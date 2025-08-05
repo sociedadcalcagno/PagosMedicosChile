@@ -1,0 +1,24 @@
+Crea una aplicación web para el módulo “Maestros” del portal de pagos médicos.
+
+Entidades principales:
+1. **Usuario**: identificador RUT, nombre, perfil. Un mantenedor debe permitir buscar por RUT y crear o modificar usuarios.
+2. **Médico**: RUT, nombre, especialidad, tipo HMQ, estación, convenios (Fonasa), tipo y RUT de sociedad, nombre de sociedad, tipo de pago. Se necesita listado con filtros por RUT y nombre, y acciones para editar.
+3. **Prestación / Especialidad**: código, nombre, tipo de participación, etc. Debe existir un catálogo editable con filtros para especialidad y tipo de participación.
+4. **Regla de cálculo**: código, nombre, descripción, regla base, vigencia (desde/hasta), tipo de participación, especialidad, tipo de prestación, criterios específicos (médico individual o grupo, centro médico individual o grupo, prestación individual o grupo), convenio, previsión, sociedad, tipo de horario, días de la semana, tipo de abono (monto o porcentaje). Cada regla relaciona varias entidades y define un valor de pago fijo o porcentual.
+
+Funciones requeridas:
+- **Gestión Usuarios**: página de búsqueda por RUT con formulario para crear/modificar usuarios.
+- **Configuración Médicos**: formulario de búsqueda (RUT y nombre) y tabla editable de médicos con columnas mencionadas.
+- **Gestión Prestaciones**: mantenedor con filtros por tipo de participación y especialidad para listar y editar prestaciones.
+- **Reporte Prestaciones**: vista de consulta por participación sin edición.
+- **Reglas**:
+  - Lista de reglas con tabla que muestre todos los campos (código, nombre, regla base, etc.) y botón para crear nuevas.
+  - Formulario para agregar/editar reglas que incluya todos los campos y pasos descritos; usar combos y selectores que permitan buscar médicos, grupos, centros, prestaciones, convenios, previsiones y sociedades.
+  - Validaciones: código y nombre obligatorios; vigencias coherentes; se debe elegir al menos un criterio (médico/centro/prestación). Permitir definir monto fijo o porcentaje.
+
+Consideraciones:
+- Usa una base de datos (p. ej., MongoDB o SQLite) para almacenar usuarios, médicos, prestaciones y reglas con sus relaciones.
+- Implementa un backend (p. ej., Node.js/Express) que exponga endpoints REST para gestionar las entidades.
+- La interfaz debe ser clara: filtros y tablas para consultar, formularios paso a paso para crear reglas.
+- El sistema no necesita procesamiento de pagos; solo administra maestros y reglas.
+
