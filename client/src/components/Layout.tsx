@@ -147,7 +147,7 @@ export default function Layout({ children }: LayoutProps) {
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation */}
       <nav className="bg-white shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
-        <div className="px-4 py-3 lg:px-6 lg:py-4">
+        <div className="px-4 py-2 lg:px-6 lg:py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
@@ -211,9 +211,9 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </nav>
 
-      <div className="flex pt-20 min-h-screen">
+      <div className="flex pt-16 lg:pt-20 min-h-screen">
         {/* Sidebar */}
-        <aside className="w-64 bg-white shadow-sm border-r border-gray-200 fixed left-0 top-20 bottom-0 overflow-y-auto lg:block hidden">
+        <aside className="w-60 lg:w-64 bg-white shadow-sm border-r border-gray-200 fixed left-0 top-16 lg:top-20 bottom-0 overflow-y-auto lg:block hidden">
           <nav className="p-4">
             <div className="space-y-2">
               {/* Gestión de Maestros */}
@@ -292,7 +292,7 @@ export default function Layout({ children }: LayoutProps) {
         </aside>
 
         {/* Mobile Menu Button */}
-        <div className="lg:hidden fixed top-24 left-4 z-40">
+        <div className="lg:hidden fixed top-20 left-4 z-40">
           <Button
             variant="outline"
             size="sm"
@@ -312,7 +312,7 @@ export default function Layout({ children }: LayoutProps) {
         )}
 
         {/* Mobile Sidebar */}
-        <aside className={`lg:hidden fixed left-0 top-20 bottom-0 w-64 bg-white shadow-sm border-r border-gray-200 overflow-y-auto z-40 transform transition-transform duration-300 ${
+        <aside className={`lg:hidden fixed left-0 top-16 bottom-0 w-60 bg-white shadow-sm border-r border-gray-200 overflow-y-auto z-40 transform transition-transform duration-300 ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}>
           <nav className="p-4">
@@ -397,8 +397,8 @@ export default function Layout({ children }: LayoutProps) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 lg:ml-64 ml-0">
-          <div className="w-full px-4 py-4 lg:px-6 lg:py-6">{children}</div>
+        <main className="flex-1 lg:ml-60 xl:ml-64 ml-0">
+          <div className="w-full px-3 py-3 lg:px-4 lg:py-4">{children}</div>
         </main>
 
         {/* AI Chat Component */}
