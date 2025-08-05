@@ -28,6 +28,7 @@ The application is designed to handle complex medical payment scenarios includin
 - **LATEST**: Built dedicated doctor dashboard for regular users with limited access to relevant modules
 - **LATEST**: Restructured navigation to show master data management only to admin/supervisor roles
 - **LATEST**: Integrated multi-clinic/multi-enterprise architecture considerations in user interface
+- **LATEST**: Refined permission system: Admins get full access, Supervisors manage maintenance modules but not users, Doctors get personal dashboard only
 
 ## User Preferences
 

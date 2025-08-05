@@ -40,7 +40,7 @@ function Router() {
     return <DoctorDashboard />;
   }
 
-  // Admin and supervisors get the full layout with all modules
+  // Admin and supervisors get the management layout with appropriate modules
   return (
     <Layout>
       <Switch>

@@ -37,8 +37,8 @@ export default function Layout({ children }: LayoutProps) {
       },
     ];
 
-    // Admin and supervisor get access to master data management
-    if (user?.profile === "admin" || user?.profile === "supervisor") {
+    // Admin gets full access
+    if (user?.profile === "admin") {
       return [
         {
           href: "/usuarios",
@@ -77,6 +77,37 @@ export default function Layout({ children }: LayoutProps) {
           icon: Settings,
           section: "Configuración",
         },
+      ];
+    }
+
+    // Supervisor gets access to maintenance modules but not user management
+    if (user?.profile === "supervisor") {
+      return [
+        {
+          href: "/medicos",
+          label: "Médicos",
+          icon: UserCheck,
+          section: "Gestión de Maestros",
+        },
+        {
+          href: "/prestaciones",
+          label: "Prestaciones",
+          icon: ClipboardList,
+          section: "Gestión de Maestros",
+        },
+        {
+          href: "/reglas",
+          label: "Reglas de Cálculo",
+          icon: Calculator,
+          section: "Gestión de Maestros",
+        },
+        {
+          href: "/reportes",
+          label: "Reporte Prestaciones",
+          icon: BarChart3,
+          section: "Reportes",
+        },
+        ...baseItems,
       ];
     }
 
