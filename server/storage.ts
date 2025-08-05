@@ -119,6 +119,38 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async linkUserToDoctor(userId: string, doctorId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ doctorId, profile: 'doctor', updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  async unlinkUserFromDoctor(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ doctorId: null, profile: 'user', updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  async getUserDoctor(userId: string): Promise<any> {
+    const [result] = await db
+      .select({
+        id: doctors.id,
+        rut: doctors.rut,
+        name: doctors.name,
+        email: doctors.email,
+        specialtyId: doctors.specialtyId,
+        specialtyName: specialties.name,
+      })
+      .from(users)
+      .innerJoin(doctors, eq(users.doctorId, doctors.id))
+      .leftJoin(specialties, eq(doctors.specialtyId, specialties.id))
+      .where(eq(users.id, userId));
+    
+    return result;
+  }
+
   // Doctor operations
   async getDoctors(filters?: { rut?: string; name?: string; specialtyId?: string }): Promise<Doctor[]> {
     let query = db.select().from(doctors);

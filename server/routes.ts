@@ -30,6 +30,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Link/unlink doctor profile
+  app.post('/api/link-doctor', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { doctorId } = req.body;
+      await storage.linkUserToDoctor(userId, doctorId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error linking doctor:", error);
+      res.status(500).json({ message: "Failed to link doctor profile" });
+    }
+  });
+
+  app.post('/api/unlink-doctor', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.unlinkUserFromDoctor(userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error unlinking doctor:", error);
+      res.status(500).json({ message: "Failed to unlink doctor profile" });
+    }
+  });
+
+  app.get('/api/user-doctor', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const userDoctor = await storage.getUserDoctor(userId);
+      res.json(userDoctor);
+    } catch (error) {
+      console.error("Error fetching user doctor:", error);
+      res.status(500).json({ message: "Failed to fetch user doctor" });
+    }
+  });
+
   // AI Agent routes
   app.post('/api/ai/chat', isAuthenticated, async (req, res) => {
     try {

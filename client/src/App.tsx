@@ -12,6 +12,7 @@ import Doctors from "@/pages/Doctors.tsx";
 import Services from "@/pages/Services.tsx";
 import Rules from "@/pages/Rules.tsx";
 import Reports from "@/pages/Reports.tsx";
+import Profile from "@/pages/Profile";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -28,6 +29,7 @@ function Router() {
           <Route path="/prestaciones" component={Services} />
           <Route path="/reglas" component={Rules} />
           <Route path="/reportes" component={Reports} />
+          <Route path="/perfil" component={Profile} />
           <Route path="/configuracion" component={Home} />
         </>
       )}

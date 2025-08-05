@@ -34,7 +34,8 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   rut: varchar("rut").unique(),
-  profile: varchar("profile").notNull().default('user'), // 'user', 'supervisor', 'admin'
+  profile: varchar("profile").notNull().default('user'), // 'user', 'supervisor', 'admin', 'doctor'
+  doctorId: varchar("doctor_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

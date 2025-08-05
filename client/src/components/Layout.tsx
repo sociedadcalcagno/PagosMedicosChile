@@ -12,6 +12,7 @@ import {
   Heart,
   Bot,
   LogOut,
+  User,
 } from "lucide-react";
 import AIChat from "./AIChat";
 
@@ -54,6 +55,12 @@ export default function Layout({ children }: LayoutProps) {
       label: "Reporte Prestaciones",
       icon: BarChart3,
       section: "Reportes",
+    },
+    {
+      href: "/perfil",
+      label: "Mi Perfil",
+      icon: User,
+      section: "Configuración",
     },
     {
       href: "/configuracion",
