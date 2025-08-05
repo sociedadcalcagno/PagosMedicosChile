@@ -3,25 +3,25 @@
 @tailwind utilities;
 
 :root {
-  --background: hsl(0, 0%, 100%);
-  --foreground: hsl(20, 14.3%, 4.1%);
-  --muted: hsl(60, 4.8%, 95.9%);
-  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --background: hsl(0, 0%, 98%);
+  --foreground: hsl(0, 0%, 15%);
+  --muted: hsl(210, 10%, 93%);
+  --muted-foreground: hsl(0, 0%, 40%);
   --popover: hsl(0, 0%, 100%);
-  --popover-foreground: hsl(20, 14.3%, 4.1%);
+  --popover-foreground: hsl(0, 0%, 15%);
   --card: hsl(0, 0%, 100%);
-  --card-foreground: hsl(20, 14.3%, 4.1%);
-  --border: hsl(20, 5.9%, 90%);
-  --input: hsl(20, 5.9%, 90%);
+  --card-foreground: hsl(0, 0%, 15%);
+  --border: hsl(214, 15%, 85%);
+  --input: hsl(214, 15%, 92%);
   --primary: hsl(207, 90%, 54%);
-  --primary-foreground: hsl(211, 100%, 99%);
-  --secondary: hsl(60, 4.8%, 95.9%);
-  --secondary-foreground: hsl(24, 9.8%, 10%);
-  --accent: hsl(60, 4.8%, 95.9%);
-  --accent-foreground: hsl(24, 9.8%, 10%);
-  --destructive: hsl(0, 84.2%, 60.2%);
-  --destructive-foreground: hsl(60, 9.1%, 97.8%);
-  --ring: hsl(20, 14.3%, 4.1%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(210, 10%, 93%);
+  --secondary-foreground: hsl(0, 0%, 15%);
+  --accent: hsl(210, 10%, 93%);
+  --accent-foreground: hsl(0, 0%, 15%);
+  --destructive: hsl(0, 84%, 50%);
+  --destructive-foreground: hsl(0, 0%, 100%);
+  --ring: hsl(207, 90%, 54%);
   --radius: 0.5rem;
   
   /* Medical theme colors */
@@ -62,6 +62,30 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+  
+  /* Ensure better text contrast */
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-foreground font-semibold;
+  }
+  
+  p, span, div {
+    @apply text-foreground;
+  }
+  
+  /* Improved form label visibility */
+  label {
+    @apply text-foreground font-medium;
+  }
+  
+  /* Better button text contrast */
+  button {
+    @apply font-medium;
+  }
+  
+  /* Improved navigation text */
+  nav a, nav button {
+    @apply text-foreground;
+  }
 }
 
 @layer utilities {
@@ -73,12 +97,39 @@
     background-color: var(--medical-dark);
   }
   
+  /* Text color utilities */
+  .text-strong {
+    @apply text-gray-900;
+  }
+  
+  .text-medium {
+    @apply text-gray-700;
+  }
+  
+  .text-light {
+    @apply text-gray-500;
+  }
+  
+  /* High contrast utilities */
+  .high-contrast {
+    @apply text-gray-900 bg-white border-gray-300;
+  }
+  
+  /* Medical theme utilities */  
   .text-medical-blue {
     color: var(--medical-blue);
   }
   
   .text-medical-dark {
     color: var(--medical-dark);
+  }
+  
+  .text-success {
+    color: var(--success-green);
+  }
+
+  .text-warning {
+    color: var(--warning-orange);
   }
   
   .border-medical-blue {
@@ -95,13 +146,5 @@
   
   .bg-warning-orange {
     background-color: var(--warning-orange);
-  }
-  
-  .text-success-green {
-    color: var(--success-green);
-  }
-  
-  .text-warning-orange {
-    color: var(--warning-orange);
   }
 }
