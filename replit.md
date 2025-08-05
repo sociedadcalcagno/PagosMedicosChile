@@ -29,6 +29,8 @@ The application is designed to handle complex medical payment scenarios includin
 - **LATEST**: Restructured navigation to show master data management only to admin/supervisor roles
 - **LATEST**: Integrated multi-clinic/multi-enterprise architecture considerations in user interface
 - **LATEST**: Refined permission system: Admins get full access, Supervisors manage maintenance modules but not users, Doctors get personal dashboard only
+- **LATEST**: Fixed society medical selector in calculation rules - replaced manual RUT/name inputs with dropdown list of registered medical societies
+- **LATEST**: Corrected main content layout centering issue - content was shifted right, now properly centered in available space
 
 ## User Preferences
 
