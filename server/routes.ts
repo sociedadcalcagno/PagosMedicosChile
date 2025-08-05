@@ -1,8 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
-import { setupMockAuth, isMockAuthenticated } from "./mockAuth";
+import { setupAuth } from "./replitAuth";
+import { setupMockAuth } from "./mockAuth";
+import { authMiddleware } from "./authMiddleware";
 import { honorariosAgent, type AIMessage } from "./openai";
 import {
   insertDoctorSchema,
@@ -16,13 +17,17 @@ import {
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Always setup session middleware
+  const sessionModule = await import("./session");
+  sessionModule.setupSession(app);
+  
   // Only setup real auth in production, use mock auth in development
   if (process.env.NODE_ENV === "production") {
     await setupAuth(app);
+  } else {
+    // Setup mock auth for development (multiple user testing)
+    setupMockAuth(app);
   }
-  
-  // Setup mock auth for development (multiple user testing)
-  setupMockAuth(app);
 
   // Auth routes - support both real and mock auth
   app.get('/api/auth/user', async (req: any, res) => {
@@ -39,23 +44,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
 
-    // Fall back to real auth
-    if (!req.isAuthenticated() || !req.user?.claims?.sub) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    // Fall back to real auth (only in production)
+    if (process.env.NODE_ENV === "production") {
+      if (!req.isAuthenticated || !req.isAuthenticated() || !req.user?.claims?.sub) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
 
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      try {
+        const userId = req.user.claims.sub;
+        const user = await storage.getUser(userId);
+        res.json(user);
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        res.status(500).json({ message: "Failed to fetch user" });
+      }
+    } else {
+      // In development without mock user
+      return res.status(401).json({ message: "Unauthorized" });
     }
   });
 
   // Link/unlink doctor profile
-  app.post('/api/link-doctor', isAuthenticated, async (req: any, res) => {
+  app.post('/api/link-doctor', authMiddleware, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { doctorId } = req.body;
@@ -67,7 +77,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/unlink-doctor', isAuthenticated, async (req: any, res) => {
+  app.post('/api/unlink-doctor', authMiddleware, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       await storage.unlinkUserFromDoctor(userId);
@@ -78,7 +88,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/user-doctor', isAuthenticated, async (req: any, res) => {
+  app.get('/api/user-doctor', authMiddleware, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const userDoctor = await storage.getUserDoctor(userId);
@@ -90,7 +100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Agent routes
-  app.post('/api/ai/chat', isAuthenticated, async (req: any, res) => {
+  app.post('/api/ai/chat', authMiddleware, async (req: any, res) => {
     try {
       const { message, conversationHistory } = req.body;
       
@@ -111,7 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/ai/analyze-rule', isAuthenticated, async (req, res) => {
+  app.post('/api/ai/analyze-rule', authMiddleware, async (req, res) => {
     try {
       const { rule } = req.body;
       
@@ -127,7 +137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/ai/suggest-rule', isAuthenticated, async (req, res) => {
+  app.post('/api/ai/suggest-rule', authMiddleware, async (req, res) => {
     try {
       const { context } = req.body;
       
@@ -140,7 +150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Doctor routes
-  app.get('/api/doctors', isAuthenticated, async (req, res) => {
+  app.get('/api/doctors', authMiddleware, async (req, res) => {
     try {
       const { rut, name, specialtyId } = req.query;
       const filters: any = {};
@@ -157,7 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/doctors/:id', isAuthenticated, async (req, res) => {
+  app.get('/api/doctors/:id', authMiddleware, async (req, res) => {
     try {
       const doctor = await storage.getDoctorById(req.params.id);
       if (!doctor) {
@@ -170,7 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/doctors', isAuthenticated, async (req, res) => {
+  app.post('/api/doctors', authMiddleware, async (req, res) => {
     try {
       const validatedData = insertDoctorSchema.parse(req.body);
       const doctor = await storage.createDoctor(validatedData);
@@ -181,7 +191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/doctors/:id', isAuthenticated, async (req, res) => {
+  app.put('/api/doctors/:id', authMiddleware, async (req, res) => {
     try {
       const validatedData = insertDoctorSchema.partial().parse(req.body);
       const doctor = await storage.updateDoctor(req.params.id, validatedData);
@@ -192,7 +202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/doctors/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/doctors/:id', authMiddleware, async (req, res) => {
     try {
       await storage.deleteDoctor(req.params.id);
       res.status(204).send();
@@ -203,7 +213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Specialty routes
-  app.get('/api/specialties', isAuthenticated, async (req, res) => {
+  app.get('/api/specialties', authMiddleware, async (req, res) => {
     try {
       const specialties = await storage.getSpecialties();
       res.json(specialties);
@@ -214,7 +224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Medical societies routes
-  app.get('/api/medical-societies', isAuthenticated, async (req, res) => {
+  app.get('/api/medical-societies', authMiddleware, async (req, res) => {
     try {
       const societies = await storage.getMedicalSocieties();
       res.json(societies);
@@ -224,7 +234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/specialties', isAuthenticated, async (req, res) => {
+  app.post('/api/specialties', authMiddleware, async (req, res) => {
     try {
       const validatedData = insertSpecialtySchema.parse(req.body);
       const specialty = await storage.createSpecialty(validatedData);
@@ -235,7 +245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/specialties/:id', isAuthenticated, async (req, res) => {
+  app.put('/api/specialties/:id', authMiddleware, async (req, res) => {
     try {
       const validatedData = insertSpecialtySchema.partial().parse(req.body);
       const specialty = await storage.updateSpecialty(req.params.id, validatedData);
@@ -246,7 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/specialties/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/specialties/:id', authMiddleware, async (req, res) => {
     try {
       await storage.deleteSpecialty(req.params.id);
       res.status(204).send();
@@ -257,7 +267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Service routes
-  app.get('/api/services', isAuthenticated, async (req, res) => {
+  app.get('/api/services', authMiddleware, async (req, res) => {
     try {
       const { specialtyId, participationType } = req.query;
       const filters: any = {};
@@ -273,7 +283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/services', isAuthenticated, async (req, res) => {
+  app.post('/api/services', authMiddleware, async (req, res) => {
     try {
       const validatedData = insertServiceSchema.parse(req.body);
       const service = await storage.createService(validatedData);
@@ -284,7 +294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/services/:id', isAuthenticated, async (req, res) => {
+  app.put('/api/services/:id', authMiddleware, async (req, res) => {
     try {
       const validatedData = insertServiceSchema.partial().parse(req.body);
       const service = await storage.updateService(req.params.id, validatedData);
@@ -295,7 +305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/services/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/services/:id', authMiddleware, async (req, res) => {
     try {
       await storage.deleteService(req.params.id);
       res.status(204).send();
@@ -306,7 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Calculation rule routes
-  app.get('/api/calculation-rules', isAuthenticated, async (req, res) => {
+  app.get('/api/calculation-rules', authMiddleware, async (req, res) => {
     try {
       const { code, participationType, specialtyId, isActive } = req.query;
       const filters: any = {};
@@ -324,7 +334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/calculation-rules/:id', isAuthenticated, async (req, res) => {
+  app.get('/api/calculation-rules/:id', authMiddleware, async (req, res) => {
     try {
       const rule = await storage.getCalculationRuleById(req.params.id);
       if (!rule) {
@@ -337,7 +347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/calculation-rules', isAuthenticated, async (req, res) => {
+  app.post('/api/calculation-rules', authMiddleware, async (req, res) => {
     try {
       const validatedData = insertCalculationRuleSchema.parse(req.body);
       const rule = await storage.createCalculationRule(validatedData);
@@ -348,7 +358,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/calculation-rules/:id', isAuthenticated, async (req, res) => {
+  app.put('/api/calculation-rules/:id', authMiddleware, async (req, res) => {
     try {
       const validatedData = insertCalculationRuleSchema.partial().parse(req.body);
       const rule = await storage.updateCalculationRule(req.params.id, validatedData);
@@ -359,7 +369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/calculation-rules/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/calculation-rules/:id', authMiddleware, async (req, res) => {
     try {
       await storage.deleteCalculationRule(req.params.id);
       res.status(204).send();
@@ -370,7 +380,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Medical society routes
-  app.get('/api/medical-societies', isAuthenticated, async (req, res) => {
+  app.get('/api/medical-societies', authMiddleware, async (req, res) => {
     try {
       const societies = await storage.getMedicalSocieties();
       res.json(societies);
@@ -380,7 +390,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/medical-societies', isAuthenticated, async (req, res) => {
+  app.post('/api/medical-societies', authMiddleware, async (req, res) => {
     try {
       const validatedData = insertMedicalSocietySchema.parse(req.body);
       const society = await storage.createMedicalSociety(validatedData);
@@ -392,7 +402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Medical center routes
-  app.get('/api/medical-centers', isAuthenticated, async (req, res) => {
+  app.get('/api/medical-centers', authMiddleware, async (req, res) => {
     try {
       const centers = await storage.getMedicalCenters();
       res.json(centers);
@@ -403,7 +413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Insurance type routes
-  app.get('/api/insurance-types', isAuthenticated, async (req, res) => {
+  app.get('/api/insurance-types', authMiddleware, async (req, res) => {
     try {
       const types = await storage.getInsuranceTypes();
       res.json(types);
@@ -414,7 +424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Agreement type routes
-  app.get('/api/agreement-types', isAuthenticated, async (req, res) => {
+  app.get('/api/agreement-types', authMiddleware, async (req, res) => {
     try {
       const types = await storage.getAgreementTypes();
       res.json(types);

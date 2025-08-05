@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import type { User as UserType } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import {
   Users,
@@ -14,14 +15,14 @@ import {
   LogOut,
   User,
 } from "lucide-react";
-import AIChat from "./AIChat";
+import AIChat from "@/components/AIChat";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const { user } = useAuth();
+  const { user } = useAuth() as { user: UserType | undefined; isLoading: boolean; isAuthenticated: boolean };
   const [location] = useLocation();
   const [isChatOpen, setIsChatOpen] = useState(false);
 
@@ -219,7 +220,7 @@ export default function Layout({ children }: LayoutProps) {
         <main className="flex-1 ml-64 p-6">{children}</main>
 
         {/* AI Chat Component */}
-        <AIChat isOpen={isChatOpen} onToggle={() => setIsChatOpen(!isChatOpen)} />
+        <AIChat />
       </div>
     </div>
   );
