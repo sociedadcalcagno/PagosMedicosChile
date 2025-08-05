@@ -360,12 +360,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/calculation-rules/:id', authMiddleware, async (req, res) => {
     try {
+      console.log('Updating calculation rule:', req.params.id);
+      console.log('Request body:', JSON.stringify(req.body, null, 2));
+      
       const validatedData = insertCalculationRuleSchema.partial().parse(req.body);
+      console.log('Validated data:', JSON.stringify(validatedData, null, 2));
+      
       const rule = await storage.updateCalculationRule(req.params.id, validatedData);
       res.json(rule);
     } catch (error) {
       console.error("Error updating calculation rule:", error);
-      res.status(400).json({ message: "Invalid calculation rule data", error });
+      if (error.name === 'ZodError') {
+        console.error("Validation errors:", error.issues);
+        res.status(400).json({ 
+          message: "Invalid calculation rule data", 
+          validationErrors: error.issues 
+        });
+      } else {
+        res.status(500).json({ 
+          message: "Failed to update calculation rule", 
+          error: error.message 
+        });
+      }
     }
   });
 

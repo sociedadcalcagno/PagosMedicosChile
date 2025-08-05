@@ -184,6 +184,7 @@ export default function Rules() {
       });
     },
     onError: (error) => {
+      console.error('Rule update error:', error);
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
@@ -195,9 +196,18 @@ export default function Rules() {
         }, 500);
         return;
       }
+      
+      // Try to extract detailed error message
+      let errorMessage = "No se pudo actualizar la regla de cálculo.";
+      if (error.message?.includes('validation') || error.message?.includes('Invalid')) {
+        errorMessage = "Error de validación: Revisa los datos ingresados.";
+      } else if (error.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
+      
       toast({
         title: "Error",
-        description: "No se pudo actualizar la regla de cálculo.",
+        description: errorMessage,
         variant: "destructive",
       });
     },
