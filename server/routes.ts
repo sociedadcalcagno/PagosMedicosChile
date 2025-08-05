@@ -569,8 +569,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // CSV Import endpoint for Participacion records
   app.post('/api/import/csv-participacion', authMiddleware, async (req, res) => {
     try {
+      console.log('Participacion import started. Request body:', req.body);
       const csvData = req.body.csvData || '';
       const lines = csvData.split('\n').filter((line: string) => line.trim());
+      console.log('CSV lines found:', lines.length, 'First few lines:', lines.slice(0, 3));
       
       if (lines.length < 2) {
         return res.json({
@@ -636,6 +638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      console.log(`Import complete. Total: ${lines.length - 1}, Imported: ${imported}, Errors: ${errors.length}`);
       res.json({
         success: imported > 0,
         data: importedData,
@@ -649,7 +652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         data: [],
-        errors: ['Error interno del servidor'],
+        errors: [`Error interno del servidor: ${error}`],
         total: 0,
         imported: 0,
       });
