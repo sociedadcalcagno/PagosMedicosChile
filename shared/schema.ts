@@ -207,6 +207,117 @@ export const agreementTypesRelations = relations(agreementTypes, ({ many }) => (
   calculationRules: many(calculationRules),
 }));
 
+// Provider types (FONASA, ISAPRE, Particular)
+export const providerTypes = pgTable("provider_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code").notNull().unique(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  systemType: varchar("system_type").notNull(), // 'fonasa', 'isapre', 'particular'
+  tramo: varchar("tramo"), // For FONASA: 'A', 'B', 'C', 'D'
+  copagoPercentage: decimal("copago_percentage", { precision: 5, scale: 2 }).default('0'), // Current copago (all 0% since sept 2022)
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Service tariffs by provider type
+export const serviceTariffs = pgTable("service_tariffs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serviceId: varchar("service_id").notNull().references(() => services.id),
+  providerTypeId: varchar("provider_type_id").notNull().references(() => providerTypes.id),
+  grossAmount: decimal("gross_amount", { precision: 10, scale: 2 }).notNull(), // Monto bruto
+  netAmount: decimal("net_amount", { precision: 10, scale: 2 }).notNull(), // Monto líquido
+  participatedAmount: decimal("participated_amount", { precision: 10, scale: 2 }).notNull(), // Monto participado
+  validFrom: date("valid_from").notNull(),
+  validTo: date("valid_to"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Medical attentions/consultations
+export const medicalAttentions = pgTable("medical_attentions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  patientRut: varchar("patient_rut").notNull(),
+  patientName: varchar("patient_name").notNull(),
+  doctorId: varchar("doctor_id").notNull().references(() => doctors.id),
+  serviceId: varchar("service_id").notNull().references(() => services.id),
+  providerTypeId: varchar("provider_type_id").notNull().references(() => providerTypes.id),
+  medicalCenterId: varchar("medical_center_id").references(() => medicalCenters.id),
+  
+  // Attention details
+  attentionDate: date("attention_date").notNull(),
+  attentionTime: varchar("attention_time"), // HH:MM format
+  scheduleType: varchar("schedule_type"), // 'regular', 'irregular', 'night'
+  
+  // Amounts
+  grossAmount: decimal("gross_amount", { precision: 10, scale: 2 }).notNull(),
+  netAmount: decimal("net_amount", { precision: 10, scale: 2 }).notNull(),
+  participatedAmount: decimal("participated_amount", { precision: 10, scale: 2 }).notNull(),
+  
+  // Status
+  status: varchar("status").notNull().default('pending'), // 'pending', 'calculated', 'paid'
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Payment calculations (applying rules to attentions)
+export const paymentCalculations = pgTable("payment_calculations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  attentionId: varchar("attention_id").notNull().references(() => medicalAttentions.id),
+  calculationRuleId: varchar("calculation_rule_id").notNull().references(() => calculationRules.id),
+  doctorId: varchar("doctor_id").notNull().references(() => doctors.id),
+  
+  // Calculation details
+  baseAmount: decimal("base_amount", { precision: 10, scale: 2 }).notNull(), // Amount used for calculation
+  ruleType: varchar("rule_type").notNull(), // 'percentage', 'fixed_amount'
+  ruleValue: decimal("rule_value", { precision: 10, scale: 2 }).notNull(), // Rule percentage or fixed amount
+  calculatedAmount: decimal("calculated_amount", { precision: 10, scale: 2 }).notNull(), // Final calculated payment
+  
+  // Dates
+  calculationDate: timestamp("calculation_date").defaultNow(),
+  periodMonth: integer("period_month").notNull(),
+  periodYear: integer("period_year").notNull(),
+  
+  // Status
+  status: varchar("status").notNull().default('calculated'), // 'calculated', 'approved', 'paid'
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Processed payments
+export const payments = pgTable("payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  doctorId: varchar("doctor_id").notNull().references(() => doctors.id),
+  
+  // Payment period
+  periodMonth: integer("period_month").notNull(),
+  periodYear: integer("period_year").notNull(),
+  
+  // Payment details
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  totalAttentions: integer("total_attentions").notNull(),
+  paymentMethod: varchar("payment_method"), // 'transfer', 'check', 'deposit'
+  
+  // Bank details (copied from doctor at payment time)
+  bankAccount: varchar("bank_account"),
+  bankName: varchar("bank_name"),
+  accountHolderName: varchar("account_holder_name"),
+  accountHolderRut: varchar("account_holder_rut"),
+  
+  // Status and dates
+  status: varchar("status").notNull().default('pending'), // 'pending', 'processed', 'paid', 'rejected'
+  paymentDate: date("payment_date"),
+  processedAt: timestamp("processed_at"),
+  
+  // Reference numbers
+  transactionReference: varchar("transaction_reference"),
+  batchNumber: varchar("batch_number"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const calculationRulesRelations = relations(calculationRules, ({ one }) => ({
   specialty: one(specialties, {
     fields: [calculationRules.specialtyId],
@@ -235,6 +346,65 @@ export const calculationRulesRelations = relations(calculationRules, ({ one }) =
   society: one(medicalSocieties, {
     fields: [calculationRules.societyId],
     references: [medicalSocieties.id],
+  }),
+}));
+
+// New relations for payment system
+export const providerTypesRelations = relations(providerTypes, ({ many }) => ({
+  serviceTariffs: many(serviceTariffs),
+  medicalAttentions: many(medicalAttentions),
+}));
+
+export const serviceTariffsRelations = relations(serviceTariffs, ({ one }) => ({
+  service: one(services, {
+    fields: [serviceTariffs.serviceId],
+    references: [services.id],
+  }),
+  providerType: one(providerTypes, {
+    fields: [serviceTariffs.providerTypeId],
+    references: [providerTypes.id],
+  }),
+}));
+
+export const medicalAttentionsRelations = relations(medicalAttentions, ({ one, many }) => ({
+  doctor: one(doctors, {
+    fields: [medicalAttentions.doctorId],
+    references: [doctors.id],
+  }),
+  service: one(services, {
+    fields: [medicalAttentions.serviceId],
+    references: [services.id],
+  }),
+  providerType: one(providerTypes, {
+    fields: [medicalAttentions.providerTypeId],
+    references: [providerTypes.id],
+  }),
+  medicalCenter: one(medicalCenters, {
+    fields: [medicalAttentions.medicalCenterId],
+    references: [medicalCenters.id],
+  }),
+  paymentCalculations: many(paymentCalculations),
+}));
+
+export const paymentCalculationsRelations = relations(paymentCalculations, ({ one }) => ({
+  attention: one(medicalAttentions, {
+    fields: [paymentCalculations.attentionId],
+    references: [medicalAttentions.id],
+  }),
+  calculationRule: one(calculationRules, {
+    fields: [paymentCalculations.calculationRuleId],
+    references: [calculationRules.id],
+  }),
+  doctor: one(doctors, {
+    fields: [paymentCalculations.doctorId],
+    references: [doctors.id],
+  }),
+}));
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  doctor: one(doctors, {
+    fields: [payments.doctorId],
+    references: [doctors.id],
   }),
 }));
 
@@ -311,10 +481,17 @@ export type MedicalSociety = typeof medicalSocieties.$inferSelect;
 export type InsertMedicalSociety = z.infer<typeof insertMedicalSocietySchema>;
 
 export type MedicalCenter = typeof medicalCenters.$inferSelect;
-export type InsertMedicalCenter = z.infer<typeof insertMedicalCenterSchema>;
 
 export type InsuranceType = typeof insuranceTypes.$inferSelect;
 export type InsertInsuranceType = z.infer<typeof insertInsuranceTypeSchema>;
+
+// New payment system types
+export type ProviderType = typeof providerTypes.$inferSelect;
+export type ServiceTariff = typeof serviceTariffs.$inferSelect;
+export type MedicalAttention = typeof medicalAttentions.$inferSelect;
+export type PaymentCalculation = typeof paymentCalculations.$inferSelect;
+export type Payment = typeof payments.$inferSelect;
+export type InsertMedicalCenter = z.infer<typeof insertMedicalCenterSchema>;
 
 export type AgreementType = typeof agreementTypes.$inferSelect;
 export type InsertAgreementType = z.infer<typeof insertAgreementTypeSchema>;
