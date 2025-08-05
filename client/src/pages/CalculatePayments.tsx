@@ -39,46 +39,44 @@ export default function CalculatePayments() {
   // Queries
   const { data: doctors = [] } = useQuery({
     queryKey: ['/api/doctors'],
+    queryFn: async () => await apiRequest('/api/doctors'),
   });
 
   const { data: attentions = [] } = useQuery({
     queryKey: ['/api/medical-attentions', selectedPeriod],
     enabled: !!selectedPeriod,
-    queryFn: () => {
+    queryFn: async () => {
       const params = new URLSearchParams();
       if (selectedPeriod?.doctorId) params.append('doctorId', selectedPeriod.doctorId);
       params.append('dateFrom', `${selectedPeriod?.year}-${selectedPeriod?.month.toString().padStart(2, '0')}-01`);
       params.append('dateTo', `${selectedPeriod?.year}-${selectedPeriod?.month.toString().padStart(2, '0')}-31`);
       params.append('status', 'pending');
-      return apiRequest(`/api/medical-attentions?${params}`);
+      return await apiRequest(`/api/medical-attentions?${params}`);
     },
   });
 
   const { data: calculations = [] } = useQuery({
     queryKey: ['/api/payment-calculations', selectedPeriod],
     enabled: !!selectedPeriod,
-    queryFn: () => {
+    queryFn: async () => {
       const params = new URLSearchParams();
       if (selectedPeriod?.doctorId) params.append('doctorId', selectedPeriod.doctorId);
       if (selectedPeriod?.month) params.append('month', selectedPeriod.month.toString());
       if (selectedPeriod?.year) params.append('year', selectedPeriod.year.toString());
-      return apiRequest(`/api/payment-calculations?${params}`);
+      return await apiRequest(`/api/payment-calculations?${params}`);
     },
   });
 
   // Mutations
   const calculateMutation = useMutation({
-    mutationFn: (data: { doctorId: string; month: number; year: number }) => 
-      apiRequest('/api/calculate-payments', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-    onSuccess: (data) => {
+    mutationFn: async (data: { doctorId: string; month: number; year: number }) => 
+      await apiRequest('/api/calculate-payments', 'POST', data),
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/payment-calculations'] });
       queryClient.invalidateQueries({ queryKey: ['/api/medical-attentions'] });
       toast({
         title: "Cálculo exitoso",
-        description: `Se calcularon ${data.length} pagos correctamente`,
+        description: `Se calcularon ${Array.isArray(data) ? data.length : 0} pagos correctamente`,
       });
     },
     onError: (error: any) => {
@@ -127,7 +125,7 @@ export default function CalculatePayments() {
     const variants = {
       pending: "default",
       calculated: "secondary",
-      approved: "success",
+      approved: "secondary",
     } as const;
     
     const labels = {
@@ -143,9 +141,9 @@ export default function CalculatePayments() {
     );
   };
 
-  const totalAttentions = attentions?.length || 0;
-  const totalAmount = attentions?.reduce((sum: number, att: any) => 
-    sum + parseFloat(att.participatedAmount || '0'), 0) || 0;
+  const totalAttentions = Array.isArray(attentions) ? attentions.length : 0;
+  const totalAmount = Array.isArray(attentions) ? attentions.reduce((sum: number, att: any) => 
+    sum + parseFloat(att.participatedAmount || '0'), 0) : 0;
 
   return (
     <div className="space-y-6">
@@ -186,7 +184,7 @@ export default function CalculatePayments() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {doctors.map((doctor: any) => (
+                          {Array.isArray(doctors) && doctors.map((doctor: any) => (
                             <SelectItem key={doctor.id} value={doctor.id}>
                               {doctor.name}
                             </SelectItem>
@@ -312,7 +310,7 @@ export default function CalculatePayments() {
       </div>
 
       {/* Lista de atenciones */}
-      {selectedPeriod && attentions && attentions.length > 0 && (
+      {selectedPeriod && Array.isArray(attentions) && attentions.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Atenciones del Período</CardTitle>
@@ -322,7 +320,7 @@ export default function CalculatePayments() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {attentions.map((attention: any) => (
+              {Array.isArray(attentions) && attentions.map((attention: any) => (
                 <div key={attention.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center space-x-4">
                     <div className="p-2 bg-blue-50 rounded-lg">
@@ -347,7 +345,7 @@ export default function CalculatePayments() {
       )}
 
       {/* Resultados de cálculos */}
-      {calculations && calculations.length > 0 && (
+      {Array.isArray(calculations) && calculations.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -360,7 +358,7 @@ export default function CalculatePayments() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {calculations.map((calc: any) => (
+              {Array.isArray(calculations) && calculations.map((calc: any) => (
                 <div key={calc.id} className="flex items-center justify-between p-4 border rounded-lg bg-green-50">
                   <div className="flex items-center space-x-4">
                     <div className="p-2 bg-green-100 rounded-lg">
@@ -388,7 +386,7 @@ export default function CalculatePayments() {
         </Card>
       )}
 
-      {selectedPeriod && attentions && attentions.length === 0 && (
+      {selectedPeriod && Array.isArray(attentions) && attentions.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
             <AlertCircle className="w-12 h-12 text-orange-400 mb-4" />

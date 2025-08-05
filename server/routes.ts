@@ -537,58 +537,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/medical-attentions', authMiddleware, async (req, res) => {
-    try {
-      const { doctorId, dateFrom, dateTo, status } = req.query;
-      const attentions = await storage.getMedicalAttentions({
-        doctorId: doctorId as string,
-        dateFrom: dateFrom as string,
-        dateTo: dateTo as string,
-        status: status as string,
-      });
-      res.json(attentions);
-    } catch (error) {
-      console.error("Error fetching medical attentions:", error);
-      res.status(500).json({ message: "Failed to fetch medical attentions" });
-    }
-  });
 
-  app.post('/api/medical-attentions', authMiddleware, async (req, res) => {
-    try {
-      const attention = await storage.createMedicalAttention(req.body);
-      res.status(201).json(attention);
-    } catch (error) {
-      console.error("Error creating medical attention:", error);
-      res.status(400).json({ message: "Invalid attention data", error });
-    }
-  });
-
-  app.post('/api/calculate-payments', authMiddleware, async (req, res) => {
-    try {
-      const { doctorId, month, year } = req.body;
-      const calculations = await storage.calculatePayments(doctorId, month, year);
-      res.json(calculations);
-    } catch (error) {
-      console.error("Error calculating payments:", error);
-      res.status(400).json({ message: "Failed to calculate payments", error });
-    }
-  });
-
-  app.get('/api/payment-calculations', authMiddleware, async (req, res) => {
-    try {
-      const { doctorId, month, year, status } = req.query;
-      const calculations = await storage.getPaymentCalculations({
-        doctorId: doctorId as string,
-        month: month ? parseInt(month as string) : undefined,
-        year: year ? parseInt(year as string) : undefined,
-        status: status as string,
-      });
-      res.json(calculations);
-    } catch (error) {
-      console.error("Error fetching payment calculations:", error);
-      res.status(500).json({ message: "Failed to fetch payment calculations" });
-    }
-  });
 
   app.get('/api/payments', authMiddleware, async (req, res) => {
     try {
