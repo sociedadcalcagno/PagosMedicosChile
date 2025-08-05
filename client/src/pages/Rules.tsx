@@ -58,6 +58,7 @@ const ruleFormSchema = z.object({
   specialtyId: z.string().min(1, "Especialidad es requerida"),
   serviceId: z.string().optional(),
   doctorId: z.string().optional(),
+  societyId: z.string().optional(),
   societyRut: z.string().optional(),
   societyName: z.string().optional(),
   paymentType: z.enum(["percentage", "fixed_amount"]),
@@ -93,6 +94,10 @@ export default function Rules() {
 
   const { data: doctors } = useQuery({
     queryKey: ["/api/doctors"],
+  });
+
+  const { data: medicalSocieties } = useQuery({
+    queryKey: ["/api/medical-societies"],
   });
 
   const form = useForm<RuleFormData>({
@@ -291,6 +296,9 @@ export default function Rules() {
       participationType: rule.participationType || "individual",
       specialtyId: rule.specialtyId || "",
       serviceId: rule.serviceId || "",
+      societyId: rule.societyId || "",
+      societyRut: rule.societyRut || "",
+      societyName: rule.societyName || "",
       paymentType: rule.paymentType || "percentage",
       paymentValue: rule.paymentValue ? rule.paymentValue.toString() : "",
       scheduleType: rule.scheduleType || "",
@@ -608,7 +616,7 @@ export default function Rules() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {(specialties || []).map((specialty: any) => (
+                                  {(Array.isArray(specialties) ? specialties : []).map((specialty: any) => (
                                     <SelectItem key={specialty.id} value={specialty.id}>
                                       {specialty.name}
                                     </SelectItem>
@@ -639,7 +647,7 @@ export default function Rules() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {(doctors || []).map((doctor: any) => (
+                                  {(Array.isArray(doctors) ? doctors : []).map((doctor: any) => (
                                     <SelectItem key={doctor.id} value={doctor.id}>
                                       {doctor.rut} - {doctor.name}
                                     </SelectItem>
@@ -653,34 +661,41 @@ export default function Rules() {
                       )}
 
                       {form.watch("participationType") === "society" && (
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="societyRut"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>RUT de Sociedad *</FormLabel>
+                        <FormField
+                          control={form.control}
+                          name="societyId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Sociedad Médica *</FormLabel>
+                              <Select
+                                onValueChange={(value) => {
+                                  field.onChange(value);
+                                  // Auto-fill RUT and name based on selected society
+                                  const selectedSociety = (Array.isArray(medicalSocieties) ? medicalSocieties : []).find((s: any) => s.id === value);
+                                  if (selectedSociety) {
+                                    form.setValue("societyRut", selectedSociety.rut);
+                                    form.setValue("societyName", selectedSociety.name);
+                                  }
+                                }}
+                                defaultValue={field.value}
+                              >
                                 <FormControl>
-                                  <Input placeholder="76.123.456-7" {...field} />
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar sociedad médica..." />
+                                  </SelectTrigger>
                                 </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="societyName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Nombre de Sociedad *</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Sociedad Médica..." {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
+                                <SelectContent>
+                                  {(Array.isArray(medicalSocieties) ? medicalSocieties : []).map((society: any) => (
+                                    <SelectItem key={society.id} value={society.id}>
+                                      {society.rut} - {society.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       )}
 
                       <FormField
@@ -700,7 +715,7 @@ export default function Rules() {
                               </FormControl>
                               <SelectContent>
                                 <SelectItem value="all">Todas las prestaciones</SelectItem>
-                                {(services || []).map((service: any) => (
+                                {(Array.isArray(services) ? services : []).map((service: any) => (
                                   <SelectItem key={service.id} value={service.id}>
                                     {service.name}
                                   </SelectItem>
@@ -925,7 +940,7 @@ export default function Rules() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
-                  {(specialties || []).map((specialty: any) => (
+                  {(Array.isArray(specialties) ? specialties : []).map((specialty: any) => (
                     <SelectItem key={specialty.id} value={specialty.id}>
                       {specialty.name}
                     </SelectItem>
@@ -970,7 +985,7 @@ export default function Rules() {
               <h3 className="text-lg font-semibold text-gray-900">Lista de Reglas</h3>
               <div className="flex items-center space-x-2 text-sm text-gray-500">
                 <Calculator className="w-4 h-4" />
-                <span>Mostrando {filteredRules.length} de {rules?.length || 0} reglas</span>
+                <span>Mostrando {filteredRules.length} de {(Array.isArray(rules) ? rules.length : 0)} reglas</span>
               </div>
             </div>
 
