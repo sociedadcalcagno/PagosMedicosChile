@@ -36,6 +36,10 @@ The application is designed to handle complex medical payment scenarios includin
 - **LATEST**: Added complete payment workflow tables: provider_types, service_tariffs, medical_attentions, payment_calculations, and payments
 - **LATEST**: Created sample data for FONASA tramos, ISAPREs, and service tariffs with realistic Chilean medical pricing
 - **LATEST**: Established foundation for calculating doctor payments based on participation rules and provider types
+- **LATEST**: Built complete payment processing frontend with three dedicated pages: Medical Attentions, Calculate Payments, and Process Payments
+- **LATEST**: Implemented backend APIs for full payment workflow including attention recording, payment calculations, and payment processing
+- **LATEST**: Added sample medical attention data with correct provider type foreign keys for testing complete payment flow
+- **LATEST**: Updated navigation system with new "Sistema de Pagos" section showing all payment-related modules to admin users
 
 ## User Preferences
 

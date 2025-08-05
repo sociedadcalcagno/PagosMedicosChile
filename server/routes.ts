@@ -423,6 +423,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Medical Attentions endpoints
+  app.get('/api/medical-attentions', authMiddleware, async (req, res) => {
+    try {
+      const { doctorId, dateFrom, dateTo, status } = req.query;
+      const attentions = await storage.getMedicalAttentions({
+        doctorId: doctorId as string,
+        dateFrom: dateFrom as string,
+        dateTo: dateTo as string,
+        status: status as string,
+      });
+      res.json(attentions);
+    } catch (error) {
+      console.error('Medical attentions fetch error:', error);
+      res.status(500).json({ error: "Failed to fetch medical attentions" });
+    }
+  });
+
+  // Payment Calculations endpoints
+  app.get('/api/payment-calculations', authMiddleware, async (req, res) => {
+    try {
+      const { doctorId, month, year, status } = req.query;
+      const calculations = await storage.getPaymentCalculations({
+        doctorId: doctorId as string,
+        month: month ? parseInt(month as string) : undefined,
+        year: year ? parseInt(year as string) : undefined,
+        status: status as string,
+      });
+      res.json(calculations);
+    } catch (error) {
+      console.error('Payment calculations fetch error:', error);
+      res.status(500).json({ error: "Failed to fetch payment calculations" });
+    }
+  });
+
+  app.post('/api/calculate-payments', authMiddleware, async (req, res) => {
+    try {
+      const { doctorId, month, year } = req.body;
+      const calculations = await storage.calculatePayments(doctorId, month, year);
+      res.json(calculations);
+    } catch (error) {
+      console.error('Payment calculation error:', error);
+      res.status(500).json({ error: "Failed to calculate payments" });
+    }
+  });
+
+  // Payments endpoints
+  app.get('/api/payments', authMiddleware, async (req, res) => {
+    try {
+      const payments = await storage.getPayments();
+      res.json(payments);
+    } catch (error) {
+      console.error('Payments fetch error:', error);
+      res.status(500).json({ error: "Failed to fetch payments" });
+    }
+  });
+
+  app.post('/api/process-payment', authMiddleware, async (req, res) => {
+    try {
+      const { doctorId, month, year } = req.body;
+      const payment = await storage.processPayment(doctorId, month, year);
+      res.json(payment);
+    } catch (error) {
+      console.error('Payment processing error:', error);
+      res.status(500).json({ error: "Failed to process payment" });
+    }
+  });
+
+  // Provider Types endpoint
+  app.get('/api/provider-types', authMiddleware, async (req, res) => {
+    try {
+      const providerTypes = await storage.getProviderTypes();
+      res.json(providerTypes);
+    } catch (error) {
+      console.error('Provider types fetch error:', error);
+      res.status(500).json({ error: "Failed to fetch provider types" });
+    }
+  });
+
   // Agreement type routes
   app.get('/api/agreement-types', authMiddleware, async (req, res) => {
     try {
