@@ -71,19 +71,19 @@ export default function Layout({ children }: LayoutProps) {
           href: "/atenciones-medicas",
           label: "Atenciones Médicas",
           icon: Stethoscope,
-          section: "Pagos",
+          section: "Sistema de Pagos",
         },
         {
           href: "/calcular-pagos",
           label: "Calcular Pagos",
           icon: Calculator,
-          section: "Pagos",
+          section: "Sistema de Pagos",
         },
         {
           href: "/procesar-pagos",
           label: "Procesar Pagos",
           icon: CreditCard,
-          section: "Pagos",
+          section: "Sistema de Pagos",
         },
         {
           href: "/reportes",
