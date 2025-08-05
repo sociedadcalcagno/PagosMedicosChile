@@ -16,8 +16,10 @@ import {
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+  // Only setup real auth in production, use mock auth in development
+  if (process.env.NODE_ENV === "production") {
+    await setupAuth(app);
+  }
   
   // Setup mock auth for development (multiple user testing)
   setupMockAuth(app);

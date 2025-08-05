@@ -94,21 +94,13 @@ export default function Landing() {
                 <Button
                   size="lg"
                   className="bg-white text-medical-blue hover:bg-gray-100 font-semibold w-full"
-                  onClick={() => (window.location.href = "/api/login")}
-                >
-                  Iniciar Sesión (Replit Auth)
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"  
-                  className="border-white/50 text-white hover:bg-white/10 font-semibold w-full"
                   onClick={() => (window.location.href = "/api/mock-login")}
                 >
-                  Seleccionar Usuario de Prueba
+                  Seleccionar Usuario
                 </Button>
               </div>
               <p className="text-white/60 text-sm mt-4">
-                Usa "Usuario de Prueba" para cambiar entre diferentes roles durante el desarrollo
+                Elige un usuario para acceder al sistema (desarrollo)
               </p>
             </CardContent>
           </Card>

@@ -31,7 +31,7 @@ const mockUsers = [
 
 export function setupMockAuth(app: Express) {
   // Mock login endpoint - shows user selection
-  app.get("/api/mock-login", (req, res) => {
+  app.get(["/api/mock-login", "/api/login"], (req, res) => {
     const html = `
     <!DOCTYPE html>
     <html>
@@ -52,9 +52,9 @@ export function setupMockAuth(app: Express) {
     <body>
       <div class="container">
         <a href="/" class="back-btn">← Volver al inicio</a>
-        <h1>Seleccionar Usuario de Prueba</h1>
+        <h1>Seleccionar Usuario</h1>
         <p style="text-align: center; color: #666; margin-bottom: 30px;">
-          Elige un usuario para simular el login (solo para desarrollo)
+          Portal de Pagos Médicos - Selecciona tu perfil de usuario
         </p>
         ${mockUsers.map(user => `
           <div class="user-card" onclick="window.location.href='/api/mock-login/${user.id}'">
@@ -94,7 +94,7 @@ export function setupMockAuth(app: Express) {
   });
 
   // Mock logout
-  app.get("/api/mock-logout", (req, res) => {
+  app.get(["/api/mock-logout", "/api/logout"], (req, res) => {
     (req.session as any).mockUser = null;
     res.redirect("/");
   });

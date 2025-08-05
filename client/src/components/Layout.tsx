@@ -124,14 +124,7 @@ export default function Layout({ children }: LayoutProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => {
-                    // Check if user is using mock auth (development)
-                    if (user?.id?.startsWith('mock_')) {
-                      window.location.href = "/api/mock-logout";
-                    } else {
-                      window.location.href = "/api/logout";
-                    }
-                  }}
+                  onClick={() => (window.location.href = "/api/logout")}
                   title="Cerrar sesión"
                 >
                   <LogOut className="w-4 h-4" />
