@@ -102,11 +102,14 @@ export default function Landing() {
                   size="lg"
                   variant="outline"
                   className="border-white/50 text-white hover:bg-white/10 font-semibold w-full"
-                  onClick={() => (window.location.href = "/api/login?force_select=true")}
+                  onClick={() => (window.location.href = "/api/logout")}
                 >
                   Cambiar Cuenta
                 </Button>
               </div>
+              <p className="text-white/60 text-sm mt-4">
+                Para cambiar de cuenta, primero cierra sesión y luego inicia sesión nuevamente
+              </p>
             </CardContent>
           </Card>
         </div>
