@@ -123,6 +123,24 @@ export default function Layout({ children }: LayoutProps) {
           section: "Gestión de Maestros",
         },
         {
+          href: "/atenciones-medicas",
+          label: "Atenciones Médicas",
+          icon: Stethoscope,
+          section: "Sistema de Pagos",
+        },
+        {
+          href: "/calcular-pagos",
+          label: "Calcular Pagos",
+          icon: Calculator,
+          section: "Sistema de Pagos",
+        },
+        {
+          href: "/procesar-pagos",
+          label: "Procesar Pagos",
+          icon: CreditCard,
+          section: "Sistema de Pagos",
+        },
+        {
           href: "/reportes",
           label: "Reporte Prestaciones",
           icon: BarChart3,
