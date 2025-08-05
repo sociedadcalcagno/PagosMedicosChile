@@ -26,6 +26,7 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [recordType, setRecordType] = useState<'participacion' | 'hmq'>('participacion');
   const [apiConfig, setApiConfig] = useState({
     url: "",
     headers: "",
@@ -61,44 +62,66 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
     setUploadProgress(0);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      // Read file content
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const csvData = e.target?.result as string;
+        
+        // Simular progreso de carga
+        const progressInterval = setInterval(() => {
+          setUploadProgress(prev => Math.min(prev + 10, 90));
+        }, 200);
 
-      // Simular progreso de carga
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 10, 90));
-      }, 200);
+        const endpoint = recordType === 'participacion' 
+          ? '/api/import/csv-participacion' 
+          : '/api/import/csv-hmq';
 
-      const response = await fetch('/api/import/csv-attentions', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ csvData }),
+            credentials: 'include',
+          });
 
-      clearInterval(progressInterval);
-      setUploadProgress(100);
+          clearInterval(progressInterval);
+          setUploadProgress(100);
 
-      if (!response.ok) {
-        throw new Error('Error al procesar el archivo CSV');
-      }
+          if (!response.ok) {
+            throw new Error('Error al procesar el archivo CSV');
+          }
 
-      const result = await response.json();
-      setImportResult(result);
+          const result = await response.json();
+          setImportResult(result);
 
-      if (result.success && result.data.length > 0) {
-        onDataImported(result.data);
-        toast({
-          title: "Importación exitosa",
-          description: `Se importaron ${result.imported} de ${result.total} registros`,
-        });
-      }
+          if (result.success && result.data.length > 0) {
+            onDataImported(result.data);
+            toast({
+              title: "Importación exitosa",
+              description: `Se importaron ${result.imported} de ${result.total} registros de ${recordType}`,
+            });
+          }
+        } catch (error) {
+          clearInterval(progressInterval);
+          toast({
+            title: "Error",
+            description: "Error al procesar el archivo CSV",
+            variant: "destructive",
+          });
+        } finally {
+          setIsProcessing(false);
+        }
+      };
+      
+      reader.readAsText(file);
     } catch (error) {
       toast({
         title: "Error",
-        description: "Error al procesar el archivo CSV",
+        description: "Error al leer el archivo CSV",
         variant: "destructive",
       });
-    } finally {
       setIsProcessing(false);
     }
   };
@@ -228,6 +251,47 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
           </DialogDescription>
         </DialogHeader>
 
+        {/* Selector de tipo de registro */}
+        <Card className="mb-4">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Tipo de Registro</CardTitle>
+            <CardDescription>
+              Selecciona el tipo de datos médicos que vas a importar
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex gap-4">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="recordType"
+                  value="participacion"
+                  checked={recordType === 'participacion'}
+                  onChange={(e) => setRecordType(e.target.value as 'participacion' | 'hmq')}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm font-medium">Registros de Participación</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="recordType"
+                  value="hmq"
+                  checked={recordType === 'hmq'}
+                  onChange={(e) => setRecordType(e.target.value as 'participacion' | 'hmq')}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm font-medium">Actividades HMQ</span>
+              </label>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {recordType === 'participacion' 
+                ? 'Atenciones médicas individuales con datos de participación y porcentajes' 
+                : 'Registros de consumos/liquidaciones médicas con datos de facturación'}
+            </p>
+          </CardContent>
+        </Card>
+
         <Tabs defaultValue="csv" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="csv">Archivo CSV</TabsTrigger>
@@ -243,8 +307,9 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
                   Importar desde CSV
                 </CardTitle>
                 <CardDescription>
-                  Carga un archivo CSV con las atenciones médicas. El archivo debe contener las columnas: 
-                  RUT Paciente, Nombre Paciente, RUT Doctor, Código Servicio, Fecha, Hora, Tipo Prestador, Monto Bruto, Monto Líquido, Monto Participado
+                  {recordType === 'participacion' 
+                    ? 'Formato TMP_REGISTROS_PARTICIPACION: RUT Paciente, Nombre, Fecha Atención, Código Prestación, Nombre Prestación, Previsión, Valor Participado, Valor Líquido, % Participación, Horario, Especialidad ID, Estado'
+                    : 'Formato TMP_REGISTROS_HMQ: RUT Paciente, Nombre, Fecha Consumo, Código Prestación, Valor Bruto, Valor Líquido, Comisión, Estado, Banco, Cuenta'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

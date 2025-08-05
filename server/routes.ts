@@ -566,7 +566,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CSV Import endpoint
+  // CSV Import endpoint for Participacion records
+  app.post('/api/import/csv-participacion', authMiddleware, async (req, res) => {
+    try {
+      const csvData = req.body.csvData || '';
+      const lines = csvData.split('\n').filter((line: string) => line.trim());
+      
+      if (lines.length < 2) {
+        return res.json({
+          success: false,
+          data: [],
+          errors: ['El archivo CSV debe contener al menos una fila de datos'],
+          total: 0,
+          imported: 0,
+        });
+      }
+
+      const errors: string[] = [];
+      const importedData: any[] = [];
+      let imported = 0;
+
+      // Expected columns for TMP_REGISTROS_PARTICIPACION
+      const expectedColumns = [
+        'RPAR_RUT_PACIENTE', 'RPAR_NOMBRE_PACIENTE', 'RPAR_FATENCION', 
+        'RPAR_CODIGO_PRESTACION', 'RPAR_NOMBRE_PRESTACION', 'RPAR_PREVISION_PACIENTE',
+        'RPAR_VAL_PARTICIPADO', 'RPAR_VAL_LIQUIDO', 'RPAR_PORCENTAJE_PARTICIPACION',
+        'HORARIO', 'ESP_ID', 'RPAR_ESTADO'
+      ];
+
+      for (let i = 1; i < lines.length; i++) {
+        try {
+          const values = lines[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
+          
+          // Map TMP_REGISTROS_PARTICIPACION fields to medical attention format
+          const attention = {
+            patientRut: values[0] || '', // RPAR_RUT_PACIENTE
+            patientName: values[1] || '', // RPAR_NOMBRE_PACIENTE
+            doctorId: `doc_${values[10] || 'unknown'}`, // ESP_ID mapped to doctor
+            serviceId: values[3] || '', // RPAR_CODIGO_PRESTACION
+            providerTypeId: getProviderTypeFromPrevision(values[5] || ''), // RPAR_PREVISION_PACIENTE
+            attentionDate: formatDate(values[2] || ''), // RPAR_FATENCION
+            attentionTime: values[9] || '09:00', // HORARIO
+            scheduleType: values[9]?.includes('nocturno') || values[9]?.includes('festivo') ? 'irregular' : 'regular',
+            grossAmount: values[6] || '0', // RPAR_VAL_PARTICIPADO
+            netAmount: values[7] || '0', // RPAR_VAL_LIQUIDO
+            participatedAmount: values[6] || '0', // RPAR_VAL_PARTICIPADO
+            status: mapParticipacionStatus(values[11] || 'pending'), // RPAR_ESTADO
+            // Additional fields specific to participacion
+            participationPercentage: values[8] || '0', // RPAR_PORCENTAJE_PARTICIPACION
+            serviceName: values[4] || '', // RPAR_NOMBRE_PRESTACION
+            providerName: values[5] || '', // RPAR_PREVISION_PACIENTE
+          };
+
+          if (!attention.patientRut || !attention.patientName) {
+            errors.push(`Fila ${i + 1}: RUT y nombre del paciente son requeridos`);
+            continue;
+          }
+
+          if (!attention.serviceId) {
+            errors.push(`Fila ${i + 1}: Código de prestación es requerido`);
+            continue;
+          }
+
+          await storage.createMedicalAttention(attention);
+          importedData.push(attention);
+          imported++;
+        } catch (error) {
+          errors.push(`Fila ${i + 1}: Error al procesar - ${error}`);
+        }
+      }
+
+      res.json({
+        success: imported > 0,
+        data: importedData,
+        errors,
+        total: lines.length - 1,
+        imported,
+        recordType: 'participacion'
+      });
+    } catch (error) {
+      console.error('Error importing Participacion CSV:', error);
+      res.status(500).json({
+        success: false,
+        data: [],
+        errors: ['Error interno del servidor'],
+        total: 0,
+        imported: 0,
+      });
+    }
+  });
+
+  // CSV Import endpoint for general attentions (backward compatibility)
   app.post('/api/import/csv-attentions', authMiddleware, async (req, res) => {
     try {
       const csvData = req.body.csvData || '';
@@ -803,5 +893,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  // Helper functions for participacion import
+  function getProviderTypeFromPrevision(prevision: string): string {
+    const previsionLower = prevision.toLowerCase();
+    if (previsionLower.includes('fonasa a')) return '4c4a775e-40f1-4709-8e8c-a434f20bab67';
+    if (previsionLower.includes('fonasa b')) return '9645c305-9ed3-4e5e-b9e9-28fbde66aa7a';
+    if (previsionLower.includes('fonasa c')) return '96fb4a7a-7040-401f-8e84-c1fcff2fa9df';
+    if (previsionLower.includes('fonasa d')) return '5ed37495-fe3e-4df6-a13c-445e1ee4e013';
+    if (previsionLower.includes('isapre')) return '62166e16-1766-42fe-b02a-cfb8b3082a14';
+    if (previsionLower.includes('particular')) return 'c381abd7-3ba9-4623-928a-afa2dcb43dcb';
+    return 'c381abd7-3ba9-4623-928a-afa2dcb43dcb'; // Default to particular
+  }
+
+  function formatDate(dateStr: string): string {
+    if (!dateStr) return new Date().toISOString().split('T')[0];
+    
+    // Handle Oracle date format DD/MM/YYYY or YYYY-MM-DD
+    if (dateStr.includes('/')) {
+      const [day, month, year] = dateStr.split('/');
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    return dateStr.split('T')[0]; // Remove time part if exists
+  }
+
+  function mapParticipacionStatus(status: string): string {
+    const statusLower = status.toLowerCase();
+    if (statusLower.includes('liquidado') || statusLower.includes('pagado')) return 'processed';
+    if (statusLower.includes('anulado') || statusLower.includes('cancelado')) return 'cancelled';
+    return 'pending';
+  }
+
   return httpServer;
 }
