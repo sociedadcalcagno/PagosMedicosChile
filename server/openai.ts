@@ -39,10 +39,30 @@ Responde de manera profesional, clara y precisa. Si no tienes información espec
 
 IMPORTANTE: Debes responder siempre en formato JSON con la estructura: {"message": "tu respuesta aquí"}`;
 
-  async processMessage(message: string, conversationHistory: AIMessage[] = []): Promise<AIResponse> {
+  async processMessage(message: string, conversationHistory: AIMessage[] = [], user?: any, userDoctor?: any): Promise<AIResponse> {
     try {
+      // Build context message with user info
+      let contextMessage = this.systemPrompt;
+      if (user) {
+        contextMessage += `\n\nUsuario actual conectado:
+- Email: ${user.email || 'No disponible'}
+- Nombre: ${user.firstName || ''} ${user.lastName || ''}
+- ID: ${user.id}`;
+
+        if (userDoctor) {
+          contextMessage += `\n\nPerfil de médico asociado:
+- RUT: ${userDoctor.rut}
+- Nombre: ${userDoctor.name}
+- Especialidad: ${userDoctor.specialtyName || 'No especificada'}
+- Tipo de sociedad: ${userDoctor.societyType === 'individual' ? 'Individual' : 'Sociedad médica'}
+- Sociedad: ${userDoctor.societyName || 'N/A'}`;
+        }
+
+        contextMessage += `\n\nPersonaliza tus respuestas según el usuario y referénciate a él por su nombre cuando sea apropiado. Si tiene perfil de médico, considera esto en tus respuestas.`;
+      }
+
       const messages: AIMessage[] = [
-        { role: 'system', content: this.systemPrompt },
+        { role: 'system', content: contextMessage },
         ...conversationHistory.slice(-10), // Keep last 10 messages for context
         { role: 'user', content: message }
       ];

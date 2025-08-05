@@ -66,7 +66,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Agent routes
-  app.post('/api/ai/chat', isAuthenticated, async (req, res) => {
+  app.post('/api/ai/chat', isAuthenticated, async (req: any, res) => {
     try {
       const { message, conversationHistory } = req.body;
       
@@ -74,7 +74,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Message is required" });
       }
 
-      const response = await honorariosAgent.processMessage(message, conversationHistory);
+      // Get user information and associated doctor profile
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const userDoctor = await storage.getUserDoctor(userId);
+
+      const response = await honorariosAgent.processMessage(message, conversationHistory, user, userDoctor);
       res.json(response);
     } catch (error) {
       console.error("Error in AI chat:", error);
