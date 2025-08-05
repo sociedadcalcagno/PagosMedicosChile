@@ -57,6 +57,9 @@ const ruleFormSchema = z.object({
   participationType: z.enum(["individual", "society", "mixed"]),
   specialtyId: z.string().min(1, "Especialidad es requerida"),
   serviceId: z.string().optional(),
+  doctorId: z.string().optional(),
+  societyRut: z.string().optional(),
+  societyName: z.string().optional(),
   paymentType: z.enum(["percentage", "fixed_amount"]),
   paymentValue: z.string().min(1, "Valor de pago es requerido"),
   scheduleType: z.string().optional(),
@@ -88,6 +91,10 @@ export default function Rules() {
     queryKey: ["/api/services"],
   });
 
+  const { data: doctors } = useQuery({
+    queryKey: ["/api/doctors"],
+  });
+
   const form = useForm<RuleFormData>({
     resolver: zodResolver(ruleFormSchema),
     defaultValues: {
@@ -100,6 +107,9 @@ export default function Rules() {
       participationType: "individual",
       specialtyId: "",
       serviceId: "",
+      doctorId: "",
+      societyRut: "",
+      societyName: "",
       paymentType: "percentage",
       paymentValue: "",
       scheduleType: "",
