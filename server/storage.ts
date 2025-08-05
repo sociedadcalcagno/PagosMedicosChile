@@ -603,16 +603,54 @@ export class DatabaseStorage implements IStorage {
     const calculations: PaymentCalculation[] = [];
 
     for (const attention of attentions) {
+      console.log('\n=== Processing Attention ===');
+      console.log('Attention:', {
+        id: attention.id,
+        doctorId: attention.doctorId,
+        serviceId: attention.serviceId,
+        participatedAmount: attention.participatedAmount,
+        attentionDate: attention.attentionDate,
+        recordType: attention.recordType
+      });
+
       // Find the best matching rule for this attention
       const applicableRule = rules.find(rule => {
+        console.log('Checking rule:', {
+          id: rule.id,
+          name: rule.name,
+          doctorId: rule.doctorId,
+          serviceId: rule.serviceId,
+          participationType: rule.participationType
+        });
+
         // Rule matching logic
-        if (rule.doctorId && rule.doctorId !== attention.doctorId) return false;
-        if (rule.serviceId && rule.serviceId !== attention.serviceId) return false;
-        // Add more rule matching logic as needed
+        if (rule.doctorId && rule.doctorId !== attention.doctorId) {
+          console.log('❌ Rule rejected: Doctor ID mismatch');
+          return false;
+        }
+        if (rule.serviceId && rule.serviceId !== attention.serviceId) {
+          console.log('❌ Rule rejected: Service ID mismatch');
+          return false;
+        }
+        
+        // Check participation type if specified
+        if (rule.participationType) {
+          const attentionType = attention.recordType === 'participacion' ? 'individual' : 'society';
+          if (rule.participationType !== attentionType && rule.participationType !== 'mixed') {
+            console.log('❌ Rule rejected: Participation type mismatch', {
+              ruleType: rule.participationType,
+              attentionType
+            });
+            return false;
+          }
+        }
+
+        console.log('✅ Rule matches!');
         return true;
       });
 
       if (applicableRule) {
+        console.log('🎯 Using rule:', applicableRule.name);
         const baseAmount = parseFloat(attention.participatedAmount?.toString() || '0');
         let calculatedAmount = 0;
 
@@ -640,8 +678,14 @@ export class DatabaseStorage implements IStorage {
 
         // Update attention status
         await this.updateMedicalAttention(attention.id, { status: 'calculated' });
+        console.log('💰 Payment calculated:', calculatedAmount);
+      } else {
+        console.log('❌ No applicable rule found for this attention');
       }
     }
+    
+    console.log('\n=== Final Results ===');
+    console.log('Total calculations created:', calculations.length);
 
     return calculations;
   }
