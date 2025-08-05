@@ -31,6 +31,7 @@ The application is designed to handle complex medical payment scenarios includin
 - **LATEST**: Refined permission system: Admins get full access, Supervisors manage maintenance modules but not users, Doctors get personal dashboard only
 - **LATEST**: Fixed society medical selector in calculation rules - replaced manual RUT/name inputs with dropdown list of registered medical societies
 - **LATEST**: Corrected main content layout centering issue - content was shifted right, now properly centered in available space
+- **LATEST**: Fixed responsive layout spacing issues - reduced sidebar width to 55 units (220px) and adjusted main content margin to eliminate excessive white space between menu and content
 
 ## User Preferences
 
