@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupMockAuth, isMockAuthenticated } from "./mockAuth";
 import { honorariosAgent, type AIMessage } from "./openai";
 import {
   insertDoctorSchema,
@@ -17,9 +18,30 @@ import {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
+  
+  // Setup mock auth for development (multiple user testing)
+  setupMockAuth(app);
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Auth routes - support both real and mock auth
+  app.get('/api/auth/user', async (req: any, res) => {
+    // Try mock auth first (for development)
+    const mockUserId = (req.session as any)?.mockUser;
+    if (mockUserId) {
+      try {
+        const user = await storage.getUser(mockUserId);
+        if (user) {
+          return res.json(user);
+        }
+      } catch (error) {
+        console.error("Error fetching mock user:", error);
+      }
+    }
+
+    // Fall back to real auth
+    if (!req.isAuthenticated() || !req.user?.claims?.sub) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
