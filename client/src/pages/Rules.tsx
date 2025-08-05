@@ -385,7 +385,7 @@ export default function Rules() {
 
   // Calculate stats
   const calculateStats = () => {
-    if (!rules) return { active: 0, pending: 0, expired: 0, total: 0 };
+    if (!rules || !Array.isArray(rules)) return { active: 0, pending: 0, expired: 0, total: 0 };
     
     const today = new Date();
     const active = rules.filter((rule: any) => {
@@ -603,7 +603,7 @@ export default function Rules() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {specialties?.map((specialty: any) => (
+                                  {(specialties || []).map((specialty: any) => (
                                     <SelectItem key={specialty.id} value={specialty.id}>
                                       {specialty.name}
                                     </SelectItem>
@@ -634,7 +634,7 @@ export default function Rules() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {doctors?.map((doctor: any) => (
+                                  {(doctors || []).map((doctor: any) => (
                                     <SelectItem key={doctor.id} value={doctor.id}>
                                       {doctor.rut} - {doctor.name}
                                     </SelectItem>
@@ -695,7 +695,7 @@ export default function Rules() {
                               </FormControl>
                               <SelectContent>
                                 <SelectItem value="all">Todas las prestaciones</SelectItem>
-                                {services?.map((service: any) => (
+                                {(services || []).map((service: any) => (
                                   <SelectItem key={service.id} value={service.id}>
                                     {service.name}
                                   </SelectItem>
@@ -907,7 +907,7 @@ export default function Rules() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
-                  {specialties?.map((specialty: any) => (
+                  {(specialties || []).map((specialty: any) => (
                     <SelectItem key={specialty.id} value={specialty.id}>
                       {specialty.name}
                     </SelectItem>

@@ -263,6 +263,10 @@ export const insertCalculationRuleSchema = createInsertSchema(calculationRules).
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  paymentValue: z.union([z.string(), z.number()]).transform((val) => 
+    typeof val === 'string' ? parseFloat(val) : val
+  ),
 });
 
 export const insertMedicalSocietySchema = createInsertSchema(medicalSocieties).omit({
