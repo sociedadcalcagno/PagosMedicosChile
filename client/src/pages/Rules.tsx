@@ -129,7 +129,7 @@ export default function Rules() {
         paymentValue: parseFloat(data.paymentValue),
         applicableDays: data.applicableDays || [],
       };
-      const response = await apiRequest("POST", "/api/calculation-rules", submitData);
+      const response = await apiRequest("/api/calculation-rules", "POST", submitData);
       return response.json();
     },
     onSuccess: () => {
@@ -169,7 +169,7 @@ export default function Rules() {
         paymentValue: parseFloat(data.paymentValue),
         applicableDays: data.applicableDays || [],
       };
-      const response = await apiRequest("PUT", `/api/calculation-rules/${id}`, submitData);
+      const response = await apiRequest(`/api/calculation-rules/${id}`, "PUT", submitData);
       return response.json();
     },
     onSuccess: () => {
@@ -205,7 +205,7 @@ export default function Rules() {
 
   const deleteRuleMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/calculation-rules/${id}`);
+      await apiRequest(`/api/calculation-rules/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"] });
@@ -246,7 +246,7 @@ export default function Rules() {
       delete duplicatedRule.createdAt;
       delete duplicatedRule.updatedAt;
       
-      const response = await apiRequest("POST", "/api/calculation-rules", duplicatedRule);
+      const response = await apiRequest("/api/calculation-rules", "POST", duplicatedRule);
       return response.json();
     },
     onSuccess: () => {

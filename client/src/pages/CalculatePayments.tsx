@@ -101,7 +101,6 @@ export default function CalculatePayments() {
   // Mutations
   const calculateMutation = useMutation({
     mutationFn: async (data: CalculationForm) => {
-      console.log('Sending calculation data:', data);
       const response = await apiRequest('/api/calculate-payments', 'POST', data);
       return await response.json();
     },
@@ -159,7 +158,7 @@ export default function CalculatePayments() {
       });
       return;
     }
-    console.log('Calculating with filters:', selectedFilters);
+
     calculateMutation.mutate(selectedFilters);
   };
 

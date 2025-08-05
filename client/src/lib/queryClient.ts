@@ -12,7 +12,7 @@ export async function apiRequest(
   method: string = 'GET',
   data?: unknown | undefined,
 ): Promise<Response> {
-  console.log('API Request:', { url, method, data });
+
   
   const res = await fetch(url, {
     method,

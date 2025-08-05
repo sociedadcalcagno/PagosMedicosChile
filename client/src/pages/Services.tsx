@@ -92,7 +92,7 @@ export default function Services() {
         ...data,
         baseValue: data.baseValue ? parseFloat(data.baseValue) : null,
       };
-      const response = await apiRequest("POST", "/api/services", submitData);
+      const response = await apiRequest("/api/services", "POST", submitData);
       return response.json();
     },
     onSuccess: () => {
@@ -130,7 +130,7 @@ export default function Services() {
         ...data,
         baseValue: data.baseValue ? parseFloat(data.baseValue) : null,
       };
-      const response = await apiRequest("PUT", `/api/services/${id}`, submitData);
+      const response = await apiRequest(`/api/services/${id}`, "PUT", submitData);
       return response.json();
     },
     onSuccess: () => {
@@ -165,7 +165,7 @@ export default function Services() {
 
   const deleteServiceMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/services/${id}`);
+      await apiRequest(`/api/services/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/services"] });

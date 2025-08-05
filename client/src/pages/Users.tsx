@@ -78,7 +78,7 @@ export default function Users() {
 
   const createUserMutation = useMutation({
     mutationFn: async (data: UserFormData) => {
-      const response = await apiRequest("POST", "/api/users", data);
+      const response = await apiRequest("/api/users", "POST", data);
       return response.json();
     },
     onSuccess: () => {
@@ -101,7 +101,7 @@ export default function Users() {
 
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UserFormData }) => {
-      const response = await apiRequest("PUT", `/api/users/${id}`, data);
+      const response = await apiRequest(`/api/users/${id}`, "PUT", data);
       return response.json();
     },
     onSuccess: () => {
@@ -125,7 +125,7 @@ export default function Users() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/users/${id}`);
+      await apiRequest(`/api/users/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });

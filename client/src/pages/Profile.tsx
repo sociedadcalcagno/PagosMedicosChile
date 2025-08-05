@@ -44,7 +44,7 @@ export default function Profile() {
 
   const linkDoctorMutation = useMutation({
     mutationFn: async (doctorId: string) => {
-      const response = await apiRequest("POST", "/api/link-doctor", { doctorId });
+      const response = await apiRequest("/api/link-doctor", "POST", { doctorId });
       return response.json();
     },
     onSuccess: () => {
@@ -78,7 +78,7 @@ export default function Profile() {
 
   const unlinkDoctorMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/unlink-doctor", {});
+      const response = await apiRequest("/api/unlink-doctor", "POST", {});
       return response.json();
     },
     onSuccess: () => {

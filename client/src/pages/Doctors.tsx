@@ -108,7 +108,7 @@ export default function Doctors() {
 
   const createDoctorMutation = useMutation({
     mutationFn: async (data: DoctorFormData) => {
-      const response = await apiRequest("POST", "/api/doctors", data);
+      const response = await apiRequest("/api/doctors", "POST", data);
       return response.json();
     },
     onSuccess: () => {
@@ -142,7 +142,7 @@ export default function Doctors() {
 
   const updateDoctorMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: DoctorFormData }) => {
-      const response = await apiRequest("PUT", `/api/doctors/${id}`, data);
+      const response = await apiRequest(`/api/doctors/${id}`, "PUT", data);
       return response.json();
     },
     onSuccess: () => {
@@ -177,7 +177,7 @@ export default function Doctors() {
 
   const deleteDoctorMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/doctors/${id}`);
+      await apiRequest(`/api/doctors/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/doctors"] });
