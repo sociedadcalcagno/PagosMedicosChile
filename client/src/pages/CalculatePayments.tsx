@@ -101,6 +101,7 @@ export default function CalculatePayments() {
   // Mutations
   const calculateMutation = useMutation({
     mutationFn: async (data: CalculationForm) => {
+      console.log('Sending calculation data:', data);
       const response = await apiRequest('/api/calculate-payments', 'POST', data);
       return await response.json();
     },
@@ -150,7 +151,15 @@ export default function CalculatePayments() {
   }, [attentions, selectedFilters, doctors]);
 
   const handleCalculate = () => {
-    if (!selectedFilters) return;
+    if (!selectedFilters) {
+      toast({
+        title: "Error",
+        description: "Primero debe hacer una vista previa para seleccionar los filtros",
+        variant: "destructive",
+      });
+      return;
+    }
+    console.log('Calculating with filters:', selectedFilters);
     calculateMutation.mutate(selectedFilters);
   };
 
