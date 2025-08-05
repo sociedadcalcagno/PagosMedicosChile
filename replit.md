@@ -44,6 +44,9 @@ The application is designed to handle complex medical payment scenarios includin
 - **LATEST**: Created comprehensive CsvUploader component with progress tracking, error handling, and multi-source import capabilities
 - **LATEST**: Tested CSV import functionality - successfully imported 2 new attentions from CSV data (88776655-4 Roberto Silva, 77665544-3 Elena Torres)
 - **LATEST**: Built server endpoints for /api/import/csv-attentions, /api/import/api-attentions, and /api/import/his-attentions with proper data validation
+- **LATEST**: Implemented differentiated import types for Chilean medical system: "Registros Participaciones" (TMP_REGISTROS_PARTICIPACION) and "Registros HMQ" (TMP_REGISTROS_HMQ)
+- **LATEST**: Created specific endpoints for each record type: csv-participacion/csv-hmq, api-participacion/api-hmq, his-participacion/his-hmq with proper field mapping
+- **LATEST**: Added radio button selector in import interface with user-friendly labels: "Registros Participaciones" and "Registros HMQ" instead of technical database names
 
 ## User Preferences
 

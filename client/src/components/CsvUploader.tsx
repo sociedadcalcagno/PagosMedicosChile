@@ -100,7 +100,7 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
             onDataImported(result.data);
             toast({
               title: "Importación exitosa",
-              description: `Se importaron ${result.imported} de ${result.total} registros de ${recordType}`,
+              description: `Se importaron ${result.imported} de ${result.total} ${recordType === 'participacion' ? 'Registros Participaciones' : 'Registros HMQ'}`,
             });
           }
         } catch (error) {
@@ -278,7 +278,7 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
                   onChange={(e) => setRecordType(e.target.value as 'participacion' | 'hmq')}
                   className="w-4 h-4"
                 />
-                <span className="text-sm font-medium">Registros de Participación</span>
+                <span className="text-sm font-medium">Registros Participaciones</span>
               </label>
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
@@ -289,7 +289,7 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
                   onChange={(e) => setRecordType(e.target.value as 'participacion' | 'hmq')}
                   className="w-4 h-4"
                 />
-                <span className="text-sm font-medium">Actividades HMQ</span>
+                <span className="text-sm font-medium">Registros HMQ</span>
               </label>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
@@ -359,8 +359,8 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
                 </CardTitle>
                 <CardDescription>
                   {recordType === 'participacion' 
-                    ? 'Conecta con API externa para importar registros de participación médica con datos de porcentajes y liquidaciones'
-                    : 'Conecta con API externa para importar actividades HMQ con datos de facturación y comisiones'}
+                    ? 'Conecta con API externa para importar Registros Participaciones con datos de porcentajes y liquidaciones'
+                    : 'Conecta con API externa para importar Registros HMQ con datos de facturación y comisiones'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -431,8 +431,8 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
                 </CardTitle>
                 <CardDescription>
                   {recordType === 'participacion' 
-                    ? 'Conecta con sistemas hospitalarios para importar registros de participación médica desde MINSAL, FONASA o sistemas privados'
-                    : 'Conecta con sistemas hospitalarios para importar actividades HMQ de liquidación desde MINSAL, FONASA o sistemas privados'}
+                    ? 'Conecta con sistemas hospitalarios para importar Registros Participaciones desde MINSAL, FONASA o sistemas privados'
+                    : 'Conecta con sistemas hospitalarios para importar Registros HMQ de liquidación desde MINSAL, FONASA o sistemas privados'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
