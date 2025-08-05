@@ -316,8 +316,8 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
                 </CardTitle>
                 <CardDescription>
                   {recordType === 'participacion' 
-                    ? 'Formato TMP_REGISTROS_PARTICIPACION: RUT Paciente, Nombre, Fecha Atención, Código Prestación, Nombre Prestación, Previsión, Valor Participado, Valor Líquido, % Participación, Horario, Especialidad ID, Estado'
-                    : 'Formato TMP_REGISTROS_HMQ: RUT Paciente, Nombre, Fecha Consumo, Código Prestación, Valor Bruto, Valor Líquido, Comisión, Estado, Banco, Cuenta'}
+                    ? 'Formato TMP_REGISTROS_PARTICIPACION: RUT Paciente, Nombre, Fecha Atención, Código Prestación, Nombre Prestación, Previsión, Valor Participado, Valor Líquido, % Participación, Horario, Especialidad ID, Estado, Médico ID, Sociedad ID, Nombre Sociedad, RUT Sociedad, Código Interno Médico'
+                    : 'Formato TMP_REGISTROS_HMQ: RUT Paciente, Nombre, Fecha Consumo, Código Prestación, Nombre Prestación, Previsión, Valor Bruto, Valor Líquido, Comisión, Valor Recaudado, Especialidad ID, Estado, Banco Pago, Cuenta Pago, Médico ID, Sociedad ID, Nombre Sociedad, RUT Sociedad, Código Interno Médico, Participante'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

@@ -593,7 +593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'RPAR_RUT_PACIENTE', 'RPAR_NOMBRE_PACIENTE', 'RPAR_FATENCION', 
         'RPAR_CODIGO_PRESTACION', 'RPAR_NOMBRE_PRESTACION', 'RPAR_PREVISION_PACIENTE',
         'RPAR_VAL_PARTICIPADO', 'RPAR_VAL_LIQUIDO', 'RPAR_PORCENTAJE_PARTICIPACION',
-        'HORARIO', 'ESP_ID', 'RPAR_ESTADO'
+        'HORARIO', 'ESP_ID', 'RPAR_ESTADO', 'MED_ID', 'SOC_ID', 'NOMBRE_SOCIEDAD', 'RUT_SOCIEDAD', 'CODIGO_INTERNO_MEDICO'
       ];
 
       for (let i = 1; i < lines.length; i++) {
@@ -604,7 +604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const attention = {
             patientRut: values[0] || '', // RPAR_RUT_PACIENTE
             patientName: values[1] || '', // RPAR_NOMBRE_PACIENTE
-            doctorId: `doc_${values[10] || 'unknown'}`, // ESP_ID mapped to doctor
+            doctorId: values[12] || `doc_${values[10] || 'unknown'}`, // MED_ID or ESP_ID as fallback
             serviceId: values[3] || '', // RPAR_CODIGO_PRESTACION
             providerTypeId: getProviderTypeFromPrevision(values[5] || ''), // RPAR_PREVISION_PACIENTE
             attentionDate: formatDate(values[2] || ''), // RPAR_FATENCION
@@ -618,6 +618,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             participationPercentage: values[8] || '0', // RPAR_PORCENTAJE_PARTICIPACION
             serviceName: values[4] || '', // RPAR_NOMBRE_PRESTACION
             providerName: values[5] || '', // RPAR_PREVISION_PACIENTE
+            // Medical society and doctor information
+            medicalSocietyId: values[13] || '', // SOC_ID
+            medicalSocietyName: values[14] || '', // NOMBRE_SOCIEDAD
+            medicalSocietyRut: values[15] || '', // RUT_SOCIEDAD
+            doctorInternalCode: values[16] || '', // CODIGO_INTERNO_MEDICO
+            specialtyId: values[10] || '', // ESP_ID
           };
 
           if (!attention.patientRut || !attention.patientName) {
@@ -686,7 +692,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'RHMQ_RUT_PACIENTE', 'RHMQ_NOMBRE_PACIENTE', 'RHMQ_FCONSUMO', 
         'RHMQ_CODIGO_PRESTACION', 'RHMQ_NOMBRE_PRESTACION', 'RHMQ_PREVISION_PACIENTE',
         'RHMQ_VAL_BRUTO', 'RHMQ_VAL_LIQUIDO', 'RHMQ_COMISION', 'RHMQ_VAL_RECAUDADO',
-        'ESP_ID', 'RHMQ_ESTADO', 'RHMQ_BANCO_PARA_PAGO', 'RHMQ_CUENTA_PARA_PAGO'
+        'ESP_ID', 'RHMQ_ESTADO', 'RHMQ_BANCO_PARA_PAGO', 'RHMQ_CUENTA_PARA_PAGO',
+        'MED_ID', 'SOC_ID', 'NOMBRE_SOCIEDAD', 'RUT_SOCIEDAD', 'CODIGO_INTERNO_MEDICO', 'RHMQ_PARTICIPANTE'
       ];
 
       for (let i = 1; i < lines.length; i++) {
@@ -697,7 +704,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const attention = {
             patientRut: values[0] || '', // RHMQ_RUT_PACIENTE
             patientName: values[1] || '', // RHMQ_NOMBRE_PACIENTE
-            doctorId: `doc_${values[10] || 'unknown'}`, // ESP_ID mapped to doctor
+            doctorId: values[14] || `doc_${values[10] || 'unknown'}`, // MED_ID or ESP_ID as fallback
             serviceId: values[3] || '', // RHMQ_CODIGO_PRESTACION
             providerTypeId: getProviderTypeFromPrevision(values[5] || ''), // RHMQ_PREVISION_PACIENTE
             attentionDate: formatDate(values[2] || ''), // RHMQ_FCONSUMO
@@ -713,6 +720,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             providerName: values[5] || '', // RHMQ_PREVISION_PACIENTE
             bankForPayment: values[12] || '', // RHMQ_BANCO_PARA_PAGO
             accountForPayment: values[13] || '', // RHMQ_CUENTA_PARA_PAGO
+            // Medical society and doctor information
+            medicalSocietyId: values[15] || '', // SOC_ID
+            medicalSocietyName: values[16] || '', // NOMBRE_SOCIEDAD
+            medicalSocietyRut: values[17] || '', // RUT_SOCIEDAD
+            doctorInternalCode: values[18] || '', // CODIGO_INTERNO_MEDICO
+            participantName: values[19] || '', // RHMQ_PARTICIPANTE
+            specialtyId: values[10] || '', // ESP_ID
           };
 
           if (!attention.patientRut || !attention.patientName) {
