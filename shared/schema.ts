@@ -257,6 +257,17 @@ export const medicalAttentions = pgTable("medical_attentions", {
   // Status
   status: varchar("status").notNull().default('pending'), // 'pending', 'calculated', 'paid'
   
+  // Import-related fields
+  recordType: varchar("record_type").default('participacion'), // 'participacion', 'hmq'
+  participationPercentage: varchar("participation_percentage"),
+  serviceName: varchar("service_name"),
+  providerName: varchar("provider_name"),
+  medicalSocietyId: varchar("medical_society_id"),
+  medicalSocietyName: varchar("medical_society_name"),
+  medicalSocietyRut: varchar("medical_society_rut"),
+  doctorInternalCode: varchar("doctor_internal_code"),
+  specialtyId: varchar("specialty_id"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

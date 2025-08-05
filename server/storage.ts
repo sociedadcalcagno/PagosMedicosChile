@@ -38,7 +38,7 @@ import {
   type Payment,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, ilike, desc, asc, gte, lte } from "drizzle-orm";
+import { eq, and, or, ilike, desc, asc, gte, lte, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -544,11 +544,12 @@ export class DatabaseStorage implements IStorage {
     dateFrom?: string;
     dateTo?: string;
     status?: string;
+    recordTypes?: string[];
   }): Promise<MedicalAttention[]> {
     let query = db.select().from(medicalAttentions);
     const conditions = [];
 
-    if (filters?.doctorId) {
+    if (filters?.doctorId && filters.doctorId !== 'all') {
       conditions.push(eq(medicalAttentions.doctorId, filters.doctorId));
     }
     if (filters?.dateFrom) {
@@ -559,6 +560,9 @@ export class DatabaseStorage implements IStorage {
     }
     if (filters?.status) {
       conditions.push(eq(medicalAttentions.status, filters.status));
+    }
+    if (filters?.recordTypes && filters.recordTypes.length > 0) {
+      conditions.push(inArray(medicalAttentions.recordType, filters.recordTypes));
     }
 
     if (conditions.length > 0) {
@@ -583,6 +587,65 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Payment calculations
+  async calculatePaymentsWithFilters(filters: {
+    doctorId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    status?: string;
+    recordTypes?: string[];
+  }): Promise<PaymentCalculation[]> {
+    // Get attentions based on flexible filters
+    const attentions = await this.getMedicalAttentions(filters);
+    
+    // Get applicable calculation rules
+    const rules = await this.getCalculationRules({ isActive: true });
+    
+    const calculations: PaymentCalculation[] = [];
+
+    for (const attention of attentions) {
+      // Find the best matching rule for this attention
+      const applicableRule = rules.find(rule => {
+        // Rule matching logic
+        if (rule.doctorId && rule.doctorId !== attention.doctorId) return false;
+        if (rule.serviceId && rule.serviceId !== attention.serviceId) return false;
+        // Add more rule matching logic as needed
+        return true;
+      });
+
+      if (applicableRule) {
+        const baseAmount = parseFloat(attention.participatedAmount.toString());
+        let calculatedAmount = 0;
+
+        if (applicableRule.paymentType === 'percentage') {
+          calculatedAmount = baseAmount * (parseFloat(applicableRule.paymentValue.toString()) / 100);
+        } else if (applicableRule.paymentType === 'fixed_amount') {
+          calculatedAmount = parseFloat(applicableRule.paymentValue.toString());
+        }
+
+        const calculation = {
+          attentionId: attention.id,
+          calculationRuleId: applicableRule.id,
+          doctorId: attention.doctorId,
+          baseAmount: baseAmount.toString(),
+          ruleType: applicableRule.paymentType,
+          ruleValue: applicableRule.paymentValue.toString(),
+          calculatedAmount: calculatedAmount.toString(),
+          periodMonth: new Date(attention.attentionDate).getMonth() + 1,
+          periodYear: new Date(attention.attentionDate).getFullYear(),
+          status: 'calculated' as const
+        };
+
+        const [newCalculation] = await db.insert(paymentCalculations).values(calculation).returning();
+        calculations.push(newCalculation);
+
+        // Update attention status
+        await this.updateMedicalAttention(attention.id, { status: 'calculated' });
+      }
+    }
+
+    return calculations;
+  }
+
   async calculatePayments(doctorId: string, month: number, year: number): Promise<PaymentCalculation[]> {
     // Get attentions for the doctor in the specified period
     const attentions = await this.getMedicalAttentions({

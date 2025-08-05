@@ -426,13 +426,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Medical Attentions endpoints
   app.get('/api/medical-attentions', authMiddleware, async (req, res) => {
     try {
-      const { doctorId, dateFrom, dateTo, status } = req.query;
-      const attentions = await storage.getMedicalAttentions({
-        doctorId: doctorId as string,
-        dateFrom: dateFrom as string,
-        dateTo: dateTo as string,
-        status: status as string,
-      });
+      const { doctorId, dateFrom, dateTo, status, participationTypes } = req.query;
+      const filters: any = {};
+      
+      if (doctorId) filters.doctorId = doctorId as string;
+      if (dateFrom) filters.dateFrom = dateFrom as string;
+      if (dateTo) filters.dateTo = dateTo as string;
+      if (status) filters.status = status as string;
+      if (participationTypes) {
+        filters.recordTypes = (participationTypes as string).split(',');
+      }
+      
+      const attentions = await storage.getMedicalAttentions(filters);
       res.json(attentions);
     } catch (error) {
       console.error('Medical attentions fetch error:', error);
