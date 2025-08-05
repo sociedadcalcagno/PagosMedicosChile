@@ -213,7 +213,7 @@ export default function Layout({ children }: LayoutProps) {
 
       <div className="flex pt-16 lg:pt-20 min-h-screen">
         {/* Sidebar */}
-        <aside className="w-60 lg:w-64 bg-white shadow-sm border-r border-gray-200 fixed left-0 top-16 lg:top-20 bottom-0 overflow-y-auto lg:block hidden">
+        <aside className="w-60 lg:w-64 bg-white shadow-sm border-r border-gray-200 fixed left-0 top-16 lg:top-20 bottom-0 overflow-y-auto lg:block hidden z-40">
           <nav className="p-4">
             <div className="space-y-2">
               {/* Gestión de Maestros */}
@@ -397,8 +397,8 @@ export default function Layout({ children }: LayoutProps) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 lg:ml-60 xl:ml-64 ml-0">
-          <div className="w-full px-3 py-3 lg:px-4 lg:py-4">{children}</div>
+        <main className="flex-1 lg:ml-60 xl:ml-64 ml-0 min-h-0">
+          <div className="h-full px-3 py-3 lg:px-4 lg:py-4 max-w-full">{children}</div>
         </main>
 
         {/* AI Chat Component */}
