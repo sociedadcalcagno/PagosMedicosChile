@@ -111,7 +111,7 @@ export default function Rules() {
       validTo: "",
       participationType: "individual",
       specialtyId: "",
-      serviceId: "",
+      serviceId: "all",
       doctorId: "",
       societyRut: "",
       societyName: "",
@@ -130,7 +130,7 @@ export default function Rules() {
         applicableDays: data.applicableDays || [],
         // Convert empty strings to null for foreign key fields
         specialtyId: data.specialtyId || null,
-        serviceId: data.serviceId || null,
+        serviceId: data.serviceId === 'all' ? null : (data.serviceId || null),
         doctorId: data.doctorId || null,
         societyId: data.societyId || null,
         medicalCenterId: data.medicalCenterId || null,
@@ -182,7 +182,7 @@ export default function Rules() {
         applicableDays: data.applicableDays || [],
         // Convert empty strings to null for foreign key fields
         specialtyId: data.specialtyId || null,
-        serviceId: data.serviceId || null,
+        serviceId: data.serviceId === 'all' ? null : (data.serviceId || null),
         doctorId: data.doctorId || null,
         societyId: data.societyId || null,
         medicalCenterId: data.medicalCenterId || null,
@@ -329,7 +329,7 @@ export default function Rules() {
       validTo: rule.validTo || "",
       participationType: rule.participationType || "individual",
       specialtyId: rule.specialtyId || "",
-      serviceId: rule.serviceId || "",
+      serviceId: rule.serviceId || "all",
       societyId: rule.societyId || "",
       societyRut: rule.societyRut || "",
       societyName: rule.societyName || "",
@@ -740,7 +740,7 @@ export default function Rules() {
                             <FormLabel>Tipo de Prestación</FormLabel>
                             <Select
                               onValueChange={field.onChange}
-                              defaultValue={field.value}
+                              defaultValue={field.value || 'all'}
                             >
                               <FormControl>
                                 <SelectTrigger>
