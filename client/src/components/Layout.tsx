@@ -397,7 +397,7 @@ export default function Layout({ children }: LayoutProps) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 min-h-0" style={{ marginLeft: window.innerWidth >= 1024 ? '230px' : '0' }}>
+        <main className="flex-1 min-h-0 main-content" style={{ marginLeft: '230px' }}>
           <div className="h-full px-4 py-4 lg:px-6 lg:py-6">{children}</div>
         </main>
 
