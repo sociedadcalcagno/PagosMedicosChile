@@ -613,7 +613,7 @@ export class DatabaseStorage implements IStorage {
       });
 
       if (applicableRule) {
-        const baseAmount = parseFloat(attention.participatedAmount.toString());
+        const baseAmount = parseFloat(attention.participatedAmount?.toString() || '0');
         let calculatedAmount = 0;
 
         if (applicableRule.paymentType === 'percentage') {
@@ -671,7 +671,7 @@ export class DatabaseStorage implements IStorage {
       });
 
       if (applicableRule) {
-        const baseAmount = parseFloat(attention.participatedAmount.toString());
+        const baseAmount = parseFloat(attention.participatedAmount?.toString() || '0');
         let calculatedAmount = 0;
 
         if (applicableRule.paymentType === 'percentage') {

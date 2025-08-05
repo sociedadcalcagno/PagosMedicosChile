@@ -464,8 +464,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/calculate-payments', authMiddleware, async (req, res) => {
     try {
-      const { doctorId, month, year } = req.body;
-      const calculations = await storage.calculatePayments(doctorId, month, year);
+      const { doctorId, dateFrom, dateTo, includeParticipaciones, includeHmq } = req.body;
+      
+      // Build filters based on request
+      const filters: any = {
+        dateFrom,
+        dateTo,
+        status: 'pending'
+      };
+      
+      if (doctorId && doctorId !== 'all') {
+        filters.doctorId = doctorId;
+      }
+      
+      // Add record type filters
+      const recordTypes = [];
+      if (includeParticipaciones) recordTypes.push('participacion');
+      if (includeHmq) recordTypes.push('hmq');
+      if (recordTypes.length > 0) {
+        filters.recordTypes = recordTypes;
+      }
+      
+      const calculations = await storage.calculatePaymentsWithFilters(filters);
       res.json(calculations);
     } catch (error) {
       console.error('Payment calculation error:', error);
