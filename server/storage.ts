@@ -181,10 +181,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createDoctor(doctor: InsertDoctor): Promise<Doctor> {
-    // Limpiar societyRut si societyType es 'individual'
+    // Limpiar societyRut y societyName si societyType es 'individual'
     const cleanedDoctor = { ...doctor };
     if (cleanedDoctor.societyType === 'individual') {
       cleanedDoctor.societyRut = null;
+      cleanedDoctor.societyName = null;
+    }
+    // También limpiar si los valores están vacíos
+    if (cleanedDoctor.societyRut === '') {
+      cleanedDoctor.societyRut = null;
+    }
+    if (cleanedDoctor.societyName === '') {
+      cleanedDoctor.societyName = null;
     }
     
     const [newDoctor] = await db.insert(doctors).values(cleanedDoctor).returning();
@@ -192,10 +200,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateDoctor(id: string, doctor: Partial<InsertDoctor>): Promise<Doctor> {
-    // Limpiar societyRut si societyType es 'individual'
+    // Limpiar societyRut y societyName si societyType es 'individual'
     const cleanedDoctor = { ...doctor };
     if (cleanedDoctor.societyType === 'individual') {
       cleanedDoctor.societyRut = null;
+      cleanedDoctor.societyName = null;
+    }
+    // También limpiar si los valores están vacíos
+    if (cleanedDoctor.societyRut === '') {
+      cleanedDoctor.societyRut = null;
+    }
+    if (cleanedDoctor.societyName === '') {
+      cleanedDoctor.societyName = null;
     }
     
     const [updatedDoctor] = await db

@@ -30,11 +30,8 @@ export default function AIChat() {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (message: string) => {
-      return apiRequest("/api/ai/chat", {
-        method: "POST",
-        body: JSON.stringify({ message }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await apiRequest("POST", "/api/ai/chat", { message });
+      return response.json();
     },
     onSuccess: (response) => {
       const assistantMessage: Message = {
