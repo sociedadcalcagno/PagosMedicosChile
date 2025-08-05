@@ -213,7 +213,7 @@ export default function Layout({ children }: LayoutProps) {
 
       <div className="flex pt-16 lg:pt-20 min-h-screen">
         {/* Sidebar */}
-        <aside className="w-56 bg-white shadow-sm border-r border-gray-200 fixed left-0 top-16 lg:top-20 bottom-0 overflow-y-auto lg:block hidden z-40">
+        <aside className="bg-white shadow-sm border-r border-gray-200 fixed left-0 top-16 lg:top-20 bottom-0 overflow-y-auto lg:block hidden z-40" style={{ width: '230px' }}>
           <nav className="p-3">
             <div className="space-y-2">
               {/* Gestión de Maestros */}
@@ -312,9 +312,9 @@ export default function Layout({ children }: LayoutProps) {
         )}
 
         {/* Mobile Sidebar */}
-        <aside className={`lg:hidden fixed left-0 top-16 bottom-0 w-56 bg-white shadow-sm border-r border-gray-200 overflow-y-auto z-40 transform transition-transform duration-300 ${
+        <aside className={`lg:hidden fixed left-0 top-16 bottom-0 bg-white shadow-sm border-r border-gray-200 overflow-y-auto z-40 transform transition-transform duration-300 ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}>
+        }`} style={{ width: '230px' }}>
           <nav className="p-4">
             <div className="space-y-2">
               {/* Same navigation content as desktop */}
@@ -397,7 +397,7 @@ export default function Layout({ children }: LayoutProps) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 lg:ml-56 ml-0 min-h-0">
+        <main className="flex-1 min-h-0" style={{ marginLeft: window.innerWidth >= 1024 ? '230px' : '0' }}>
           <div className="h-full px-4 py-4 lg:px-6 lg:py-6">{children}</div>
         </main>
 
