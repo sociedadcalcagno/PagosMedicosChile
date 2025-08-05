@@ -479,7 +479,12 @@ export default function Rules() {
               </div>
 
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  if (step === 3) {
+                    form.handleSubmit(handleSubmit)(e);
+                  }
+                }} className="space-y-6">
                   {step === 1 && (
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
@@ -854,12 +859,25 @@ export default function Rules() {
                       Cancelar
                     </Button>
                     {step < 3 ? (
-                      <Button type="button" onClick={nextStep}>
+                      <Button 
+                        type="button" 
+                        onClick={async () => {
+                          // Validar campos del paso actual antes de continuar
+                          if (step === 1) {
+                            const isValid = await form.trigger(['code', 'name', 'validFrom', 'validTo']);
+                            if (isValid) nextStep();
+                          } else if (step === 2) {
+                            const isValid = await form.trigger(['participationType', 'specialtyId', 'paymentType', 'paymentValue']);
+                            if (isValid) nextStep();
+                          }
+                        }}
+                      >
                         Siguiente: {step === 1 ? "Criterios" : "Validación"}
                       </Button>
                     ) : (
                       <Button
-                        type="submit"
+                        type="button"
+                        onClick={() => form.handleSubmit(handleSubmit)()}
                         disabled={
                           createRuleMutation.isPending || updateRuleMutation.isPending
                         }
