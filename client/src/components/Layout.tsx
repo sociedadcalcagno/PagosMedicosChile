@@ -283,7 +283,9 @@ export default function Layout({ children }: LayoutProps) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 ml-64 p-6">{children}</main>
+        <main className="flex-1 ml-64">
+          <div className="max-w-full mx-auto p-6">{children}</div>
+        </main>
 
         {/* AI Chat Component */}
         <AIChat />
