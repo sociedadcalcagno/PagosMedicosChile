@@ -989,19 +989,20 @@ export default function Rules() {
               </div>
             </div>
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Especialidad</TableHead>
-                  <TableHead>Regla Base</TableHead>
-                  <TableHead>Vigencia</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-center">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
+            <div className="overflow-x-auto">
+              <Table className="min-w-full">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="whitespace-nowrap">Código</TableHead>
+                    <TableHead className="whitespace-nowrap">Nombre</TableHead>
+                    <TableHead className="whitespace-nowrap">Tipo</TableHead>
+                    <TableHead className="whitespace-nowrap">Especialidad</TableHead>
+                    <TableHead className="whitespace-nowrap">Regla Base</TableHead>
+                    <TableHead className="whitespace-nowrap">Vigencia</TableHead>
+                    <TableHead className="whitespace-nowrap">Estado</TableHead>
+                    <TableHead className="text-center whitespace-nowrap">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
@@ -1106,7 +1107,8 @@ export default function Rules() {
                   })
                 )}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
           </CardContent>
         </Card>
 
