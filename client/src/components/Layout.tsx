@@ -14,6 +14,8 @@ import {
   Bot,
   LogOut,
   User,
+  Stethoscope,
+  CreditCard,
 } from "lucide-react";
 import AIChat from "@/components/AIChat";
 
@@ -64,6 +66,24 @@ export default function Layout({ children }: LayoutProps) {
           label: "Reglas de Cálculo",
           icon: Calculator,
           section: "Gestión de Maestros",
+        },
+        {
+          href: "/atenciones-medicas",
+          label: "Atenciones Médicas",
+          icon: Stethoscope,
+          section: "Pagos",
+        },
+        {
+          href: "/calcular-pagos",
+          label: "Calcular Pagos",
+          icon: Calculator,
+          section: "Pagos",
+        },
+        {
+          href: "/procesar-pagos",
+          label: "Procesar Pagos",
+          icon: CreditCard,
+          section: "Pagos",
         },
         {
           href: "/reportes",

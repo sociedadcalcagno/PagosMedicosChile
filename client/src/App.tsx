@@ -16,6 +16,9 @@ import Rules from "@/pages/Rules.tsx";
 import Reports from "@/pages/Reports.tsx";
 import Profile from "@/pages/Profile";
 import DoctorDashboard from "@/pages/DoctorDashboard";
+import MedicalAttentions from "@/pages/MedicalAttentions";
+import CalculatePayments from "@/pages/CalculatePayments";
+import ProcessPayments from "@/pages/ProcessPayments";
 import type { User } from "@shared/schema";
 
 function Router() {
@@ -49,6 +52,9 @@ function Router() {
         <Route path="/medicos" component={Doctors} />
         <Route path="/prestaciones" component={Services} />
         <Route path="/reglas" component={Rules} />
+        <Route path="/atenciones-medicas" component={MedicalAttentions} />
+        <Route path="/calcular-pagos" component={CalculatePayments} />
+        <Route path="/procesar-pagos" component={ProcessPayments} />
         <Route path="/reportes" component={Reports} />
         <Route path="/perfil" component={Profile} />
         <Route path="/configuracion" component={Home} />

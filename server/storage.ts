@@ -8,6 +8,11 @@ import {
   medicalCenters,
   insuranceTypes,
   agreementTypes,
+  providerTypes,
+  serviceTariffs,
+  medicalAttentions,
+  paymentCalculations,
+  payments,
   type User,
   type UpsertUser,
   type Doctor,
@@ -26,9 +31,14 @@ import {
   type InsertInsuranceType,
   type AgreementType,
   type InsertAgreementType,
+  type ProviderType,
+  type ServiceTariff,
+  type MedicalAttention,
+  type PaymentCalculation,
+  type Payment,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, ilike, desc, asc } from "drizzle-orm";
+import { eq, and, or, ilike, desc, asc, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -95,6 +105,36 @@ export interface IStorage {
   createAgreementType(type: InsertAgreementType): Promise<AgreementType>;
   updateAgreementType(id: string, type: Partial<InsertAgreementType>): Promise<AgreementType>;
   deleteAgreementType(id: string): Promise<void>;
+
+  // Payment system operations
+  getProviderTypes(): Promise<ProviderType[]>;
+  getServiceTariffs(serviceId?: string, providerTypeId?: string): Promise<ServiceTariff[]>;
+  getMedicalAttentions(filters?: {
+    doctorId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    status?: string;
+  }): Promise<MedicalAttention[]>;
+  createMedicalAttention(attention: any): Promise<MedicalAttention>;
+  updateMedicalAttention(id: string, attention: any): Promise<MedicalAttention>;
+  
+  // Payment calculations
+  calculatePayments(doctorId: string, month: number, year: number): Promise<PaymentCalculation[]>;
+  getPaymentCalculations(filters?: {
+    doctorId?: string;
+    month?: number;
+    year?: number;
+    status?: string;
+  }): Promise<PaymentCalculation[]>;
+  
+  // Payment processing
+  getPayments(filters?: {
+    doctorId?: string;
+    month?: number;
+    year?: number;
+    status?: string;
+  }): Promise<Payment[]>;
+  processPayment(doctorId: string, month: number, year: number): Promise<Payment>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -341,14 +381,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCalculationRule(rule: InsertCalculationRule): Promise<CalculationRule> {
-    const [newRule] = await db.insert(calculationRules).values(rule).returning();
+    const ruleWithStringValue = {
+      ...rule,
+      paymentValue: rule.paymentValue.toString()
+    };
+    const [newRule] = await db.insert(calculationRules).values(ruleWithStringValue).returning();
     return newRule;
   }
 
   async updateCalculationRule(id: string, rule: Partial<InsertCalculationRule>): Promise<CalculationRule> {
+    const ruleWithStringValue = {
+      ...rule,
+      paymentValue: rule.paymentValue ? rule.paymentValue.toString() : undefined,
+      updatedAt: new Date()
+    };
     const [updatedRule] = await db
       .update(calculationRules)
-      .set({ ...rule, updatedAt: new Date() })
+      .set(ruleWithStringValue)
       .where(eq(calculationRules.id, id))
       .returning();
     return updatedRule;
@@ -468,6 +517,239 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAgreementType(id: string): Promise<void> {
     await db.delete(agreementTypes).where(eq(agreementTypes.id, id));
+  }
+
+  // Payment system operations
+  async getProviderTypes(): Promise<ProviderType[]> {
+    return await db.select().from(providerTypes).where(eq(providerTypes.isActive, true)).orderBy(asc(providerTypes.name));
+  }
+
+  async getServiceTariffs(serviceId?: string, providerTypeId?: string): Promise<ServiceTariff[]> {
+    const conditions = [eq(serviceTariffs.isActive, true)];
+    
+    if (serviceId) {
+      conditions.push(eq(serviceTariffs.serviceId, serviceId));
+    }
+    if (providerTypeId) {
+      conditions.push(eq(serviceTariffs.providerTypeId, providerTypeId));
+    }
+    
+    return await db.select().from(serviceTariffs)
+      .where(and(...conditions))
+      .orderBy(desc(serviceTariffs.validFrom));
+  }
+
+  async getMedicalAttentions(filters?: {
+    doctorId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    status?: string;
+  }): Promise<MedicalAttention[]> {
+    let query = db.select().from(medicalAttentions);
+    const conditions = [];
+
+    if (filters?.doctorId) {
+      conditions.push(eq(medicalAttentions.doctorId, filters.doctorId));
+    }
+    if (filters?.dateFrom) {
+      conditions.push(gte(medicalAttentions.attentionDate, filters.dateFrom));
+    }
+    if (filters?.dateTo) {
+      conditions.push(lte(medicalAttentions.attentionDate, filters.dateTo));
+    }
+    if (filters?.status) {
+      conditions.push(eq(medicalAttentions.status, filters.status));
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    return await query.orderBy(desc(medicalAttentions.attentionDate));
+  }
+
+  async createMedicalAttention(attention: any): Promise<MedicalAttention> {
+    const [newAttention] = await db.insert(medicalAttentions).values(attention).returning();
+    return newAttention;
+  }
+
+  async updateMedicalAttention(id: string, attention: any): Promise<MedicalAttention> {
+    const [updatedAttention] = await db
+      .update(medicalAttentions)
+      .set({ ...attention, updatedAt: new Date() })
+      .where(eq(medicalAttentions.id, id))
+      .returning();
+    return updatedAttention;
+  }
+
+  // Payment calculations
+  async calculatePayments(doctorId: string, month: number, year: number): Promise<PaymentCalculation[]> {
+    // Get attentions for the doctor in the specified period
+    const attentions = await this.getMedicalAttentions({
+      doctorId,
+      dateFrom: `${year}-${month.toString().padStart(2, '0')}-01`,
+      dateTo: `${year}-${month.toString().padStart(2, '0')}-31`,
+      status: 'pending'
+    });
+
+    // Get applicable calculation rules for this doctor
+    const rules = await this.getCalculationRules({ isActive: true });
+    
+    const calculations: PaymentCalculation[] = [];
+
+    for (const attention of attentions) {
+      // Find the best matching rule for this attention
+      const applicableRule = rules.find(rule => {
+        // Rule matching logic
+        if (rule.doctorId && rule.doctorId !== doctorId) return false;
+        if (rule.serviceId && rule.serviceId !== attention.serviceId) return false;
+        // Add more rule matching logic as needed
+        return true;
+      });
+
+      if (applicableRule) {
+        const baseAmount = parseFloat(attention.participatedAmount.toString());
+        let calculatedAmount = 0;
+
+        if (applicableRule.paymentType === 'percentage') {
+          calculatedAmount = baseAmount * (parseFloat(applicableRule.paymentValue.toString()) / 100);
+        } else if (applicableRule.paymentType === 'fixed_amount') {
+          calculatedAmount = parseFloat(applicableRule.paymentValue.toString());
+        }
+
+        const calculation = {
+          attentionId: attention.id,
+          calculationRuleId: applicableRule.id,
+          doctorId: doctorId,
+          baseAmount: baseAmount.toString(),
+          ruleType: applicableRule.paymentType,
+          ruleValue: applicableRule.paymentValue.toString(),
+          calculatedAmount: calculatedAmount.toString(),
+          periodMonth: month,
+          periodYear: year,
+          status: 'calculated' as const
+        };
+
+        const [newCalculation] = await db.insert(paymentCalculations).values(calculation).returning();
+        calculations.push(newCalculation);
+
+        // Update attention status
+        await this.updateMedicalAttention(attention.id, { status: 'calculated' });
+      }
+    }
+
+    return calculations;
+  }
+
+  async getPaymentCalculations(filters?: {
+    doctorId?: string;
+    month?: number;
+    year?: number;
+    status?: string;
+  }): Promise<PaymentCalculation[]> {
+    let query = db.select().from(paymentCalculations);
+    const conditions = [];
+
+    if (filters?.doctorId) {
+      conditions.push(eq(paymentCalculations.doctorId, filters.doctorId));
+    }
+    if (filters?.month) {
+      conditions.push(eq(paymentCalculations.periodMonth, filters.month));
+    }
+    if (filters?.year) {
+      conditions.push(eq(paymentCalculations.periodYear, filters.year));
+    }
+    if (filters?.status) {
+      conditions.push(eq(paymentCalculations.status, filters.status));
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    return await query.orderBy(desc(paymentCalculations.calculationDate));
+  }
+
+  // Payment processing
+  async getPayments(filters?: {
+    doctorId?: string;
+    month?: number;
+    year?: number;
+    status?: string;
+  }): Promise<Payment[]> {
+    let query = db.select().from(payments);
+    const conditions = [];
+
+    if (filters?.doctorId) {
+      conditions.push(eq(payments.doctorId, filters.doctorId));
+    }
+    if (filters?.month) {
+      conditions.push(eq(payments.periodMonth, filters.month));
+    }
+    if (filters?.year) {
+      conditions.push(eq(payments.periodYear, filters.year));
+    }
+    if (filters?.status) {
+      conditions.push(eq(payments.status, filters.status));
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    return await query.orderBy(desc(payments.createdAt));
+  }
+
+  async processPayment(doctorId: string, month: number, year: number): Promise<Payment> {
+    // Get all calculated payments for this doctor/period
+    const calculations = await this.getPaymentCalculations({
+      doctorId,
+      month,
+      year,
+      status: 'calculated'
+    });
+
+    if (calculations.length === 0) {
+      throw new Error('No calculations found for the specified period');
+    }
+
+    // Get doctor details for payment
+    const doctor = await this.getDoctorById(doctorId);
+    if (!doctor) {
+      throw new Error('Doctor not found');
+    }
+
+    // Calculate totals
+    const totalAmount = calculations.reduce((sum, calc) => 
+      sum + parseFloat(calc.calculatedAmount.toString()), 0
+    );
+
+    // Create payment record
+    const payment = {
+      doctorId,
+      periodMonth: month,
+      periodYear: year,
+      totalAmount: totalAmount.toString(),
+      totalAttentions: calculations.length,
+      paymentMethod: doctor.paymentType || 'transfer',
+      bankAccount: doctor.bankAccount,
+      bankName: doctor.bankName,
+      accountHolderName: doctor.accountHolderName,
+      accountHolderRut: doctor.accountHolderRut,
+      status: 'pending' as const
+    };
+
+    const [newPayment] = await db.insert(payments).values(payment).returning();
+
+    // Update calculation statuses
+    for (const calc of calculations) {
+      await db
+        .update(paymentCalculations)
+        .set({ status: 'approved' })
+        .where(eq(paymentCalculations.id, calc.id));
+    }
+
+    return newPayment;
   }
 }
 
