@@ -567,6 +567,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // CSV Import endpoint for Participacion records
+  // Helper function to find or create doctor from CSV data
+  async function findOrCreateDoctor(medId: string, doctorInternalCode: string, specialtyId: string) {
+    try {
+      // First try to find existing doctor by internal code
+      const existingDoctors = await storage.getDoctors();
+      let doctor = existingDoctors.find((d: any) => d.internalCode === doctorInternalCode);
+      
+      if (doctor) {
+        return doctor.id;
+      }
+
+      // If not found, create a new doctor entry
+      const newDoctor = {
+        rut: `${medId.replace('MED', '')}-K`, // Generate a temporary RUT
+        name: `Dr./Dra. ${doctorInternalCode}`,
+        email: `${doctorInternalCode.toLowerCase()}@hospital.cl`,
+        phone: '',
+        specialties: specialtyId ? [specialtyId] : [],
+        participationType: 'individual' as const,
+        medicalSocietyId: null,
+        internalCode: doctorInternalCode,
+        bankAccount: '',
+        isActive: true,
+      };
+
+      const createdDoctor = await storage.createDoctor(newDoctor);
+      return createdDoctor.id;
+    } catch (error) {
+      console.error('Error finding/creating doctor:', error);
+      // Return first available doctor as fallback
+      const doctors = await storage.getDoctors();
+      return doctors.length > 0 ? doctors[0].id : 'doc001';
+    }
+  }
+
   app.post('/api/import/csv-participacion', authMiddleware, async (req, res) => {
     try {
       console.log('Participacion import started. Request body:', req.body);
@@ -600,11 +635,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const values = lines[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
           
+          // Find or create doctor based on CSV data
+          const medId = values[12] || '';
+          const doctorInternalCode = values[16] || '';
+          const specialtyId = values[10] || '';
+          const doctorId = await findOrCreateDoctor(medId, doctorInternalCode, specialtyId);
+          
           // Map TMP_REGISTROS_PARTICIPACION fields to medical attention format
           const attention = {
             patientRut: values[0] || '', // RPAR_RUT_PACIENTE
             patientName: values[1] || '', // RPAR_NOMBRE_PACIENTE
-            doctorId: values[12] || `doc_${values[10] || 'unknown'}`, // MED_ID or ESP_ID as fallback
+            doctorId: doctorId, // Use resolved doctor ID
             serviceId: values[3] || '', // RPAR_CODIGO_PRESTACION
             providerTypeId: getProviderTypeFromPrevision(values[5] || ''), // RPAR_PREVISION_PACIENTE
             attentionDate: formatDate(values[2] || ''), // RPAR_FATENCION
@@ -700,11 +741,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const values = lines[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
           
+          // Find or create doctor based on CSV data
+          const medId = values[14] || '';
+          const doctorInternalCode = values[18] || '';
+          const specialtyId = values[10] || '';
+          const doctorId = await findOrCreateDoctor(medId, doctorInternalCode, specialtyId);
+          
           // Map TMP_REGISTROS_HMQ fields to medical attention format
           const attention = {
             patientRut: values[0] || '', // RHMQ_RUT_PACIENTE
             patientName: values[1] || '', // RHMQ_NOMBRE_PACIENTE
-            doctorId: values[14] || `doc_${values[10] || 'unknown'}`, // MED_ID or ESP_ID as fallback
+            doctorId: doctorId, // Use resolved doctor ID
             serviceId: values[3] || '', // RHMQ_CODIGO_PRESTACION
             providerTypeId: getProviderTypeFromPrevision(values[5] || ''), // RHMQ_PREVISION_PACIENTE
             attentionDate: formatDate(values[2] || ''), // RHMQ_FCONSUMO
