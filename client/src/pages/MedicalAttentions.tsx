@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Calendar, User, Stethoscope, CreditCard } from "lucide-react";
+import { CsvUploader } from "@/components/CsvUploader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -71,10 +72,10 @@ export default function MedicalAttentions() {
 
   // Mutations
   const createAttentionMutation = useMutation({
-    mutationFn: (data: AttentionForm) => apiRequest('/api/medical-attentions', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+    mutationFn: async (data: AttentionForm) => {
+      const response = await apiRequest('/api/medical-attentions', 'POST', data);
+      return await response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/medical-attentions'] });
       setIsDialogOpen(false);
@@ -86,12 +87,17 @@ export default function MedicalAttentions() {
     createAttentionMutation.mutate(data);
   };
 
+  const handleDataImported = (importedData: any[]) => {
+    // Refrescar la lista de atenciones después de importar
+    queryClient.invalidateQueries({ queryKey: ['/api/medical-attentions'] });
+  };
+
   const getStatusBadge = (status: string) => {
     const variants = {
-      pending: "default",
-      calculated: "secondary",
-      paid: "success",
-    } as const;
+      pending: "default" as const,
+      calculated: "secondary" as const,
+      paid: "outline" as const,
+    };
     
     const labels = {
       pending: "Pendiente",
@@ -127,14 +133,16 @@ export default function MedicalAttentions() {
           </p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Nueva Atención
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+        <div className="flex space-x-2">
+          <CsvUploader onDataImported={handleDataImported} />
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Nueva Atención
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Registrar Nueva Atención</DialogTitle>
               <DialogDescription>
@@ -188,7 +196,7 @@ export default function MedicalAttentions() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {doctors.map((doctor: any) => (
+                            {Array.isArray(doctors) && doctors.map((doctor: any) => (
                               <SelectItem key={doctor.id} value={doctor.id}>
                                 {doctor.name}
                               </SelectItem>
@@ -213,7 +221,7 @@ export default function MedicalAttentions() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {services.map((service: any) => (
+                            {Array.isArray(services) && services.map((service: any) => (
                               <SelectItem key={service.id} value={service.id}>
                                 {service.name}
                               </SelectItem>
@@ -239,7 +247,7 @@ export default function MedicalAttentions() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {providerTypes.map((type: any) => (
+                          {Array.isArray(providerTypes) && providerTypes.map((type: any) => (
                             <SelectItem key={type.id} value={type.id}>
                               {type.name}
                             </SelectItem>
@@ -367,10 +375,11 @@ export default function MedicalAttentions() {
             </Form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="grid gap-6">
-        {attentions.length === 0 ? (
+        {Array.isArray(attentions) && attentions.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16">
               <Stethoscope className="w-12 h-12 text-gray-400 mb-4" />
@@ -388,7 +397,7 @@ export default function MedicalAttentions() {
           </Card>
         ) : (
           <div className="grid gap-4">
-            {attentions.map((attention: any) => (
+            {Array.isArray(attentions) && attentions.map((attention: any) => (
               <Card key={attention.id}>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
@@ -421,7 +430,7 @@ export default function MedicalAttentions() {
                       <div>
                         <p className="text-sm font-medium">Doctor</p>
                         <p className="text-sm text-gray-600">
-                          {doctors.find((d: any) => d.id === attention.doctorId)?.name || 'N/A'}
+                          {Array.isArray(doctors) ? doctors.find((d: any) => d.id === attention.doctorId)?.name || 'N/A' : 'N/A'}
                         </p>
                       </div>
                     </div>
@@ -439,7 +448,7 @@ export default function MedicalAttentions() {
                     <div>
                       <p className="text-sm font-medium">Prestador</p>
                       <p className="text-sm text-gray-600">
-                        {providerTypes.find((p: any) => p.id === attention.providerTypeId)?.name || 'N/A'}
+                        {Array.isArray(providerTypes) ? providerTypes.find((p: any) => p.id === attention.providerTypeId)?.name || 'N/A' : 'N/A'}
                       </p>
                     </div>
                   </div>

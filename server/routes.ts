@@ -567,5 +567,241 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  // CSV Import endpoint
+  app.post('/api/import/csv-attentions', authMiddleware, async (req, res) => {
+    try {
+      const csvData = req.body.csvData || '';
+      const lines = csvData.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        return res.json({
+          success: false,
+          data: [],
+          errors: ['El archivo CSV debe contener al menos una fila de datos'],
+          total: 0,
+          imported: 0,
+        });
+      }
+
+      const errors: string[] = [];
+      const importedData: any[] = [];
+      let imported = 0;
+
+      for (let i = 1; i < lines.length; i++) {
+        try {
+          const values = lines[i].split(',').map(v => v.trim());
+          
+          const attention = {
+            patientRut: values[0] || '',
+            patientName: values[1] || '',
+            doctorId: values[2] || '',
+            serviceId: values[3] || '',
+            providerTypeId: values[4] || '',
+            attentionDate: values[5] || '',
+            attentionTime: values[6] || '',
+            scheduleType: values[7] || 'regular',
+            grossAmount: values[8] || '0',
+            netAmount: values[9] || '0',
+            participatedAmount: values[10] || '0',
+            status: 'pending',
+          };
+
+          if (!attention.patientRut || !attention.patientName) {
+            errors.push(`Fila ${i + 1}: RUT y nombre del paciente son requeridos`);
+            continue;
+          }
+
+          await storage.createMedicalAttention(attention);
+          importedData.push(attention);
+          imported++;
+        } catch (error) {
+          errors.push(`Fila ${i + 1}: Error al procesar - ${error}`);
+        }
+      }
+
+      res.json({
+        success: imported > 0,
+        data: importedData,
+        errors,
+        total: lines.length - 1,
+        imported,
+      });
+    } catch (error) {
+      console.error('Error importing CSV:', error);
+      res.status(500).json({
+        success: false,
+        data: [],
+        errors: ['Error interno del servidor'],
+        total: 0,
+        imported: 0,
+      });
+    }
+  });
+
+  // API Import endpoint
+  app.post('/api/import/api-attentions', authMiddleware, async (req, res) => {
+    try {
+      const { url, method, headers, body } = req.body;
+
+      const response = await fetch(url, {
+        method: method || 'GET',
+        headers: headers || {},
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+      if (!response.ok) {
+        return res.json({
+          success: false,
+          data: [],
+          errors: [`Error al conectar con la API: ${response.statusText}`],
+          total: 0,
+          imported: 0,
+        });
+      }
+
+      const apiData = await response.json();
+      const errors: string[] = [];
+      const importedData: any[] = [];
+      let imported = 0;
+
+      const dataArray = Array.isArray(apiData) ? apiData : apiData.data || [];
+
+      for (const item of dataArray) {
+        try {
+          const attention = {
+            patientRut: item.patientRut || item.rut_paciente || '',
+            patientName: item.patientName || item.nombre_paciente || '',
+            doctorId: item.doctorId || item.medico_id || '',
+            serviceId: item.serviceId || item.servicio_id || '',
+            providerTypeId: item.providerTypeId || item.tipo_prestador_id || '',
+            attentionDate: item.attentionDate || item.fecha_atencion || '',
+            attentionTime: item.attentionTime || item.hora_atencion || '',
+            scheduleType: item.scheduleType || 'regular',
+            grossAmount: item.grossAmount || item.monto_bruto || '0',
+            netAmount: item.netAmount || item.monto_liquido || '0',
+            participatedAmount: item.participatedAmount || item.monto_participado || '0',
+            status: 'pending',
+          };
+
+          if (!attention.patientRut || !attention.patientName) {
+            errors.push(`Registro: RUT y nombre del paciente son requeridos`);
+            continue;
+          }
+
+          await storage.createMedicalAttention(attention);
+          importedData.push(attention);
+          imported++;
+        } catch (error) {
+          errors.push(`Error al procesar registro: ${error}`);
+        }
+      }
+
+      res.json({
+        success: imported > 0,
+        data: importedData,
+        errors,
+        total: dataArray.length,
+        imported,
+      });
+    } catch (error) {
+      console.error('Error importing from API:', error);
+      res.status(500).json({
+        success: false,
+        data: [],
+        errors: ['Error al conectar con la API externa'],
+        total: 0,
+        imported: 0,
+      });
+    }
+  });
+
+  // HIS Import endpoint
+  app.post('/api/import/his-attentions', authMiddleware, async (req, res) => {
+    try {
+      const { endpoint, apiKey, facility, dateFrom, dateTo } = req.body;
+
+      const hisHeaders = {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'X-Facility-Code': facility,
+      };
+
+      const hisParams = new URLSearchParams({
+        dateFrom: dateFrom || '',
+        dateTo: dateTo || '',
+        status: 'completed',
+      });
+
+      const response = await fetch(`${endpoint}/attentions?${hisParams}`, {
+        method: 'GET',
+        headers: hisHeaders,
+      });
+
+      if (!response.ok) {
+        return res.json({
+          success: false,
+          data: [],
+          errors: [`Error al conectar con el HIS: ${response.statusText}`],
+          total: 0,
+          imported: 0,
+        });
+      }
+
+      const hisData = await response.json();
+      const errors: string[] = [];
+      const importedData: any[] = [];
+      let imported = 0;
+
+      const dataArray = hisData.attentions || hisData.data || [];
+
+      for (const item of dataArray) {
+        try {
+          const attention = {
+            patientRut: item.rut_paciente || item.patient_rut || '',
+            patientName: item.nombre_paciente || item.patient_name || '',
+            doctorId: item.medico_rut || item.doctor_rut || '',
+            serviceId: item.codigo_prestacion || item.service_code || '',
+            providerTypeId: item.tipo_prestador || item.provider_type || '',
+            attentionDate: item.fecha_atencion || item.attention_date || '',
+            attentionTime: item.hora_atencion || item.attention_time || '',
+            scheduleType: item.tipo_horario || 'regular',
+            grossAmount: item.valor_bruto || item.gross_amount || '0',
+            netAmount: item.valor_liquido || item.net_amount || '0',
+            participatedAmount: item.valor_participado || item.participated_amount || '0',
+            status: 'pending',
+          };
+
+          if (!attention.patientRut || !attention.patientName) {
+            errors.push(`Registro HIS: RUT y nombre del paciente son requeridos`);
+            continue;
+          }
+
+          await storage.createMedicalAttention(attention);
+          importedData.push(attention);
+          imported++;
+        } catch (error) {
+          errors.push(`Error al procesar registro HIS: ${error}`);
+        }
+      }
+
+      res.json({
+        success: imported > 0,
+        data: importedData,
+        errors,
+        total: dataArray.length,
+        imported,
+      });
+    } catch (error) {
+      console.error('Error importing from HIS:', error);
+      res.status(500).json({
+        success: false,
+        data: [],
+        errors: ['Error al conectar con el sistema HIS'],
+        total: 0,
+        imported: 0,
+      });
+    }
+  });
+
   return httpServer;
 }
