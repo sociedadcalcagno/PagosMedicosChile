@@ -47,6 +47,10 @@ The application is designed to handle complex medical payment scenarios includin
 - **LATEST**: Implemented differentiated import types for Chilean medical system: "Registros Participaciones" (TMP_REGISTROS_PARTICIPACION) and "Registros HMQ" (TMP_REGISTROS_HMQ)
 - **LATEST**: Created specific endpoints for each record type: csv-participacion/csv-hmq, api-participacion/api-hmq, his-participacion/his-hmq with proper field mapping
 - **LATEST**: Added radio button selector in import interface with user-friendly labels: "Registros Participaciones" and "Registros HMQ" instead of technical database names
+- **LATEST**: Resolved critical foreign key constraint violations in CSV import system by implementing auto-creation of missing doctors and services
+- **LATEST**: Built intelligent data mapping system that finds existing records by internal codes or creates new ones automatically during import
+- **LATEST**: Successfully tested complete CSV import workflow - system now handles TMP_REGISTROS_PARTICIPACION with all medical professional and society fields
+- **LATEST**: Implemented robust error handling and data validation for Chilean medical system compliance with automatic entity resolution
 
 ## User Preferences
 

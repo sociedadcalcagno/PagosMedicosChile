@@ -567,6 +567,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // CSV Import endpoint for Participacion records
+  // Helper function to find or create service from CSV data
+  async function findOrCreateService(serviceCode: string, serviceName: string) {
+    try {
+      // First try to find existing service by code
+      const existingServices = await storage.getServices();
+      let service = existingServices.find((s: any) => s.code === serviceCode);
+      
+      if (service) {
+        return service.id;
+      }
+
+      // If not found, create a new service entry
+      const newService = {
+        code: serviceCode,
+        name: serviceName || `Servicio ${serviceCode}`,
+        description: `Servicio importado: ${serviceName}`,
+        basePrice: 50000, // Default base price
+        participationType: 'individual' as const,
+        specialtyId: null,
+        isActive: true,
+      };
+
+      const createdService = await storage.createService(newService);
+      return createdService.id;
+    } catch (error) {
+      console.error('Error finding/creating service:', error);
+      // Return first available service as fallback
+      const services = await storage.getServices();
+      return services.length > 0 ? services[0].id : 'srv001';
+    }
+  }
+
   // Helper function to find or create doctor from CSV data
   async function findOrCreateDoctor(medId: string, doctorInternalCode: string, specialtyId: string) {
     try {
@@ -635,18 +667,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const values = lines[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
           
-          // Find or create doctor based on CSV data
+          // Find or create doctor and service based on CSV data
           const medId = values[12] || '';
           const doctorInternalCode = values[16] || '';
           const specialtyId = values[10] || '';
           const doctorId = await findOrCreateDoctor(medId, doctorInternalCode, specialtyId);
+          
+          const serviceCode = values[3] || '';
+          const serviceName = values[4] || '';
+          const serviceId = await findOrCreateService(serviceCode, serviceName);
           
           // Map TMP_REGISTROS_PARTICIPACION fields to medical attention format
           const attention = {
             patientRut: values[0] || '', // RPAR_RUT_PACIENTE
             patientName: values[1] || '', // RPAR_NOMBRE_PACIENTE
             doctorId: doctorId, // Use resolved doctor ID
-            serviceId: values[3] || '', // RPAR_CODIGO_PRESTACION
+            serviceId: serviceId, // Use resolved service ID
             providerTypeId: getProviderTypeFromPrevision(values[5] || ''), // RPAR_PREVISION_PACIENTE
             attentionDate: formatDate(values[2] || ''), // RPAR_FATENCION
             attentionTime: values[9] || '09:00', // HORARIO
@@ -741,18 +777,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const values = lines[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
           
-          // Find or create doctor based on CSV data
+          // Find or create doctor and service based on CSV data
           const medId = values[14] || '';
           const doctorInternalCode = values[18] || '';
           const specialtyId = values[10] || '';
           const doctorId = await findOrCreateDoctor(medId, doctorInternalCode, specialtyId);
+          
+          const serviceCode = values[3] || '';
+          const serviceName = values[4] || '';
+          const serviceId = await findOrCreateService(serviceCode, serviceName);
           
           // Map TMP_REGISTROS_HMQ fields to medical attention format
           const attention = {
             patientRut: values[0] || '', // RHMQ_RUT_PACIENTE
             patientName: values[1] || '', // RHMQ_NOMBRE_PACIENTE
             doctorId: doctorId, // Use resolved doctor ID
-            serviceId: values[3] || '', // RHMQ_CODIGO_PRESTACION
+            serviceId: serviceId, // Use resolved service ID
             providerTypeId: getProviderTypeFromPrevision(values[5] || ''), // RHMQ_PREVISION_PACIENTE
             attentionDate: formatDate(values[2] || ''), // RHMQ_FCONSUMO
             attentionTime: '09:00', // Default time for HMQ records
