@@ -568,7 +568,7 @@ export default function Rules() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="individual">Individual</SelectItem>
+                                  <SelectItem value="individual">Profesional</SelectItem>
                                   <SelectItem value="society">Sociedad</SelectItem>
                                   <SelectItem value="mixed">Mixto</SelectItem>
                                 </SelectContent>
@@ -605,6 +605,68 @@ export default function Rules() {
                           )}
                         />
                       </div>
+
+                      {/* Selector de Profesional o Sociedad según tipo de participación */}
+                      {form.watch("participationType") === "individual" && (
+                        <FormField
+                          control={form.control}
+                          name="doctorId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Médico/Profesional *</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar médico..." />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {doctors?.map((doctor: any) => (
+                                    <SelectItem key={doctor.id} value={doctor.id}>
+                                      {doctor.rut} - {doctor.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      {form.watch("participationType") === "society" && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="societyRut"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>RUT de Sociedad *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="76.123.456-7" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="societyName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Nombre de Sociedad *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Sociedad Médica..." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      )}
 
                       <FormField
                         control={form.control}
@@ -824,7 +886,7 @@ export default function Rules() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="individual">Individual</SelectItem>
+                  <SelectItem value="individual">Profesional</SelectItem>
                   <SelectItem value="society">Sociedad</SelectItem>
                   <SelectItem value="mixed">Mixto</SelectItem>
                 </SelectContent>
