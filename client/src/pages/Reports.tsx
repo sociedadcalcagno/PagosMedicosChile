@@ -210,7 +210,7 @@ export default function Reports() {
                   <SelectValue placeholder="Filtrar por especialidad" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas las especialidades</SelectItem>
+                  <SelectItem value="all">Todas las especialidades</SelectItem>
                   {specialties?.map((specialty: any) => (
                     <SelectItem key={specialty.id} value={specialty.id}>
                       {specialty.name}
@@ -223,7 +223,7 @@ export default function Reports() {
                   <SelectValue placeholder="Tipo de participación" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos los tipos</SelectItem>
+                  <SelectItem value="all">Todos los tipos</SelectItem>
                   <SelectItem value="individual">Individual</SelectItem>
                   <SelectItem value="society">Sociedad</SelectItem>
                   <SelectItem value="mixed">Mixto</SelectItem>

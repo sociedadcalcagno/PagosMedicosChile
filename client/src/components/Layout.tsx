@@ -141,8 +141,8 @@ export default function Layout({ children }: LayoutProps) {
                   const Icon = item.icon;
                   return (
                     <Link key={item.href} href={item.href}>
-                      <a
-                        className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                      <div
+                        className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
                           isActive(item.href)
                             ? "bg-medical-blue text-white"
                             : "text-gray-700 hover:bg-gray-100"
@@ -150,7 +150,7 @@ export default function Layout({ children }: LayoutProps) {
                       >
                         <Icon className="w-5 text-gray-400 mr-3" />
                         <span className="font-medium">{item.label}</span>
-                      </a>
+                      </div>
                     </Link>
                   );
                 })}
@@ -165,8 +165,8 @@ export default function Layout({ children }: LayoutProps) {
                   const Icon = item.icon;
                   return (
                     <Link key={item.href} href={item.href}>
-                      <a
-                        className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                      <div
+                        className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
                           isActive(item.href)
                             ? "bg-medical-blue text-white"
                             : "text-gray-700 hover:bg-gray-100"
@@ -174,7 +174,7 @@ export default function Layout({ children }: LayoutProps) {
                       >
                         <Icon className="w-5 text-gray-400 mr-3" />
                         <span className="font-medium">{item.label}</span>
-                      </a>
+                      </div>
                     </Link>
                   );
                 })}
@@ -189,8 +189,8 @@ export default function Layout({ children }: LayoutProps) {
                   const Icon = item.icon;
                   return (
                     <Link key={item.href} href={item.href}>
-                      <a
-                        className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                      <div
+                        className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
                           isActive(item.href)
                             ? "bg-medical-blue text-white"
                             : "text-gray-700 hover:bg-gray-100"
@@ -198,7 +198,7 @@ export default function Layout({ children }: LayoutProps) {
                       >
                         <Icon className="w-5 text-gray-400 mr-3" />
                         <span className="font-medium">{item.label}</span>
-                      </a>
+                      </div>
                     </Link>
                   );
                 })}

@@ -622,7 +622,7 @@ export default function Rules() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="">Todas las prestaciones</SelectItem>
+                                <SelectItem value="all">Todas las prestaciones</SelectItem>
                                 {services?.map((service: any) => (
                                   <SelectItem key={service.id} value={service.id}>
                                     {service.name}
@@ -705,7 +705,7 @@ export default function Rules() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="">Todos los horarios</SelectItem>
+                                  <SelectItem value="all">Todos los horarios</SelectItem>
                                   <SelectItem value="regular">Horario Hábil</SelectItem>
                                   <SelectItem value="irregular">Horario Inhábil</SelectItem>
                                   <SelectItem value="night">Horario Nocturno</SelectItem>
@@ -823,7 +823,7 @@ export default function Rules() {
                   <SelectValue placeholder="Tipo de participación" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="individual">Individual</SelectItem>
                   <SelectItem value="society">Sociedad</SelectItem>
                   <SelectItem value="mixed">Mixto</SelectItem>
@@ -834,7 +834,7 @@ export default function Rules() {
                   <SelectValue placeholder="Especialidad" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas</SelectItem>
+                  <SelectItem value="all">Todas</SelectItem>
                   {specialties?.map((specialty: any) => (
                     <SelectItem key={specialty.id} value={specialty.id}>
                       {specialty.name}
@@ -847,7 +847,7 @@ export default function Rules() {
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="active">Activa</SelectItem>
                   <SelectItem value="inactive">Inactiva</SelectItem>
                   <SelectItem value="expired">Vencida</SelectItem>
