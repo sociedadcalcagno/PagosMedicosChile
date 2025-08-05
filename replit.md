@@ -16,6 +16,10 @@ The application is designed to handle complex medical payment scenarios includin
 - Application is now running successfully on port 5000 with authentication
 - Database schema pushed and connected properly
 - All core functionality is operational: authentication, AI chat, master data management
+- **LATEST**: Fixed foreign key constraint violations in doctor editing (Individual vs Society types)
+- **LATEST**: Corrected AI chat OpenAI API integration with proper JSON format requirements
+- **LATEST**: Enhanced doctor form with medical society dropdown selector
+- **LATEST**: Cleaned up database records and implemented robust validation for society references
 
 ## User Preferences
 

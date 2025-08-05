@@ -35,7 +35,9 @@ Contexto del sistema:
 - Criterios por especialidad, horario, días de la semana
 - Integración con Fonasa y otros convenios
 
-Responde de manera profesional, clara y precisa. Si no tienes información específica, indica que necesitas más detalles y sugiere consultar con el equipo técnico.`;
+Responde de manera profesional, clara y precisa. Si no tienes información específica, indica que necesitas más detalles y sugiere consultar con el equipo técnico.
+
+IMPORTANTE: Debes responder siempre en formato JSON con la estructura: {"message": "tu respuesta aquí"}`;
 
   async processMessage(message: string, conversationHistory: AIMessage[] = []): Promise<AIResponse> {
     try {
