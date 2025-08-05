@@ -128,6 +128,18 @@ export default function Rules() {
         ...data,
         paymentValue: parseFloat(data.paymentValue),
         applicableDays: data.applicableDays || [],
+        // Convert empty strings to null for foreign key fields
+        specialtyId: data.specialtyId || null,
+        serviceId: data.serviceId || null,
+        doctorId: data.doctorId || null,
+        societyId: data.societyId || null,
+        medicalCenterId: data.medicalCenterId || null,
+        agreementTypeId: data.agreementTypeId || null,
+        insuranceTypeId: data.insuranceTypeId || null,
+        // Remove empty string fields that should be null
+        societyRut: data.societyRut || undefined,
+        societyName: data.societyName || undefined,
+        baseRule: data.baseRule || undefined,
       };
       const response = await apiRequest("/api/calculation-rules", "POST", submitData);
       return response.json();
@@ -168,6 +180,18 @@ export default function Rules() {
         ...data,
         paymentValue: parseFloat(data.paymentValue),
         applicableDays: data.applicableDays || [],
+        // Convert empty strings to null for foreign key fields
+        specialtyId: data.specialtyId || null,
+        serviceId: data.serviceId || null,
+        doctorId: data.doctorId || null,
+        societyId: data.societyId || null,
+        medicalCenterId: data.medicalCenterId || null,
+        agreementTypeId: data.agreementTypeId || null,
+        insuranceTypeId: data.insuranceTypeId || null,
+        // Remove empty string fields that should be null
+        societyRut: data.societyRut || undefined,
+        societyName: data.societyName || undefined,
+        baseRule: data.baseRule || undefined,
       };
       const response = await apiRequest(`/api/calculation-rules/${id}`, "PUT", submitData);
       return response.json();

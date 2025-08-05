@@ -360,12 +360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/calculation-rules/:id', authMiddleware, async (req, res) => {
     try {
-      console.log('Updating calculation rule:', req.params.id);
-      console.log('Request body:', JSON.stringify(req.body, null, 2));
-      
       const validatedData = insertCalculationRuleSchema.partial().parse(req.body);
-      console.log('Validated data:', JSON.stringify(validatedData, null, 2));
-      
       const rule = await storage.updateCalculationRule(req.params.id, validatedData);
       res.json(rule);
     } catch (error) {

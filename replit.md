@@ -51,6 +51,9 @@ The application is designed to handle complex medical payment scenarios includin
 - **LATEST**: Built intelligent data mapping system that finds existing records by internal codes or creates new ones automatically during import
 - **LATEST**: Successfully tested complete CSV import workflow - system now handles TMP_REGISTROS_PARTICIPACION with all medical professional and society fields
 - **LATEST**: Implemented robust error handling and data validation for Chilean medical system compliance with automatic entity resolution
+- **LATEST**: Fixed critical apiRequest parameter order bug across all application files causing fetch failures throughout the system
+- **LATEST**: Resolved foreign key constraint violation in calculation rules editing by implementing proper null handling for empty foreign key fields
+- **LATEST**: Enhanced error handling with detailed logging and validation feedback for better debugging and user experience
 
 ## User Preferences
 
