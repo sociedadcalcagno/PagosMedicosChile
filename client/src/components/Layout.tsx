@@ -40,7 +40,7 @@ export default function Layout({ children }: LayoutProps) {
       },
     ];
 
-    // Admin gets full access
+    // Admin gets full access including payment system
     if (user?.profile === "admin") {
       return [
         {
