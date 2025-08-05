@@ -81,6 +81,10 @@ export default function Doctors() {
     queryKey: ["/api/specialties"],
   });
 
+  const { data: medicalSocieties } = useQuery({
+    queryKey: ["/api/medical-societies"],
+  });
+
   const form = useForm<DoctorFormData>({
     resolver: zodResolver(doctorFormSchema),
     defaultValues: {
@@ -203,10 +207,17 @@ export default function Doctors() {
   });
 
   const handleSubmit = (data: DoctorFormData) => {
+    // Limpiar societyRut si societyType es 'individual'
+    const cleanedData = { ...data };
+    if (cleanedData.societyType === 'individual') {
+      cleanedData.societyRut = null;
+      cleanedData.societyName = null;
+    }
+    
     if (editingDoctor) {
-      updateDoctorMutation.mutate({ id: editingDoctor.id, data });
+      updateDoctorMutation.mutate({ id: editingDoctor.id, data: cleanedData });
     } else {
-      createDoctorMutation.mutate(data);
+      createDoctorMutation.mutate(cleanedData);
     }
   };
 
@@ -468,10 +479,27 @@ export default function Doctors() {
                         name="societyRut"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>RUT Sociedad</FormLabel>
-                            <FormControl>
-                              <Input placeholder="76.123.456-7" {...field} />
-                            </FormControl>
+                            <FormLabel>Sociedad Médica *</FormLabel>
+                            <Select onValueChange={(value) => {
+                              field.onChange(value);
+                              const selected = (medicalSocieties || []).find((s: any) => s.rut === value);
+                              if (selected) {
+                                form.setValue("societyName", selected.name);
+                              }
+                            }} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecciona una sociedad" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {(medicalSocieties || []).map((society: any) => (
+                                  <SelectItem key={society.id} value={society.rut}>
+                                    {society.rut} - {society.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -483,7 +511,7 @@ export default function Doctors() {
                           <FormItem>
                             <FormLabel>Nombre Sociedad</FormLabel>
                             <FormControl>
-                              <Input placeholder="Sociedad Médica Ltda." {...field} />
+                              <Input placeholder="Se llena automáticamente" {...field} disabled />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

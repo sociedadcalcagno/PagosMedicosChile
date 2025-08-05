@@ -184,6 +184,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Medical societies routes
+  app.get('/api/medical-societies', isAuthenticated, async (req, res) => {
+    try {
+      const societies = await storage.getMedicalSocieties();
+      res.json(societies);
+    } catch (error) {
+      console.error("Error fetching medical societies:", error);
+      res.status(500).json({ message: "Failed to fetch medical societies" });
+    }
+  });
+
   app.post('/api/specialties', isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertSpecialtySchema.parse(req.body);

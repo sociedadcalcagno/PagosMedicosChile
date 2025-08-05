@@ -181,14 +181,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createDoctor(doctor: InsertDoctor): Promise<Doctor> {
-    const [newDoctor] = await db.insert(doctors).values(doctor).returning();
+    // Limpiar societyRut si societyType es 'individual'
+    const cleanedDoctor = { ...doctor };
+    if (cleanedDoctor.societyType === 'individual') {
+      cleanedDoctor.societyRut = null;
+    }
+    
+    const [newDoctor] = await db.insert(doctors).values(cleanedDoctor).returning();
     return newDoctor;
   }
 
   async updateDoctor(id: string, doctor: Partial<InsertDoctor>): Promise<Doctor> {
+    // Limpiar societyRut si societyType es 'individual'
+    const cleanedDoctor = { ...doctor };
+    if (cleanedDoctor.societyType === 'individual') {
+      cleanedDoctor.societyRut = null;
+    }
+    
     const [updatedDoctor] = await db
       .update(doctors)
-      .set(doctor)
+      .set(cleanedDoctor)
       .where(eq(doctors.id, id))
       .returning();
     return updatedDoctor;
@@ -224,6 +236,11 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSpecialty(id: string): Promise<void> {
     await db.delete(specialties).where(eq(specialties.id, id));
+  }
+
+  // Medical Society operations
+  async getMedicalSocieties(): Promise<any[]> {
+    return await db.select().from(medicalSocieties).orderBy(asc(medicalSocieties.name));
   }
 
   // Service operations
