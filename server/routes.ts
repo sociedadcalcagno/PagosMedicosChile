@@ -566,12 +566,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
   // CSV Import endpoint
   app.post('/api/import/csv-attentions', authMiddleware, async (req, res) => {
     try {
       const csvData = req.body.csvData || '';
-      const lines = csvData.split('\n').filter(line => line.trim());
+      const lines = csvData.split('\n').filter((line: string) => line.trim());
       
       if (lines.length < 2) {
         return res.json({
@@ -589,7 +588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (let i = 1; i < lines.length; i++) {
         try {
-          const values = lines[i].split(',').map(v => v.trim());
+          const values = lines[i].split(',').map((v: string) => v.trim());
           
           const attention = {
             patientRut: values[0] || '',
@@ -803,5 +802,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const httpServer = createServer(app);
   return httpServer;
 }

@@ -1,0 +1,4 @@
+patientRut,patientName,doctorId,serviceId,providerTypeId,attentionDate,attentionTime,scheduleType,grossAmount,netAmount,participatedAmount
+88776655-4,Roberto Silva Moreno,doc001,srv001,4c4a775e-40f1-4709-8e8c-a434f20bab67,2025-01-20,09:30,regular,45000,38250,30000
+77665544-3,Elena Torres Mendoza,doc002,srv002,9645c305-9ed3-4e5e-b9e9-28fbde66aa7a,2025-01-20,14:15,regular,65000,55250,42000
+66554433-2,José Martín Flores,doc003,srv003,96fb4a7a-7040-401f-8e84-c1fcff2fa9df,2025-01-21,11:00,irregular,35000,29750,25000
