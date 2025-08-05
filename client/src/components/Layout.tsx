@@ -26,50 +26,85 @@ export default function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  const navigationItems = [
-    {
-      href: "/usuarios",
-      label: "Usuarios",
-      icon: Users,
-      section: "Gestión de Maestros",
-    },
-    {
-      href: "/medicos",
-      label: "Médicos",
-      icon: UserCheck,
-      section: "Gestión de Maestros",
-    },
-    {
-      href: "/prestaciones",
-      label: "Prestaciones",
-      icon: ClipboardList,
-      section: "Gestión de Maestros",
-    },
-    {
-      href: "/reglas",
-      label: "Reglas de Cálculo",
-      icon: Calculator,
-      section: "Gestión de Maestros",
-    },
-    {
-      href: "/reportes",
-      label: "Reporte Prestaciones",
-      icon: BarChart3,
-      section: "Reportes",
-    },
-    {
-      href: "/perfil",
-      label: "Mi Perfil",
-      icon: User,
-      section: "Configuración",
-    },
-    {
-      href: "/configuracion",
-      label: "Configuración",
-      icon: Settings,
-      section: "Configuración",
-    },
-  ];
+  // Navigation items based on user role
+  const getNavigationItems = () => {
+    const baseItems = [
+      {
+        href: "/perfil",
+        label: "Mi Perfil",
+        icon: User,
+        section: "Configuración",
+      },
+    ];
+
+    // Admin and supervisor get access to master data management
+    if (user?.profile === "admin" || user?.profile === "supervisor") {
+      return [
+        {
+          href: "/usuarios",
+          label: "Usuarios",
+          icon: Users,
+          section: "Gestión de Maestros",
+        },
+        {
+          href: "/medicos",
+          label: "Médicos",
+          icon: UserCheck,
+          section: "Gestión de Maestros",
+        },
+        {
+          href: "/prestaciones",
+          label: "Prestaciones",
+          icon: ClipboardList,
+          section: "Gestión de Maestros",
+        },
+        {
+          href: "/reglas",
+          label: "Reglas de Cálculo",
+          icon: Calculator,
+          section: "Gestión de Maestros",
+        },
+        {
+          href: "/reportes",
+          label: "Reporte Prestaciones",
+          icon: BarChart3,
+          section: "Reportes",
+        },
+        ...baseItems,
+        {
+          href: "/configuracion",
+          label: "Configuración",
+          icon: Settings,
+          section: "Configuración",
+        },
+      ];
+    }
+
+    // Regular users/doctors get limited access
+    return [
+      {
+        href: "/mis-pagos",
+        label: "Mis Pagos",
+        icon: Calculator,
+        section: "Mi Actividad",
+      },
+      {
+        href: "/participaciones",
+        label: "Participaciones",
+        icon: BarChart3,
+        section: "Mi Actividad",
+      },
+      {
+        href: "/reportes-medico",
+        label: "Mis Reportes",
+        icon: ClipboardList,
+        section: "Mi Actividad",
+      },
+      ...baseItems,
+    ];
+  };
+
+  const navigationItems = getNavigationItems();
 
   const getSectionItems = (section: string) =>
     navigationItems.filter((item) => item.section === section);
