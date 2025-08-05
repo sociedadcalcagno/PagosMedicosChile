@@ -39,7 +39,6 @@ export default function CalculatePayments() {
   // Queries
   const { data: doctors = [] } = useQuery({
     queryKey: ['/api/doctors'],
-    queryFn: async () => await apiRequest('/api/doctors'),
   });
 
   const { data: attentions = [] } = useQuery({
@@ -51,7 +50,8 @@ export default function CalculatePayments() {
       params.append('dateFrom', `${selectedPeriod?.year}-${selectedPeriod?.month.toString().padStart(2, '0')}-01`);
       params.append('dateTo', `${selectedPeriod?.year}-${selectedPeriod?.month.toString().padStart(2, '0')}-31`);
       params.append('status', 'pending');
-      return await apiRequest(`/api/medical-attentions?${params}`);
+      const response = await apiRequest(`/api/medical-attentions?${params}`);
+      return await response.json();
     },
   });
 
@@ -63,14 +63,17 @@ export default function CalculatePayments() {
       if (selectedPeriod?.doctorId) params.append('doctorId', selectedPeriod.doctorId);
       if (selectedPeriod?.month) params.append('month', selectedPeriod.month.toString());
       if (selectedPeriod?.year) params.append('year', selectedPeriod.year.toString());
-      return await apiRequest(`/api/payment-calculations?${params}`);
+      const response = await apiRequest(`/api/payment-calculations?${params}`);
+      return await response.json();
     },
   });
 
   // Mutations
   const calculateMutation = useMutation({
-    mutationFn: async (data: { doctorId: string; month: number; year: number }) => 
-      await apiRequest('/api/calculate-payments', 'POST', data),
+    mutationFn: async (data: { doctorId: string; month: number; year: number }) => {
+      const response = await apiRequest('/api/calculate-payments', 'POST', data);
+      return await response.json();
+    },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/payment-calculations'] });
       queryClient.invalidateQueries({ queryKey: ['/api/medical-attentions'] });
