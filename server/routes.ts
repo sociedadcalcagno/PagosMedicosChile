@@ -659,6 +659,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // CSV Import endpoint for HMQ Activities records
+  app.post('/api/import/csv-hmq', authMiddleware, async (req, res) => {
+    try {
+      console.log('HMQ import started. Request body:', req.body);
+      const csvData = req.body.csvData || '';
+      const lines = csvData.split('\n').filter((line: string) => line.trim());
+      console.log('CSV lines found:', lines.length, 'First few lines:', lines.slice(0, 3));
+      
+      if (lines.length < 2) {
+        return res.json({
+          success: false,
+          data: [],
+          errors: ['El archivo CSV debe contener al menos una fila de datos'],
+          total: 0,
+          imported: 0,
+        });
+      }
+
+      const errors: string[] = [];
+      const importedData: any[] = [];
+      let imported = 0;
+
+      // Expected columns for TMP_REGISTROS_HMQ
+      const expectedColumns = [
+        'RHMQ_RUT_PACIENTE', 'RHMQ_NOMBRE_PACIENTE', 'RHMQ_FCONSUMO', 
+        'RHMQ_CODIGO_PRESTACION', 'RHMQ_NOMBRE_PRESTACION', 'RHMQ_PREVISION_PACIENTE',
+        'RHMQ_VAL_BRUTO', 'RHMQ_VAL_LIQUIDO', 'RHMQ_COMISION', 'RHMQ_VAL_RECAUDADO',
+        'ESP_ID', 'RHMQ_ESTADO', 'RHMQ_BANCO_PARA_PAGO', 'RHMQ_CUENTA_PARA_PAGO'
+      ];
+
+      for (let i = 1; i < lines.length; i++) {
+        try {
+          const values = lines[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
+          
+          // Map TMP_REGISTROS_HMQ fields to medical attention format
+          const attention = {
+            patientRut: values[0] || '', // RHMQ_RUT_PACIENTE
+            patientName: values[1] || '', // RHMQ_NOMBRE_PACIENTE
+            doctorId: `doc_${values[10] || 'unknown'}`, // ESP_ID mapped to doctor
+            serviceId: values[3] || '', // RHMQ_CODIGO_PRESTACION
+            providerTypeId: getProviderTypeFromPrevision(values[5] || ''), // RHMQ_PREVISION_PACIENTE
+            attentionDate: formatDate(values[2] || ''), // RHMQ_FCONSUMO
+            attentionTime: '09:00', // Default time for HMQ records
+            scheduleType: 'regular' as const,
+            grossAmount: values[6] || '0', // RHMQ_VAL_BRUTO
+            netAmount: values[7] || '0', // RHMQ_VAL_LIQUIDO
+            participatedAmount: values[9] || '0', // RHMQ_VAL_RECAUDADO
+            status: mapHmqStatus(values[11] || 'pending'), // RHMQ_ESTADO
+            // Additional fields specific to HMQ
+            commission: values[8] || '0', // RHMQ_COMISION
+            serviceName: values[4] || '', // RHMQ_NOMBRE_PRESTACION
+            providerName: values[5] || '', // RHMQ_PREVISION_PACIENTE
+            bankForPayment: values[12] || '', // RHMQ_BANCO_PARA_PAGO
+            accountForPayment: values[13] || '', // RHMQ_CUENTA_PARA_PAGO
+          };
+
+          if (!attention.patientRut || !attention.patientName) {
+            errors.push(`Fila ${i + 1}: RUT y nombre del paciente son requeridos`);
+            continue;
+          }
+
+          if (!attention.serviceId) {
+            errors.push(`Fila ${i + 1}: Código de prestación es requerido`);
+            continue;
+          }
+
+          console.log('Creating HMQ attention:', JSON.stringify(attention, null, 2));
+          await storage.createMedicalAttention(attention);
+          importedData.push(attention);
+          imported++;
+        } catch (error) {
+          console.error(`Error processing HMQ line ${i + 1}:`, error);
+          errors.push(`Fila ${i + 1}: Error al procesar - ${error}`);
+        }
+      }
+
+      console.log(`HMQ Import complete. Total: ${lines.length - 1}, Imported: ${imported}, Errors: ${errors.length}`);
+      res.json({
+        success: imported > 0,
+        data: importedData,
+        errors,
+        total: lines.length - 1,
+        imported,
+        recordType: 'hmq'
+      });
+    } catch (error) {
+      console.error('Error importing HMQ CSV:', error);
+      res.status(500).json({
+        success: false,
+        data: [],
+        errors: [`Error interno del servidor: ${error}`],
+        total: 0,
+        imported: 0,
+      });
+    }
+  });
+
   // CSV Import endpoint for general attentions (backward compatibility)
   app.post('/api/import/csv-attentions', authMiddleware, async (req, res) => {
     try {
@@ -730,7 +827,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // API Import endpoint
+  // API Import endpoint for Participacion records
+  app.post('/api/import/api-participacion', authMiddleware, async (req, res) => {
+    try {
+      const { url, method = 'GET', headers = {}, body } = req.body;
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al conectar con la API externa');
+      }
+
+      const apiData = await response.json();
+      const dataArray = Array.isArray(apiData) ? apiData : [apiData];
+
+      const errors: string[] = [];
+      const importedData: any[] = [];
+      let imported = 0;
+
+      for (let index = 0; index < dataArray.length; index++) {
+        const item = dataArray[index];
+        try {
+          // Map API data to participacion format
+          const attention = {
+            patientRut: item.rut_paciente || item.patientRut || '',
+            patientName: item.nombre_paciente || item.patientName || '',
+            doctorId: `doc_${item.especialidad_id || item.esp_id || 'unknown'}`,
+            serviceId: item.codigo_prestacion || item.serviceCode || '',
+            providerTypeId: getProviderTypeFromPrevision(item.prevision || item.provider || ''),
+            attentionDate: formatDate(item.fecha_atencion || item.attentionDate || ''),
+            attentionTime: item.horario || item.time || '09:00',
+            scheduleType: 'regular' as const,
+            grossAmount: item.val_participado || item.participatedAmount || '0',
+            netAmount: item.val_liquido || item.netAmount || '0',
+            participatedAmount: item.val_participado || item.participatedAmount || '0',
+            status: mapParticipacionStatus(item.estado || item.status || 'pending'),
+            participationPercentage: item.porcentaje_participacion || item.participationPercentage || '0',
+            serviceName: item.nombre_prestacion || item.serviceName || '',
+            providerName: item.prevision || item.provider || '',
+          };
+
+          await storage.createMedicalAttention(attention);
+          importedData.push(attention);
+          imported++;
+        } catch (error: any) {
+          errors.push(`Registro ${index + 1}: ${error.message}`);
+        }
+      }
+
+      res.json({
+        success: imported > 0,
+        data: importedData,
+        errors,
+        total: dataArray.length,
+        imported,
+        recordType: 'participacion'
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        data: [],
+        errors: [`Error al importar desde API: ${error.message}`],
+        total: 0,
+        imported: 0,
+      });
+    }
+  });
+
+  // API Import endpoint for HMQ Activities records  
+  app.post('/api/import/api-hmq', authMiddleware, async (req, res) => {
+    try {
+      const { url, method = 'GET', headers = {}, body } = req.body;
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al conectar con la API externa');
+      }
+
+      const apiData = await response.json();
+      const dataArray = Array.isArray(apiData) ? apiData : [apiData];
+
+      const errors: string[] = [];
+      const importedData: any[] = [];
+      let imported = 0;
+
+      for (let index = 0; index < dataArray.length; index++) {
+        const item = dataArray[index];
+        try {
+          // Map API data to HMQ format
+          const attention = {
+            patientRut: item.rut_paciente || item.patientRut || '',
+            patientName: item.nombre_paciente || item.patientName || '',
+            doctorId: `doc_${item.especialidad_id || item.esp_id || 'unknown'}`,
+            serviceId: item.codigo_prestacion || item.serviceCode || '',
+            providerTypeId: getProviderTypeFromPrevision(item.prevision || item.provider || ''),
+            attentionDate: formatDate(item.fecha_consumo || item.consumptionDate || ''),
+            attentionTime: '09:00',
+            scheduleType: 'regular' as const,
+            grossAmount: item.val_bruto || item.grossAmount || '0',
+            netAmount: item.val_liquido || item.netAmount || '0',
+            participatedAmount: item.val_recaudado || item.collectedAmount || '0',
+            status: mapHmqStatus(item.estado || item.status || 'pending'),
+            commission: item.comision || item.commission || '0',
+            serviceName: item.nombre_prestacion || item.serviceName || '',
+            providerName: item.prevision || item.provider || '',
+            bankForPayment: item.banco_pago || item.paymentBank || '',
+            accountForPayment: item.cuenta_pago || item.paymentAccount || '',
+          };
+
+          await storage.createMedicalAttention(attention);
+          importedData.push(attention);
+          imported++;
+        } catch (error: any) {
+          errors.push(`Registro ${index + 1}: ${error.message}`);
+        }
+      }
+
+      res.json({
+        success: imported > 0,
+        data: importedData,
+        errors,
+        total: dataArray.length,
+        imported,
+        recordType: 'hmq'
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        data: [],
+        errors: [`Error al importar desde API: ${error.message}`],
+        total: 0,
+        imported: 0,
+      });
+    }
+  });
+
+  // API Import endpoint for general attentions (backward compatibility)
   app.post('/api/import/api-attentions', authMiddleware, async (req, res) => {
     try {
       const { url, method, headers, body } = req.body;
@@ -807,7 +1054,181 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // HIS Import endpoint
+  // HIS Import endpoint for Participacion records
+  app.post('/api/import/his-participacion', authMiddleware, async (req, res) => {
+    try {
+      const { endpoint, apiKey, facility, dateFrom, dateTo } = req.body;
+
+      const hisHeaders = {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'X-Facility-Code': facility,
+      };
+
+      const hisParams = new URLSearchParams({
+        dateFrom: dateFrom || '',
+        dateTo: dateTo || '',
+        recordType: 'participacion',
+        status: 'completed',
+      });
+
+      const response = await fetch(`${endpoint}/participacion?${hisParams}`, {
+        method: 'GET',
+        headers: hisHeaders,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error al conectar con el HIS: ${response.statusText}`);
+      }
+
+      const hisData = await response.json();
+      const errors: string[] = [];
+      const importedData: any[] = [];
+      let imported = 0;
+
+      const dataArray = hisData.participaciones || hisData.data || [];
+
+      for (const item of dataArray) {
+        try {
+          const attention = {
+            patientRut: item.rut_paciente || item.patient_rut || '',
+            patientName: item.nombre_paciente || item.patient_name || '',
+            doctorId: `doc_${item.especialidad_id || item.specialty_id || 'unknown'}`,
+            serviceId: item.codigo_prestacion || item.service_code || '',
+            providerTypeId: getProviderTypeFromPrevision(item.prevision || item.provider || ''),
+            attentionDate: formatDate(item.fecha_atencion || item.attention_date || ''),
+            attentionTime: item.horario || item.time || '09:00',
+            scheduleType: 'regular' as const,
+            grossAmount: item.val_participado || item.participated_amount || '0',
+            netAmount: item.val_liquido || item.net_amount || '0',
+            participatedAmount: item.val_participado || item.participated_amount || '0',
+            status: mapParticipacionStatus(item.estado || item.status || 'pending'),
+            participationPercentage: item.porcentaje_participacion || item.participation_percentage || '0',
+            serviceName: item.nombre_prestacion || item.service_name || '',
+            providerName: item.prevision || item.provider || '',
+          };
+
+          if (!attention.patientRut || !attention.patientName) {
+            errors.push(`Registro HIS: RUT y nombre del paciente son requeridos`);
+            continue;
+          }
+
+          await storage.createMedicalAttention(attention);
+          importedData.push(attention);
+          imported++;
+        } catch (error: any) {
+          errors.push(`Error HIS: ${error.message}`);
+        }
+      }
+
+      res.json({
+        success: imported > 0,
+        data: importedData,
+        errors,
+        total: dataArray.length,
+        imported,
+        recordType: 'participacion'
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        data: [],
+        errors: [`Error al conectar con el HIS: ${error.message}`],
+        total: 0,
+        imported: 0,
+      });
+    }
+  });
+
+  // HIS Import endpoint for HMQ Activities
+  app.post('/api/import/his-hmq', authMiddleware, async (req, res) => {
+    try {
+      const { endpoint, apiKey, facility, dateFrom, dateTo } = req.body;
+
+      const hisHeaders = {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'X-Facility-Code': facility,
+      };
+
+      const hisParams = new URLSearchParams({
+        dateFrom: dateFrom || '',
+        dateTo: dateTo || '',
+        recordType: 'hmq',
+        status: 'liquidado',
+      });
+
+      const response = await fetch(`${endpoint}/actividades-hmq?${hisParams}`, {
+        method: 'GET',
+        headers: hisHeaders,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error al conectar con el HIS: ${response.statusText}`);
+      }
+
+      const hisData = await response.json();
+      const errors: string[] = [];
+      const importedData: any[] = [];
+      let imported = 0;
+
+      const dataArray = hisData.actividades || hisData.data || [];
+
+      for (const item of dataArray) {
+        try {
+          const attention = {
+            patientRut: item.rut_paciente || item.patient_rut || '',
+            patientName: item.nombre_paciente || item.patient_name || '',
+            doctorId: `doc_${item.especialidad_id || item.specialty_id || 'unknown'}`,
+            serviceId: item.codigo_prestacion || item.service_code || '',
+            providerTypeId: getProviderTypeFromPrevision(item.prevision || item.provider || ''),
+            attentionDate: formatDate(item.fecha_consumo || item.consumption_date || ''),
+            attentionTime: '09:00',
+            scheduleType: 'regular' as const,
+            grossAmount: item.val_bruto || item.gross_amount || '0',
+            netAmount: item.val_liquido || item.net_amount || '0',
+            participatedAmount: item.val_recaudado || item.collected_amount || '0',
+            status: mapHmqStatus(item.estado || item.status || 'pending'),
+            commission: item.comision || item.commission || '0',
+            serviceName: item.nombre_prestacion || item.service_name || '',
+            providerName: item.prevision || item.provider || '',
+            bankForPayment: item.banco_pago || item.payment_bank || '',
+            accountForPayment: item.cuenta_pago || item.payment_account || '',
+          };
+
+          if (!attention.patientRut || !attention.patientName) {
+            errors.push(`Registro HIS: RUT y nombre del paciente son requeridos`);
+            continue;
+          }
+
+          await storage.createMedicalAttention(attention);
+          importedData.push(attention);
+          imported++;
+        } catch (error: any) {
+          errors.push(`Error HIS: ${error.message}`);
+        }
+      }
+
+      res.json({
+        success: imported > 0,
+        data: importedData,
+        errors,
+        total: dataArray.length,
+        imported,
+        recordType: 'hmq'
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        data: [],
+        errors: [`Error al conectar con el HIS: ${error.message}`],
+        total: 0,
+        imported: 0,
+      });
+    }
+  });
+
+  // HIS Import endpoint for general attentions (backward compatibility)
   app.post('/api/import/his-attentions', authMiddleware, async (req, res) => {
     try {
       const { endpoint, apiKey, facility, dateFrom, dateTo } = req.body;
@@ -924,6 +1345,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const statusLower = status.toLowerCase();
     if (statusLower.includes('liquidado') || statusLower.includes('pagado')) return 'processed';
     if (statusLower.includes('anulado') || statusLower.includes('cancelado')) return 'cancelled';
+    return 'pending';
+  }
+
+  function mapHmqStatus(status: string): string {
+    const statusLower = status.toLowerCase();
+    if (statusLower.includes('liquidado') || statusLower.includes('pagado') || statusLower.includes('recaudado')) return 'processed';
+    if (statusLower.includes('anulado') || statusLower.includes('cancelado')) return 'cancelled';
+    if (statusLower.includes('pendiente') || statusLower.includes('proceso')) return 'pending';
     return 'pending';
   }
 

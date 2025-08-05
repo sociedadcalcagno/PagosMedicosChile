@@ -143,7 +143,11 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
         headers = JSON.parse(apiConfig.headers);
       }
 
-      const response = await fetch('/api/import/api-attentions', {
+      const endpoint = recordType === 'participacion' 
+        ? '/api/import/api-participacion' 
+        : '/api/import/api-hmq';
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -194,7 +198,11 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
 
     setIsProcessing(true);
     try {
-      const response = await fetch('/api/import/his-attentions', {
+      const endpoint = recordType === 'participacion' 
+        ? '/api/import/his-participacion' 
+        : '/api/import/his-hmq';
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -350,7 +358,9 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
                   Conectar con API Externa
                 </CardTitle>
                 <CardDescription>
-                  Configura la conexión con una API externa para importar atenciones médicas
+                  {recordType === 'participacion' 
+                    ? 'Conecta con API externa para importar registros de participación médica con datos de porcentajes y liquidaciones'
+                    : 'Conecta con API externa para importar actividades HMQ con datos de facturación y comisiones'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -420,7 +430,9 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
                   Sistema HIS (Health Information System)
                 </CardTitle>
                 <CardDescription>
-                  Conecta con sistemas hospitalarios estándar como MINSAL, FONASA o sistemas privados
+                  {recordType === 'participacion' 
+                    ? 'Conecta con sistemas hospitalarios para importar registros de participación médica desde MINSAL, FONASA o sistemas privados'
+                    : 'Conecta con sistemas hospitalarios para importar actividades HMQ de liquidación desde MINSAL, FONASA o sistemas privados'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
