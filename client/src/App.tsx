@@ -8,10 +8,10 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Home from "@/pages/Home";
 import Users from "@/pages/Users";
-import Doctors from "@/pages/Doctors";
-import Services from "@/pages/Services";
-import Rules from "@/pages/Rules";
-import Reports from "@/pages/Reports";
+import Doctors from "@/pages/Doctors.tsx";
+import Services from "@/pages/Services.tsx";
+import Rules from "@/pages/Rules.tsx";
+import Reports from "@/pages/Reports.tsx";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
