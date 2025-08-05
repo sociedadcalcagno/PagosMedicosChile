@@ -629,7 +629,10 @@ export class DatabaseStorage implements IStorage {
           return false;
         }
         if (rule.serviceId && rule.serviceId !== attention.serviceId) {
-          console.log('❌ Rule rejected: Service ID mismatch');
+          console.log('❌ Rule rejected: Service ID mismatch', {
+            ruleServiceId: rule.serviceId,
+            attentionServiceId: attention.serviceId
+          });
           return false;
         }
         
