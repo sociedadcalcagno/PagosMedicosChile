@@ -90,13 +90,23 @@ export default function Landing() {
               <p className="text-white/80 mb-6">
                 Inicia sesión para gestionar el sistema de honorarios médicos
               </p>
-              <Button
-                size="lg"
-                className="bg-white text-medical-blue hover:bg-gray-100 font-semibold"
-                onClick={() => (window.location.href = "/api/login")}
-              >
-                Iniciar Sesión
-              </Button>
+              <div className="space-y-3">
+                <Button
+                  size="lg"
+                  className="bg-white text-medical-blue hover:bg-gray-100 font-semibold w-full"
+                  onClick={() => (window.location.href = "/api/login")}
+                >
+                  Iniciar Sesión
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-white/50 text-white hover:bg-white/10 font-semibold w-full"
+                  onClick={() => (window.location.href = "/api/login?force_select=true")}
+                >
+                  Cambiar Cuenta
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
