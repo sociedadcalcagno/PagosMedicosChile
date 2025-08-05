@@ -914,7 +914,7 @@ export default function Rules() {
             <CardTitle>Filtros de Búsqueda</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="flex items-center space-x-2">
                 <Search className="w-4 h-4 text-gray-400" />
                 <Input
@@ -959,7 +959,7 @@ export default function Rules() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex justify-end mt-4 space-x-3">
+            <div className="flex flex-col sm:flex-row justify-end mt-4 space-y-2 sm:space-y-0 sm:space-x-3">
               <Button 
                 variant="outline" 
                 onClick={() => {
@@ -989,18 +989,19 @@ export default function Rules() {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <Table className="min-w-full">
+            {/* Desktop Table */}
+            <div className="hidden lg:block">
+              <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="whitespace-nowrap">Código</TableHead>
-                    <TableHead className="whitespace-nowrap">Nombre</TableHead>
-                    <TableHead className="whitespace-nowrap">Tipo</TableHead>
-                    <TableHead className="whitespace-nowrap">Especialidad</TableHead>
-                    <TableHead className="whitespace-nowrap">Regla Base</TableHead>
-                    <TableHead className="whitespace-nowrap">Vigencia</TableHead>
-                    <TableHead className="whitespace-nowrap">Estado</TableHead>
-                    <TableHead className="text-center whitespace-nowrap">Acciones</TableHead>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Especialidad</TableHead>
+                    <TableHead>Regla Base</TableHead>
+                    <TableHead>Vigencia</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
               <TableBody>
@@ -1109,11 +1110,105 @@ export default function Rules() {
               </TableBody>
               </Table>
             </div>
+
+            {/* Mobile Card Layout */}
+            <div className="lg:hidden space-y-4">
+              {isLoading ? (
+                <div className="text-center py-8">Cargando reglas...</div>
+              ) : filteredRules.length === 0 ? (
+                <div className="text-center py-8">No se encontraron reglas</div>
+              ) : (
+                filteredRules.map((rule: any) => {
+                  const status = getRuleStatus(rule);
+                  return (
+                    <Card key={rule.id} className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-medium text-gray-900">{rule.name}</h4>
+                            <p className="text-sm text-medical-blue font-mono">{rule.code}</p>
+                          </div>
+                          <Badge variant={status.variant}>
+                            {status.status}
+                          </Badge>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <span className="text-gray-500">Tipo:</span>
+                            <Badge variant={getParticipationBadge(rule.participationType)} className="ml-1">
+                              {getParticipationLabel(rule.participationType)}
+                            </Badge>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Especialidad:</span>
+                            <span className="ml-1">{getSpecialtyName(rule.specialtyId)}</span>
+                          </div>
+                        </div>
+
+                        <div className="text-sm">
+                          <span className="text-gray-500">Regla Base:</span>
+                          <p className="mt-1">
+                            {rule.paymentType === "percentage" 
+                              ? `${rule.paymentValue}% del valor base`
+                              : `$${parseFloat(rule.paymentValue).toLocaleString()} fijo`
+                            }
+                          </p>
+                        </div>
+
+                        <div className="text-sm">
+                          <span className="text-gray-500">Vigencia:</span>
+                          <p className="mt-1">{rule.validFrom} - {rule.validTo}</p>
+                        </div>
+
+                        <div className="flex justify-end space-x-2 pt-2 border-t">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-gray-400 hover:text-medical-blue"
+                            title="Ver detalles"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(rule)}
+                            className="text-gray-400 hover:text-warning-orange"
+                            title="Editar"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDuplicate(rule)}
+                            className="text-gray-400 hover:text-blue-500"
+                            title="Duplicar"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(rule.id)}
+                            className="text-gray-400 hover:text-red-500"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })
+              )}
+            </div>
           </CardContent>
         </Card>
 
         {/* Quick Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
