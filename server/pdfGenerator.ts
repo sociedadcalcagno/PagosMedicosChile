@@ -41,47 +41,111 @@ export function generatePayrollPDF(data: PDFPayrollData): string {
   // HTML template based on the provided sample
   const html = `
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CARTOLA DE PAGO - ${data.doctorName}</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            line-height: 1.2;
-            margin: 20px;
-            color: #000;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            font-size: 13px;
+            line-height: 1.6;
+            margin: 0;
+            padding: 40px;
+            color: #1a1a1a;
+            background: #ffffff;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .document-container {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            padding: 48px;
+            border: 1px solid #e5e7eb;
         }
         .header {
             text-align: center;
-            margin-bottom: 30px;
-            font-weight: bold;
+            margin-bottom: 48px;
+            padding: 32px 0;
+            border-bottom: 3px solid #0f766e;
+            background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
+            border-radius: 8px;
+            margin: -24px -24px 48px -24px;
+            padding: 32px 24px;
         }
         .title {
-            font-size: 16px;
-            margin-bottom: 5px;
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f766e;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
         }
         .subtitle {
-            font-size: 14px;
-            margin-bottom: 5px;
+            font-size: 16px;
+            font-weight: 500;
+            color: #0d9488;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .date {
-            font-size: 12px;
-            margin-bottom: 20px;
+            font-size: 14px;
+            color: #475569;
+            font-weight: 500;
+            margin-bottom: 0;
         }
         .cartola-info {
-            margin-bottom: 20px;
-            font-weight: bold;
+            background: #f8fafc;
+            padding: 20px 24px;
+            border-radius: 8px;
+            border-left: 4px solid #3b82f6;
+            margin-bottom: 32px;
+            font-weight: 600;
+            font-size: 16px;
+            color: #1e40af;
         }
         .doctor-info {
-            margin-bottom: 30px;
-            font-weight: bold;
+            background: #fefefe;
+            padding: 24px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 40px;
+            font-weight: 500;
+            color: #334155;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        .doctor-info .rut {
+            color: #0f766e;
+            font-weight: 600;
+        }
+        .doctor-info .name {
+            color: #1e293b;
+            font-weight: 700;
+            font-size: 15px;
         }
         .section-title {
-            font-weight: bold;
-            font-size: 14px;
-            margin: 30px 0 10px 0;
-            text-decoration: underline;
+            font-weight: 700;
+            font-size: 18px;
+            margin: 48px 0 24px 0;
+            color: #0f766e;
+            padding: 12px 20px;
+            background: linear-gradient(90deg, #0f766e 0%, #14b8a6 100%);
+            color: white;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(15, 118, 110, 0.2);
         }
         .table-header {
             font-weight: bold;
@@ -101,53 +165,115 @@ export function generatePayrollPDF(data: PDFPayrollData): string {
             font-size: 11px;
         }
         .totals {
-            margin-top: 30px;
-            font-weight: bold;
-            border-top: 2px solid #000;
-            padding-top: 15px;
+            margin-top: 48px;
+            background: #f8fafc;
+            padding: 32px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
         }
         .total-row {
-            margin-bottom: 8px;
             display: flex;
             justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 15px;
+        }
+        .total-row:last-child {
+            border-bottom: none;
+            border-top: 2px solid #0f766e;
+            margin-top: 16px;
+            padding-top: 24px;
+            font-weight: 700;
+            font-size: 18px;
+            color: #0f766e;
+        }
+        .total-label {
+            font-weight: 600;
+            color: #475569;
+        }
+        .total-amount {
+            font-weight: 700;
+            color: #0f766e;
+            font-size: 16px;
         }
         .footer {
-            margin-top: 40px;
+            margin-top: 64px;
             text-align: center;
-            font-size: 10px;
-            border-top: 1px solid #666;
-            padding-top: 15px;
+            font-size: 12px;
+            color: #64748b;
+            padding: 24px;
+            border-top: 2px solid #e2e8f0;
+            background: #f8fafc;
+            border-radius: 8px;
+            line-height: 1.8;
+        }
+        .footer strong {
+            color: #0f766e;
+            font-weight: 600;
         }
         .no-data {
             text-align: center;
             font-style: italic;
-            color: #666;
-            margin: 20px 0;
+            color: #94a3b8;
+            margin: 32px 0;
+            padding: 32px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px dashed #cbd5e1;
+            font-size: 14px;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 32px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e2e8f0;
         }
         th, td {
             text-align: left;
-            padding: 4px 8px;
-            border-bottom: 1px solid #ccc;
-            font-size: 11px;
+            padding: 16px 20px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
         }
         th {
-            font-weight: bold;
-            background-color: #f5f5f5;
+            font-weight: 600;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            color: #475569;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #cbd5e1;
+        }
+        tbody tr:hover {
+            background-color: #f8fafc;
+        }
+        tbody tr:last-child td {
+            border-bottom: none;
         }
         .amount {
             text-align: right;
+            font-weight: 600;
+            color: #059669;
         }
         .center {
             text-align: center;
         }
+        .percentage {
+            background: #ecfdf5;
+            color: #059669;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
+    <div class="document-container">
     <div class="header">
         <div class="title">CARTOLA DE PAGO - Participaciones</div>
         <div class="subtitle">PORTAL PAGOS MÉDICOS</div>
@@ -159,8 +285,8 @@ export function generatePayrollPDF(data: PDFPayrollData): string {
     </div>
 
     <div class="doctor-info">
-        ${data.societyName ? `RUT Pago: ${data.societyRut || ''} ${data.societyName}` : ''}
-        <br>RUT Profesional: ${data.doctorRut} ${data.doctorName}
+        ${data.societyName ? `<div style="margin-bottom: 12px;"><span class="rut">RUT Pago:</span> <span class="name">${data.societyRut || ''} ${data.societyName}</span></div>` : ''}
+        <div><span class="rut">RUT Profesional:</span> <span class="name">${data.doctorRut} ${data.doctorName}</span></div>
     </div>
 
     ${data.participacionAttentions.length > 0 ? `
@@ -190,7 +316,7 @@ export function generatePayrollPDF(data: PDFPayrollData): string {
                 <td>${att.serviceName || ''}</td>
                 <td>HABIL</td>
                 <td class="amount">${formatCurrency(parseFloat(att.baseAmount || '0'))}</td>
-                <td class="center">${att.participationPercentage || '0'}%</td>
+                <td class="center"><span class="percentage">${att.participationPercentage || '0'}%</span></td>
                 <td class="amount">${formatCurrency(parseFloat(att.participatedAmount))}</td>
                 <td class="amount">${formatCurrency(parseFloat(att.commissionAmount || '0'))}</td>
             </tr>
@@ -232,7 +358,7 @@ export function generatePayrollPDF(data: PDFPayrollData): string {
                 <td>${att.serviceName || ''}</td>
                 <td>HABIL</td>
                 <td class="amount">${formatCurrency(parseFloat(att.baseAmount || '0'))}</td>
-                <td class="center">${att.participationPercentage || '0'}%</td>
+                <td class="center"><span class="percentage">${att.participationPercentage || '0'}%</span></td>
                 <td class="amount">${formatCurrency(parseFloat(att.participatedAmount))}</td>
                 <td class="amount">${formatCurrency(parseFloat(att.commissionAmount || '0'))}</td>
             </tr>
@@ -249,23 +375,24 @@ export function generatePayrollPDF(data: PDFPayrollData): string {
 
     <div class="totals">
         <div class="total-row">
-            <span>TOTAL PARTICIPACIONES:</span>
-            <span>$${formatCurrency(data.participacionTotal)}</span>
+            <span class="total-label">TOTAL PARTICIPACIONES:</span>
+            <span class="total-amount">$${formatCurrency(data.participacionTotal)}</span>
         </div>
         <div class="total-row">
-            <span>TOTAL HMQ:</span>
-            <span>$${formatCurrency(data.hmqTotal)}</span>
+            <span class="total-label">TOTAL HMQ:</span>
+            <span class="total-amount">$${formatCurrency(data.hmqTotal)}</span>
         </div>
-        <div class="total-row" style="border-top: 1px solid #000; padding-top: 8px; margin-top: 8px;">
-            <span>TOTAL GENERAL:</span>
-            <span>$${formatCurrency(data.totalAmount)}</span>
+        <div class="total-row">
+            <span class="total-label">TOTAL GENERAL:</span>
+            <span class="total-amount">$${formatCurrency(data.totalAmount)}</span>
         </div>
     </div>
 
     <div class="footer">
-        Portal de Pagos Médicos - Sistema de Liquidaciones<br>
+        <strong>Portal de Pagos Médicos</strong> - Sistema de Liquidaciones<br>
         Generado el ${new Date().toLocaleString('es-CL')}<br>
         Período: ${monthNames[data.month - 1]} ${data.year}
+    </div>
     </div>
 </body>
 </html>`;
