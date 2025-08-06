@@ -669,6 +669,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced payment processing endpoints
+  app.post('/api/calculate-payment-summaries', authMiddleware, async (req, res) => {
+    try {
+      const { month, year, recordType } = req.body;
+      
+      if (!month || !year) {
+        return res.status(400).json({ error: 'Month and year are required' });
+      }
+      
+      const summaries = await storage.calculatePaymentSummaries(month, year, recordType);
+      res.json(summaries);
+    } catch (error) {
+      console.error('Payment summaries calculation error:', error);
+      res.status(500).json({ error: "Failed to calculate payment summaries" });
+    }
+  });
+
+  app.post('/api/process-bulk-payments', authMiddleware, async (req, res) => {
+    try {
+      const { month, year, selectedDoctors, paymentMethod, notes, recordType } = req.body;
+      
+      if (!month || !year || !selectedDoctors || selectedDoctors.length === 0) {
+        return res.status(400).json({ error: 'Month, year, and selected doctors are required' });
+      }
+      
+      const result = await storage.processBulkPayments({
+        month,
+        year,
+        selectedDoctors,
+        paymentMethod: paymentMethod || 'transfer',
+        notes,
+        recordType,
+      });
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Bulk payment processing error:', error);
+      res.status(500).json({ error: "Failed to process bulk payments" });
+    }
+  });
+
   // CSV Import endpoint for Participacion records
   // Helper function to find or create service from CSV data
   async function findOrCreateService(serviceCode: string, serviceName: string) {

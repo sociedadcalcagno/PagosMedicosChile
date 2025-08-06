@@ -38,7 +38,7 @@ import {
   type Payment,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, ilike, desc, asc, gte, lte, inArray } from "drizzle-orm";
+import { eq, and, or, ilike, desc, asc, gte, lte, inArray, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -817,6 +817,129 @@ export class DatabaseStorage implements IStorage {
     }
 
     return await query.orderBy(desc(paymentCalculations.calculationDate));
+  }
+
+  // Payment summaries for enhanced processing
+  async calculatePaymentSummaries(month: number, year: number, recordType?: string): Promise<any[]> {
+    let whereConditions = [
+      eq(sql`EXTRACT(MONTH FROM ${medicalAttentions.attentionDate})`, month),
+      eq(sql`EXTRACT(YEAR FROM ${medicalAttentions.attentionDate})`, year)
+    ];
+    
+    if (recordType && recordType !== 'all') {
+      whereConditions.push(eq(medicalAttentions.recordType, recordType));
+    }
+
+    const attentions = await db.select({
+      id: medicalAttentions.id,
+      doctorId: medicalAttentions.doctorId,
+      participatedAmount: medicalAttentions.participatedAmount,
+      recordType: medicalAttentions.recordType,
+      doctor: {
+        id: doctors.id,
+        name: doctors.name,
+        rut: doctors.rut,
+        email: doctors.email,
+        societyId: doctors.societyId,
+      },
+      society: {
+        id: medicalSocieties.id,
+        name: medicalSocieties.name,
+      }
+    })
+    .from(medicalAttentions)
+    .leftJoin(doctors, eq(medicalAttentions.doctorId, doctors.id))
+    .leftJoin(medicalSocieties, eq(doctors.societyId, medicalSocieties.id))
+    .where(and(...whereConditions));
+
+    // Group by doctor
+    const doctorSummaries = new Map();
+    
+    for (const attention of attentions) {
+      const doctorId = attention.doctorId;
+      const amount = parseFloat(attention.participatedAmount);
+      
+      if (!doctorSummaries.has(doctorId)) {
+        doctorSummaries.set(doctorId, {
+          doctorId,
+          doctorName: attention.doctor?.name || 'Desconocido',
+          doctorEmail: attention.doctor?.email || '',
+          societyId: attention.doctor?.societyId || null,
+          societyName: attention.society?.name || null,
+          participacionCount: 0,
+          hmqCount: 0,
+          totalCount: 0,
+          participacionAmount: 0,
+          hmqAmount: 0,
+          totalAmount: 0,
+        });
+      }
+      
+      const summary = doctorSummaries.get(doctorId);
+      summary.totalCount++;
+      summary.totalAmount += amount;
+      
+      if (attention.recordType === 'participacion') {
+        summary.participacionCount++;
+        summary.participacionAmount += amount;
+      } else if (attention.recordType === 'hmq') {
+        summary.hmqCount++;
+        summary.hmqAmount += amount;
+      }
+    }
+    
+    return Array.from(doctorSummaries.values());
+  }
+
+  async processBulkPayments(data: {
+    month: number;
+    year: number;
+    selectedDoctors: string[];
+    paymentMethod: string;
+    notes?: string;
+    recordType?: string;
+  }): Promise<{ processedCount: number; totalAmount: number }> {
+    let processedCount = 0;
+    let totalAmount = 0;
+
+    for (const doctorId of data.selectedDoctors) {
+      // Get all attentions for this doctor in the period
+      let whereConditions = [
+        eq(medicalAttentions.doctorId, doctorId),
+        eq(sql`EXTRACT(MONTH FROM ${medicalAttentions.attentionDate})`, data.month),
+        eq(sql`EXTRACT(YEAR FROM ${medicalAttentions.attentionDate})`, data.year)
+      ];
+      
+      if (data.recordType && data.recordType !== 'all') {
+        whereConditions.push(eq(medicalAttentions.recordType, data.recordType));
+      }
+
+      const attentions = await db.select()
+        .from(medicalAttentions)
+        .where(and(...whereConditions));
+
+      if (attentions.length > 0) {
+        const doctorTotal = attentions.reduce((sum, att) => sum + parseFloat(att.participatedAmount), 0);
+        
+        // Create payment record
+        await db.insert(payments).values({
+          id: crypto.randomUUID(),
+          doctorId,
+          amount: doctorTotal.toString(),
+          paymentMethod: data.paymentMethod,
+          status: 'processed',
+          notes: data.notes || `Pago procesado masivamente - ${data.month}/${data.year}`,
+          paymentDate: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        processedCount++;
+        totalAmount += doctorTotal;
+      }
+    }
+
+    return { processedCount, totalAmount };
   }
 
   // Payroll processing functions

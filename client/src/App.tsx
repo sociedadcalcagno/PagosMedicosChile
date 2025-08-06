@@ -20,6 +20,7 @@ import MedicalAttentions from "@/pages/MedicalAttentions";
 import CalculatePayments from "@/pages/CalculatePayments";
 import ProcessPayments from "@/pages/ProcessPayments";
 import PayrollProcessing from "@/pages/PayrollProcessing";
+import ProcessPaymentsEnhanced from "@/pages/ProcessPaymentsEnhanced";
 import type { User } from "@shared/schema";
 
 function Router() {
@@ -56,6 +57,7 @@ function Router() {
         <Route path="/atenciones-medicas" component={MedicalAttentions} />
         <Route path="/calcular-pagos" component={CalculatePayments} />
         <Route path="/procesar-pagos" component={ProcessPayments} />
+        <Route path="/procesar-pagos-avanzado" component={ProcessPaymentsEnhanced} />
         <Route path="/nomina" component={PayrollProcessing} />
         <Route path="/reportes" component={Reports} />
         <Route path="/perfil" component={Profile} />

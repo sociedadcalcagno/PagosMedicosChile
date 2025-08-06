@@ -16,6 +16,7 @@ import {
   User,
   Stethoscope,
   CreditCard,
+  CheckSquare,
 } from "lucide-react";
 import AIChat from "@/components/AIChat";
 
@@ -83,6 +84,12 @@ export default function Layout({ children }: LayoutProps) {
           href: "/procesar-pagos",
           label: "Procesar Pagos",
           icon: CreditCard,
+          section: "Sistema de Pagos",
+        },
+        {
+          href: "/procesar-pagos-avanzado",
+          label: "Procesar Pagos Avanzado",
+          icon: CheckSquare,
           section: "Sistema de Pagos",
         },
         {
