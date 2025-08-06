@@ -46,28 +46,31 @@ export default function ProcessPayments() {
   const { data: calculations = [] } = useQuery({
     queryKey: ['/api/payment-calculations', selectedPeriod],
     enabled: !!selectedPeriod,
-    queryFn: () => {
+    queryFn: async () => {
       const params = new URLSearchParams();
       if (selectedPeriod?.doctorId) params.append('doctorId', selectedPeriod.doctorId);
       if (selectedPeriod?.month) params.append('month', selectedPeriod.month.toString());
       if (selectedPeriod?.year) params.append('year', selectedPeriod.year.toString());
       params.append('status', 'calculated');
-      return apiRequest(`/api/payment-calculations?${params}`);
+      const response = await apiRequest(`/api/payment-calculations?${params}`, 'GET');
+      return response.json();
     },
   });
 
   const { data: payments = [] } = useQuery({
     queryKey: ['/api/payments'],
-    queryFn: () => apiRequest('/api/payments'),
+    queryFn: async () => {
+      const response = await apiRequest('/api/payments', 'GET');
+      return response.json();
+    },
   });
 
   // Mutations
   const processPaymentMutation = useMutation({
-    mutationFn: (data: { doctorId: string; month: number; year: number }) => 
-      apiRequest('/api/process-payment', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+    mutationFn: async (data: { doctorId: string; month: number; year: number }) => {
+      const response = await apiRequest('/api/process-payment', 'POST', data);
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
       queryClient.invalidateQueries({ queryKey: ['/api/payment-calculations'] });
@@ -155,9 +158,10 @@ export default function ProcessPayments() {
     );
   };
 
-  const totalCalculations = calculations?.length || 0;
-  const totalAmount = calculations?.reduce((sum: number, calc: any) => 
-    sum + parseFloat(calc.calculatedAmount || '0'), 0) || 0;
+  const calculationsArray = Array.isArray(calculations) ? calculations : [];
+  const totalCalculations = calculationsArray.length;
+  const totalAmount = calculationsArray.reduce((sum: number, calc: any) => 
+    sum + parseFloat(calc.calculatedAmount || '0'), 0);
 
   return (
     <div className="space-y-6">
