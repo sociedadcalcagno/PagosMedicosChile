@@ -648,8 +648,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get society information if applicable
       let society = null;
-      if (doctor.societyId) {
-        society = await storage.getMedicalSocietyById(doctor.societyId);
+      const doctorData = doctor as any;
+      if (doctorData.societyId) {
+        society = await storage.getMedicalSocietyById(doctorData.societyId);
       }
 
       // Get payroll data for the doctor
@@ -683,8 +684,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Store the HTML in memory for download (in production, use a proper storage solution)
       const pdfId = `${doctorId}_${month}_${year}_${Date.now()}`;
-      global.pdfStorage = global.pdfStorage || {};
-      global.pdfStorage[pdfId] = html;
+      (global as any).pdfStorage = (global as any).pdfStorage || {};
+      (global as any).pdfStorage[pdfId] = html;
       
       res.json({ 
         message: 'PDF generated successfully',
@@ -706,16 +707,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { pdfId } = req.params;
       
-      if (!global.pdfStorage || !global.pdfStorage[pdfId]) {
+      if (!(global as any).pdfStorage || !(global as any).pdfStorage[pdfId]) {
         return res.status(404).json({ error: 'PDF not found' });
       }
       
-      const html = global.pdfStorage[pdfId];
+      const html = (global as any).pdfStorage[pdfId];
       
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Content-Disposition', `inline; filename="liquidacion_${pdfId}.html"`);
       res.send(html);
-    } catch (error) {
+    } catch (error: any) {
       console.error('PDF download error:', error);
       res.status(500).json({ error: "Failed to download PDF" });
     }
@@ -726,16 +727,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { pdfId } = req.params;
       
-      if (!global.pdfStorage || !global.pdfStorage[pdfId]) {
+      if (!(global as any).pdfStorage || !(global as any).pdfStorage[pdfId]) {
         return res.status(404).json({ error: 'PDF not found' });
       }
       
-      const html = global.pdfStorage[pdfId];
+      const html = (global as any).pdfStorage[pdfId];
       
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="liquidacion_${pdfId}.html"`);
       res.send(html);
-    } catch (error) {
+    } catch (error: any) {
       console.error('PDF file download error:', error);
       res.status(500).json({ error: "Failed to download PDF file" });
     }
