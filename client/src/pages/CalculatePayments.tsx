@@ -50,7 +50,7 @@ export default function CalculatePayments() {
   const form = useForm<CalculationForm>({
     resolver: zodResolver(calculationSchema),
     defaultValues: {
-      doctorId: "",
+      doctorId: "all",
       dateFrom: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
       dateTo: new Date().toISOString().split('T')[0],
       includeParticipaciones: true,
@@ -68,7 +68,7 @@ export default function CalculatePayments() {
     enabled: !!selectedFilters,
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (selectedFilters?.doctorId) params.append('doctorId', selectedFilters.doctorId);
+      if (selectedFilters?.doctorId && selectedFilters.doctorId !== 'all') params.append('doctorId', selectedFilters.doctorId);
       if (selectedFilters?.dateFrom) params.append('dateFrom', selectedFilters.dateFrom);
       if (selectedFilters?.dateTo) params.append('dateTo', selectedFilters.dateTo);
       
@@ -90,7 +90,7 @@ export default function CalculatePayments() {
     enabled: !!selectedFilters,
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (selectedFilters?.doctorId) params.append('doctorId', selectedFilters.doctorId);
+      if (selectedFilters?.doctorId && selectedFilters.doctorId !== 'all') params.append('doctorId', selectedFilters.doctorId);
       if (selectedFilters?.dateFrom) params.append('dateFrom', selectedFilters.dateFrom);
       if (selectedFilters?.dateTo) params.append('dateTo', selectedFilters.dateTo);
       const response = await apiRequest(`/api/payment-calculations?${params}`);
