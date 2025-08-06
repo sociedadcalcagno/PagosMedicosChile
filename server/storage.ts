@@ -835,17 +835,10 @@ export class DatabaseStorage implements IStorage {
       doctorId: medicalAttentions.doctorId,
       participatedAmount: medicalAttentions.participatedAmount,
       recordType: medicalAttentions.recordType,
-      doctor: {
-        id: doctors.id,
-        name: doctors.name,
-        rut: doctors.rut,
-        email: doctors.email,
-        societyId: doctors.societyId,
-      },
-      society: {
-        id: medicalSocieties.id,
-        name: medicalSocieties.name,
-      }
+      doctorName: doctors.name,
+      doctorEmail: doctors.email,
+      doctorSocietyId: doctors.societyId,
+      societyName: medicalSocieties.name,
     })
     .from(medicalAttentions)
     .leftJoin(doctors, eq(medicalAttentions.doctorId, doctors.id))
@@ -862,10 +855,10 @@ export class DatabaseStorage implements IStorage {
       if (!doctorSummaries.has(doctorId)) {
         doctorSummaries.set(doctorId, {
           doctorId,
-          doctorName: attention.doctor?.name || 'Desconocido',
-          doctorEmail: attention.doctor?.email || '',
-          societyId: attention.doctor?.societyId || null,
-          societyName: attention.society?.name || null,
+          doctorName: attention.doctorName || 'Desconocido',
+          doctorEmail: attention.doctorEmail || '',
+          societyId: attention.doctorSocietyId || null,
+          societyName: attention.societyName || null,
           participacionCount: 0,
           hmqCount: 0,
           totalCount: 0,
@@ -950,12 +943,8 @@ export class DatabaseStorage implements IStorage {
       doctorId: medicalAttentions.doctorId,
       participatedAmount: medicalAttentions.participatedAmount,
       recordType: medicalAttentions.recordType,
-      doctor: {
-        id: doctors.id,
-        name: doctors.name,
-        rut: doctors.rut,
-        email: doctors.email,
-      }
+      doctorName: doctors.name,
+      doctorEmail: doctors.email,
     })
     .from(medicalAttentions)
     .leftJoin(doctors, eq(medicalAttentions.doctorId, doctors.id))
@@ -976,8 +965,8 @@ export class DatabaseStorage implements IStorage {
       if (!doctorSummaries.has(doctorId)) {
         doctorSummaries.set(doctorId, {
           doctorId,
-          doctorName: attention.doctor?.name || 'Desconocido',
-          doctorEmail: attention.doctor?.email || '',
+          doctorName: attention.doctorName || 'Desconocido',
+          doctorEmail: attention.doctorEmail || '',
           participacionAttentions: 0,
           hmqAttentions: 0,
           totalAttentions: 0,
