@@ -756,8 +756,47 @@ export class DatabaseStorage implements IStorage {
     month?: number;
     year?: number;
     status?: string;
-  }): Promise<PaymentCalculation[]> {
-    let query = db.select().from(paymentCalculations);
+  }): Promise<any[]> {
+    let query = db.select({
+      id: paymentCalculations.id,
+      attentionId: paymentCalculations.attentionId,
+      calculationRuleId: paymentCalculations.calculationRuleId,
+      doctorId: paymentCalculations.doctorId,
+      baseAmount: paymentCalculations.baseAmount,
+      ruleType: paymentCalculations.ruleType,
+      ruleValue: paymentCalculations.ruleValue,
+      calculatedAmount: paymentCalculations.calculatedAmount,
+      calculationDate: paymentCalculations.calculationDate,
+      periodMonth: paymentCalculations.periodMonth,
+      periodYear: paymentCalculations.periodYear,
+      status: paymentCalculations.status,
+      createdAt: paymentCalculations.createdAt,
+      // Include attention data
+      attention: {
+        id: medicalAttentions.id,
+        patientName: medicalAttentions.patientName,
+        attentionDate: medicalAttentions.attentionDate,
+        serviceName: medicalAttentions.serviceName,
+        participatedAmount: medicalAttentions.participatedAmount,
+        service: {
+          id: services.id,
+          name: services.name,
+          code: services.code,
+        }
+      },
+      // Include rule data
+      rule: {
+        id: calculationRules.id,
+        name: calculationRules.name,
+        paymentType: calculationRules.paymentType,
+        paymentValue: calculationRules.paymentValue,
+      }
+    })
+    .from(paymentCalculations)
+    .leftJoin(medicalAttentions, eq(paymentCalculations.attentionId, medicalAttentions.id))
+    .leftJoin(services, eq(medicalAttentions.serviceId, services.id))
+    .leftJoin(calculationRules, eq(paymentCalculations.calculationRuleId, calculationRules.id));
+    
     const conditions = [];
 
     if (filters?.doctorId) {

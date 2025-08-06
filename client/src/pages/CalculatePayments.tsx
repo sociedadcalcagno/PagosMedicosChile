@@ -206,10 +206,14 @@ export default function CalculatePayments() {
                           <User className="h-4 w-4" />
                           Doctor/Profesional
                         </FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || "all"}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Todos los médicos" />
+                              <SelectValue>
+                                {field.value && field.value !== "all" 
+                                  ? doctors.find(d => d.id === field.value)?.name 
+                                  : "Todos los médicos"}
+                              </SelectValue>
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>

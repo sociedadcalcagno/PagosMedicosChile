@@ -38,7 +38,11 @@ export default function ProcessPayments() {
       
       console.log('Payment to export:', payment);
       console.log('Payment calculations found:', paymentCalculations.length);
-      console.log('First calculation:', paymentCalculations[0]);
+      if (paymentCalculations.length > 0) {
+        console.log('First calculation:', paymentCalculations[0]);
+        console.log('Attention data:', paymentCalculations[0]?.attention);
+        console.log('Rule data:', paymentCalculations[0]?.rule);
+      }
       
       // Crear los datos del CSV
       const csvData = [];
