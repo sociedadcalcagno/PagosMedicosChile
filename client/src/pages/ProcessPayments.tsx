@@ -29,6 +29,80 @@ export default function ProcessPayments() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
+  // Función para exportar un pago a CSV
+  const exportPaymentToCSV = async (payment: any) => {
+    try {
+      // Obtener los detalles del pago incluyendo los cálculos
+      const response = await apiRequest(`/api/payment-calculations?paymentId=${payment.id}`, 'GET');
+      const paymentCalculations = await response.json();
+      
+      // Crear los datos del CSV
+      const csvData = [];
+      
+      // Encabezado del CSV
+      csvData.push([
+        'Doctor',
+        'RUT Doctor',
+        'Período',
+        'Fecha Atención',
+        'Servicio',
+        'Monto Participado',
+        'Monto Calculado',
+        'Regla Aplicada',
+        'Estado'
+      ]);
+      
+      // Obtener información del doctor
+      const doctor = doctors.find((d: any) => d.id === payment.doctorId);
+      const period = `${months.find(m => m.value === payment.periodMonth.toString())?.label} ${payment.periodYear}`;
+      
+      // Datos de cada cálculo
+      paymentCalculations.forEach((calc: any) => {
+        const attentionDate = new Date(calc.attention?.attentionDate || '').toLocaleDateString('es-CL');
+        
+        csvData.push([
+          doctor?.name || 'N/A',
+          doctor?.rut || 'N/A',
+          period,
+          attentionDate,
+          calc.attention?.service?.name || 'N/A',
+          `$${parseFloat(calc.attention?.participatedAmount || '0').toLocaleString('es-CL')}`,
+          `$${parseFloat(calc.calculatedAmount || '0').toLocaleString('es-CL')}`,
+          calc.rule?.name || 'N/A',
+          'Pagado'
+        ]);
+      });
+      
+      // Convertir a CSV
+      const csvContent = csvData.map(row => 
+        row.map(cell => `"${cell}"`).join(',')
+      ).join('\n');
+      
+      // Crear el blob y descargar
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `pago_${doctor?.name?.replace(/\s+/g, '_')}_${payment.periodMonth}_${payment.periodYear}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "Exportación exitosa",
+        description: "El archivo CSV se ha descargado correctamente",
+      });
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      toast({
+        title: "Error al exportar",
+        description: "No se pudo generar el archivo CSV",
+        variant: "destructive",
+      });
+    }
+  };
+  
   const form = useForm<PaymentForm>({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
@@ -476,7 +550,11 @@ export default function ProcessPayments() {
                         </DialogContent>
                       </Dialog>
                       
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => exportPaymentToCSV(payment)}
+                      >
                         <Download className="w-4 h-4 mr-2" />
                         Exportar
                       </Button>
