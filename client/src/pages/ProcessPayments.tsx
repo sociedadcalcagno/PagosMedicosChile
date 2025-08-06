@@ -32,9 +32,13 @@ export default function ProcessPayments() {
   // Función para exportar un pago a CSV
   const exportPaymentToCSV = async (payment: any) => {
     try {
-      // Obtener los cálculos de este doctor y período
-      const response = await apiRequest(`/api/payment-calculations?doctorId=${payment.doctorId}&month=${payment.periodMonth}&year=${payment.periodYear}&status=approved`, 'GET');
+      // Obtener los cálculos de este doctor y período (buscar tanto calculated como approved)
+      const response = await apiRequest(`/api/payment-calculations?doctorId=${payment.doctorId}&month=${payment.periodMonth}&year=${payment.periodYear}`, 'GET');
       const paymentCalculations = await response.json();
+      
+      console.log('Payment to export:', payment);
+      console.log('Payment calculations found:', paymentCalculations.length);
+      console.log('First calculation:', paymentCalculations[0]);
       
       // Crear los datos del CSV
       const csvData = [];
@@ -60,7 +64,7 @@ export default function ProcessPayments() {
       // Datos de cada cálculo
       paymentCalculations.forEach((calc: any) => {
         const attentionDate = new Date(calc.attention?.attentionDate || '').toLocaleDateString('es-CL');
-        const brutAmount = parseFloat(calc.attention?.participatedAmount || '0');
+        const brutAmount = parseFloat(calc.baseAmount || '0'); // Usar baseAmount en lugar de attention.participatedAmount
         const netAmount = parseFloat(calc.calculatedAmount || '0');
         const percentage = brutAmount > 0 ? ((netAmount / brutAmount) * 100).toFixed(1) : '0';
         
@@ -69,14 +73,24 @@ export default function ProcessPayments() {
           doctor?.rut || 'N/A',
           period,
           attentionDate,
-          calc.attention?.service?.name || 'N/A',
+          calc.attention?.service?.name || calc.serviceName || 'N/A',
           `$${brutAmount.toLocaleString('es-CL')}`,
           `$${netAmount.toLocaleString('es-CL')}`,
           `${percentage}%`,
           calc.rule?.name || 'N/A',
-          'Pagado'
+          calc.status === 'approved' ? 'Pagado' : 'Calculado'
         ]);
       });
+      
+      // Verificar si hay datos
+      if (paymentCalculations.length === 0) {
+        toast({
+          title: "Sin datos para exportar",
+          description: "No se encontraron cálculos para este pago",
+          variant: "destructive",
+        });
+        return;
+      }
       
       // Convertir a CSV
       const csvContent = csvData.map(row => 
