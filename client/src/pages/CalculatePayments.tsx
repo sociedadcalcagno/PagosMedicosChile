@@ -51,7 +51,7 @@ export default function CalculatePayments() {
     resolver: zodResolver(calculationSchema),
     defaultValues: {
       doctorId: "all",
-      dateFrom: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+      dateFrom: "2025-07-01", // Expanded to include July data
       dateTo: new Date().toISOString().split('T')[0],
       includeParticipaciones: true,
       includeHmq: true,
