@@ -830,16 +830,7 @@ export class DatabaseStorage implements IStorage {
       whereConditions.push(eq(medicalAttentions.recordType, recordType));
     }
 
-    const attentions = await db.select({
-      id: medicalAttentions.id,
-      doctorId: medicalAttentions.doctorId,
-      participatedAmount: medicalAttentions.participatedAmount,
-      recordType: medicalAttentions.recordType,
-      doctorName: doctors.name,
-      doctorEmail: doctors.email,
-      doctorSocietyId: doctors.societyId,
-      societyName: medicalSocieties.name,
-    })
+    const attentions = await db.select()
     .from(medicalAttentions)
     .leftJoin(doctors, eq(medicalAttentions.doctorId, doctors.id))
     .leftJoin(medicalSocieties, eq(doctors.societyId, medicalSocieties.id))
@@ -848,17 +839,21 @@ export class DatabaseStorage implements IStorage {
     // Group by doctor
     const doctorSummaries = new Map();
     
-    for (const attention of attentions) {
+    for (const row of attentions) {
+      const attention = row.medical_attentions;
+      const doctor = row.doctors;
+      const society = row.medical_societies;
+      
       const doctorId = attention.doctorId;
       const amount = parseFloat(attention.participatedAmount);
       
       if (!doctorSummaries.has(doctorId)) {
         doctorSummaries.set(doctorId, {
           doctorId,
-          doctorName: attention.doctorName || 'Desconocido',
-          doctorEmail: attention.doctorEmail || '',
-          societyId: attention.doctorSocietyId || null,
-          societyName: attention.societyName || null,
+          doctorName: doctor?.name || 'Desconocido',
+          doctorEmail: doctor?.email || '',
+          societyId: doctor?.societyId || null,
+          societyName: society?.name || null,
           participacionCount: 0,
           hmqCount: 0,
           totalCount: 0,

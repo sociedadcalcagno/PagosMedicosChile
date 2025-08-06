@@ -640,11 +640,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { doctorId } = req.params;
       const { month, year } = req.body;
       
-      // For now, return a simple response - we'll implement PDF generation next
-      res.json({ 
-        message: 'PDF generation endpoint ready',
+      // Get doctor information
+      const doctor = await storage.getDoctorById(doctorId);
+      if (!doctor) {
+        return res.status(404).json({ error: 'Doctor not found' });
+      }
+
+      // Get society information if applicable
+      let society = null;
+      if (doctor.societyId) {
+        society = await storage.getMedicalSocietyById(doctor.societyId);
+      }
+
+      // Get payroll data for the doctor
+      const payrollData = await storage.calculatePayroll(month, year);
+      const doctorPayroll = payrollData.find(p => p.doctorId === doctorId);
+      
+      if (!doctorPayroll) {
+        return res.status(404).json({ error: 'No payroll data found for this doctor in the specified period' });
+      }
+
+      // Import the PDF generator
+      const { generatePayrollPDF } = await import('./pdfGenerator.js');
+
+      // Generate PDF data
+      const pdfData = {
         doctorId,
-        period: `${month}/${year}`
+        doctorName: doctor.name,
+        doctorRut: doctor.rut,
+        societyName: society?.name,
+        societyRut: society?.rut,
+        month,
+        year,
+        participacionAttentions: doctorPayroll.participacionAttentions || [],
+        hmqAttentions: doctorPayroll.hmqAttentions || [],
+        participacionTotal: doctorPayroll.participacionAmount,
+        hmqTotal: doctorPayroll.hmqAmount,
+        totalAmount: doctorPayroll.totalAmount,
+      };
+
+      const html = generatePayrollPDF(pdfData);
+      
+      res.json({ 
+        message: 'PDF generated successfully',
+        doctorId,
+        period: `${month}/${year}`,
+        html,
+        data: pdfData
       });
     } catch (error) {
       console.error('PDF generation error:', error);
