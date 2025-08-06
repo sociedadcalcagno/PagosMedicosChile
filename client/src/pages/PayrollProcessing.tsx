@@ -114,24 +114,28 @@ export default function PayrollProcessing() {
       if (!selectedPeriod) throw new Error('No period selected');
       const response = await apiRequest(`/api/generate-payslip/${doctorId}`, 'POST', selectedPeriod);
       
-      if (!response.ok) {
-        throw new Error('Failed to generate PDF');
+      if (response.pdfId && response.downloadUrl) {
+        // Open PDF in new tab to view
+        window.open(`/api/download-pdf/${response.pdfId}`, '_blank');
+        
+        // Also provide download option
+        const downloadLink = document.createElement('a');
+        downloadLink.href = `/api/download-pdf-file/${response.pdfId}`;
+        downloadLink.download = `liquidacion_${doctorId}_${selectedPeriod.month}_${selectedPeriod.year}.html`;
+        downloadLink.style.display = 'none';
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        
+        return response;
+      } else {
+        throw new Error('PDF generation failed - no PDF ID returned');
       }
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `liquidacion_${doctorId}_${selectedPeriod.month}_${selectedPeriod.year}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
-        title: "PDF generado",
-        description: "La liquidación ha sido descargada",
+        title: "PDF generado exitosamente",
+        description: "La liquidación se abrió en nueva pestaña y se descargó",
       });
     },
     onError: (error: any) => {
