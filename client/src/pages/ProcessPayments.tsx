@@ -32,8 +32,8 @@ export default function ProcessPayments() {
   // Función para exportar un pago a CSV
   const exportPaymentToCSV = async (payment: any) => {
     try {
-      // Obtener los detalles del pago incluyendo los cálculos
-      const response = await apiRequest(`/api/payment-calculations?paymentId=${payment.id}`, 'GET');
+      // Obtener los cálculos de este doctor y período
+      const response = await apiRequest(`/api/payment-calculations?doctorId=${payment.doctorId}&month=${payment.periodMonth}&year=${payment.periodYear}&status=approved`, 'GET');
       const paymentCalculations = await response.json();
       
       // Crear los datos del CSV
@@ -46,8 +46,9 @@ export default function ProcessPayments() {
         'Período',
         'Fecha Atención',
         'Servicio',
-        'Monto Participado',
-        'Monto Calculado',
+        'Monto Bruto (Participado)',
+        'Monto Neto (Calculado)',
+        'Porcentaje',
         'Regla Aplicada',
         'Estado'
       ]);
@@ -59,6 +60,9 @@ export default function ProcessPayments() {
       // Datos de cada cálculo
       paymentCalculations.forEach((calc: any) => {
         const attentionDate = new Date(calc.attention?.attentionDate || '').toLocaleDateString('es-CL');
+        const brutAmount = parseFloat(calc.attention?.participatedAmount || '0');
+        const netAmount = parseFloat(calc.calculatedAmount || '0');
+        const percentage = brutAmount > 0 ? ((netAmount / brutAmount) * 100).toFixed(1) : '0';
         
         csvData.push([
           doctor?.name || 'N/A',
@@ -66,8 +70,9 @@ export default function ProcessPayments() {
           period,
           attentionDate,
           calc.attention?.service?.name || 'N/A',
-          `$${parseFloat(calc.attention?.participatedAmount || '0').toLocaleString('es-CL')}`,
-          `$${parseFloat(calc.calculatedAmount || '0').toLocaleString('es-CL')}`,
+          `$${brutAmount.toLocaleString('es-CL')}`,
+          `$${netAmount.toLocaleString('es-CL')}`,
+          `${percentage}%`,
           calc.rule?.name || 'N/A',
           'Pagado'
         ]);
@@ -473,8 +478,16 @@ export default function ProcessPayments() {
                       </div>
                       
                       <div className="text-right space-y-2">
-                        <div className="text-2xl font-bold text-green-600">
-                          ${parseFloat(payment.totalAmount).toLocaleString('es-CL')}
+                        <div className="space-y-1">
+                          <div className="text-sm text-gray-500">Monto a Pagar</div>
+                          <div className="text-2xl font-bold text-green-600">
+                            ${parseFloat(payment.totalAmount).toLocaleString('es-CL')}
+                          </div>
+                          {payment.totalBrutAmount && (
+                            <div className="text-sm text-gray-600">
+                              Bruto: ${parseFloat(payment.totalBrutAmount).toLocaleString('es-CL')}
+                            </div>
+                          )}
                         </div>
                         {getStatusBadge(payment.status)}
                       </div>
@@ -539,11 +552,19 @@ export default function ProcessPayments() {
                                   <p className="font-medium">{selectedPayment.totalAttentions}</p>
                                 </div>
                                 <div>
-                                  <label className="text-sm font-medium text-gray-600">Monto Total</label>
+                                  <label className="text-sm font-medium text-gray-600">Monto a Pagar</label>
                                   <p className="font-medium text-green-600">
                                     ${parseFloat(selectedPayment.totalAmount).toLocaleString('es-CL')}
                                   </p>
                                 </div>
+                                {selectedPayment.totalBrutAmount && (
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-600">Monto Bruto</label>
+                                    <p className="font-medium text-blue-600">
+                                      ${parseFloat(selectedPayment.totalBrutAmount).toLocaleString('es-CL')}
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )}

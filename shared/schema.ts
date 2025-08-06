@@ -307,6 +307,7 @@ export const payments = pgTable("payments", {
   
   // Payment details
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  totalBrutAmount: decimal("total_brut_amount", { precision: 10, scale: 2 }),
   totalAttentions: integer("total_attentions").notNull(),
   paymentMethod: varchar("payment_method"), // 'transfer', 'check', 'deposit'
   

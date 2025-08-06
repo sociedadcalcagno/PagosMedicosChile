@@ -833,6 +833,10 @@ export class DatabaseStorage implements IStorage {
     const totalAmount = calculations.reduce((sum, calc) => 
       sum + parseFloat(calc.calculatedAmount.toString()), 0
     );
+    
+    const totalBrutAmount = calculations.reduce((sum, calc) => 
+      sum + parseFloat(calc.baseAmount.toString()), 0
+    );
 
     // Create payment record
     const payment = {
@@ -840,6 +844,7 @@ export class DatabaseStorage implements IStorage {
       periodMonth: month,
       periodYear: year,
       totalAmount: totalAmount.toString(),
+      totalBrutAmount: totalBrutAmount.toString(),
       totalAttentions: calculations.length,
       paymentMethod: doctor.paymentType || 'transfer',
       bankAccount: doctor.bankAccount,
