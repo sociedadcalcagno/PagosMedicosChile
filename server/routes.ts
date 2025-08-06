@@ -730,12 +730,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalAmount: (doctorPayroll.participacionAmount || 0) + (doctorPayroll.hmqAmount || 0),
       };
 
-      const html = generatePayrollPDF(pdfData);
+      const pdfBuffer = await generatePayrollPDF(pdfData);
       
-      // Store the HTML in memory for download (in production, use a proper storage solution)
+      // Store the PDF Buffer in memory for download (in production, use a proper storage solution)
       const pdfId = `${doctorId}_${month}_${year}_${Date.now()}`;
       (global as any).pdfStorage = (global as any).pdfStorage || {};
-      (global as any).pdfStorage[pdfId] = html;
+      (global as any).pdfStorage[pdfId] = pdfBuffer;
       
       console.log('PDF generated with pdfId:', pdfId);
       res.json({ 
@@ -761,11 +761,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'PDF not found' });
       }
       
-      const html = (global as any).pdfStorage[pdfId];
+      const pdfBuffer = (global as any).pdfStorage[pdfId];
       
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Content-Disposition', `inline; filename="liquidacion_${pdfId}.html"`);
-      res.send(html);
+      res.send(pdfBuffer);
     } catch (error: any) {
       console.error('PDF download error:', error);
       res.status(500).json({ error: "Failed to download PDF" });
@@ -781,11 +781,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'PDF not found' });
       }
       
-      const html = (global as any).pdfStorage[pdfId];
+      const pdfBuffer = (global as any).pdfStorage[pdfId];
       
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="liquidacion_${pdfId}.html"`);
-      res.send(html);
+      res.send(pdfBuffer);
     } catch (error: any) {
       console.error('PDF file download error:', error);
       res.status(500).json({ error: "Failed to download PDF file" });

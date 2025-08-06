@@ -1,3 +1,8 @@
+import { writeFileSync, readFileSync } from 'fs';
+import { join } from 'path';
+
+const TEMP_DIR = '/tmp';
+
 interface PDFPayrollData {
   doctorId: string;
   doctorName: string;
@@ -13,7 +18,7 @@ interface PDFPayrollData {
   totalAmount: number;
 }
 
-export function generatePayrollPDF(data: PDFPayrollData): string {
+export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> {
   const monthNames = [
     'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
     'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
@@ -393,5 +398,15 @@ export function generatePayrollPDF(data: PDFPayrollData): string {
 </body>
 </html>`;
 
-  return html;
+  // For now, generate a simple PDF using pure HTML until we can install proper PDF library
+  // Save HTML temporarily and return the HTML as a file download
+  const pdfId = `${data.doctorId}_${data.month}_${data.year}_${Date.now()}`;
+  const htmlFilePath = join(TEMP_DIR, `${pdfId}.html`);
+  
+  writeFileSync(htmlFilePath, html);
+  
+  // Read the HTML file as buffer to simulate PDF for now
+  const htmlBuffer = readFileSync(htmlFilePath);
+  
+  return htmlBuffer;
 }

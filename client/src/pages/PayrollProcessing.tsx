@@ -128,17 +128,34 @@ export default function PayrollProcessing() {
       const data = await response.json();
       
       if (data.pdfId && data.downloadUrl) {
-        // Open PDF in new tab to view
-        window.open(`/api/download-pdf/${data.pdfId}`, '_blank');
-        
-        // Also provide download option
-        const downloadLink = document.createElement('a');
-        downloadLink.href = `/api/download-pdf-file/${data.pdfId}`;
-        downloadLink.download = `liquidacion_${doctorId}_${selectedPeriod.month}_${selectedPeriod.year}.html`;
-        downloadLink.style.display = 'none';
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
+        // Open the liquidation document in a new window with print dialog
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+          // Fetch the HTML content
+          fetch(`/api/download-pdf/${data.pdfId}`)
+            .then(response => response.text())
+            .then(html => {
+              newWindow.document.write(html);
+              newWindow.document.close();
+              
+              // Add additional print-optimized styles
+              const style = newWindow.document.createElement('style');
+              style.textContent = `
+                @media print {
+                  body { margin: 0; }
+                  .container { margin: 0; padding: 20px; }
+                  @page { margin: 1cm; size: A4; }
+                }
+              `;
+              newWindow.document.head.appendChild(style);
+              
+              // Automatically open print dialog after a short delay
+              setTimeout(() => {
+                newWindow.focus();
+                newWindow.print();
+              }, 1000);
+            });
+        }
         
         return data;
       } else {
@@ -147,8 +164,8 @@ export default function PayrollProcessing() {
     },
     onSuccess: (data) => {
       toast({
-        title: "PDF generado exitosamente",
-        description: "La liquidación se abrió en nueva pestaña y se descargó",
+        title: "Liquidación generada exitosamente",
+        description: "La liquidación se abrió en nueva pestaña con opción de impresión",
       });
     },
     onError: (error: any) => {
