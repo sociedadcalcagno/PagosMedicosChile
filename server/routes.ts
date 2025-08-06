@@ -602,6 +602,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Payroll processing endpoints
+  app.post('/api/calculate-payroll', authMiddleware, async (req, res) => {
+    try {
+      const { month, year } = req.body;
+      
+      if (!month || !year) {
+        return res.status(400).json({ error: 'Month and year are required' });
+      }
+      
+      const payrollSummary = await storage.calculatePayroll(month, year);
+      res.json(payrollSummary);
+    } catch (error) {
+      console.error('Payroll calculation error:', error);
+      res.status(500).json({ error: "Failed to calculate payroll" });
+    }
+  });
+
+  app.post('/api/process-payroll', authMiddleware, async (req, res) => {
+    try {
+      const { month, year } = req.body;
+      
+      if (!month || !year) {
+        return res.status(400).json({ error: 'Month and year are required' });
+      }
+      
+      await storage.processPayroll(month, year);
+      res.json({ success: true, message: 'Payroll processed successfully' });
+    } catch (error) {
+      console.error('Payroll processing error:', error);
+      res.status(500).json({ error: "Failed to process payroll" });
+    }
+  });
+
+  app.post('/api/generate-payslip/:doctorId', authMiddleware, async (req, res) => {
+    try {
+      const { doctorId } = req.params;
+      const { month, year } = req.body;
+      
+      // For now, return a simple response - we'll implement PDF generation next
+      res.json({ 
+        message: 'PDF generation endpoint ready',
+        doctorId,
+        period: `${month}/${year}`
+      });
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      res.status(500).json({ error: "Failed to generate PDF" });
+    }
+  });
+
+  app.post('/api/send-payslip/:doctorId', authMiddleware, async (req, res) => {
+    try {
+      const { doctorId } = req.params;
+      const { month, year } = req.body;
+      
+      // For now, return a simple response - we'll implement email sending next
+      res.json({ 
+        message: 'Email sending endpoint ready',
+        doctorId,
+        period: `${month}/${year}`
+      });
+    } catch (error) {
+      console.error('Email sending error:', error);
+      res.status(500).json({ error: "Failed to send email" });
+    }
+  });
+
   // CSV Import endpoint for Participacion records
   // Helper function to find or create service from CSV data
   async function findOrCreateService(serviceCode: string, serviceName: string) {

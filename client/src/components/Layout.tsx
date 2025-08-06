@@ -86,6 +86,12 @@ export default function Layout({ children }: LayoutProps) {
           section: "Sistema de Pagos",
         },
         {
+          href: "/nomina",
+          label: "Nómina Completa",
+          icon: Users,
+          section: "Sistema de Pagos",
+        },
+        {
           href: "/reportes",
           label: "Reporte Prestaciones",
           icon: BarChart3,

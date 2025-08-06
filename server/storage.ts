@@ -819,6 +819,88 @@ export class DatabaseStorage implements IStorage {
     return await query.orderBy(desc(paymentCalculations.calculationDate));
   }
 
+  // Payroll processing functions
+  async calculatePayroll(month: number, year: number): Promise<any[]> {
+    // Get all medical attentions for the period
+    const attentions = await db.select({
+      id: medicalAttentions.id,
+      doctorId: medicalAttentions.doctorId,
+      participatedAmount: medicalAttentions.participatedAmount,
+      recordType: medicalAttentions.recordType,
+      doctor: {
+        id: doctors.id,
+        name: doctors.name,
+        rut: doctors.rut,
+        email: doctors.email,
+      }
+    })
+    .from(medicalAttentions)
+    .leftJoin(doctors, eq(medicalAttentions.doctorId, doctors.id))
+    .where(
+      and(
+        eq(sql`EXTRACT(MONTH FROM ${medicalAttentions.attentionDate})`, month),
+        eq(sql`EXTRACT(YEAR FROM ${medicalAttentions.attentionDate})`, year)
+      )
+    );
+
+    // Group by doctor
+    const doctorSummaries = new Map();
+    
+    for (const attention of attentions) {
+      const doctorId = attention.doctorId;
+      const amount = parseFloat(attention.participatedAmount);
+      
+      if (!doctorSummaries.has(doctorId)) {
+        doctorSummaries.set(doctorId, {
+          doctorId,
+          doctorName: attention.doctor?.name || 'Desconocido',
+          doctorEmail: attention.doctor?.email || '',
+          participacionAttentions: 0,
+          hmqAttentions: 0,
+          totalAttentions: 0,
+          participacionAmount: 0,
+          hmqAmount: 0,
+          totalGrossAmount: 0,
+          totalNetAmount: 0,
+          calculatedPayments: 0,
+          period: `${month}/${year}`,
+        });
+      }
+      
+      const summary = doctorSummaries.get(doctorId);
+      summary.totalAttentions++;
+      summary.totalGrossAmount += amount;
+      
+      if (attention.recordType === 'participacion') {
+        summary.participacionAttentions++;
+        summary.participacionAmount += amount;
+      } else if (attention.recordType === 'hmq') {
+        summary.hmqAttentions++;
+        summary.hmqAmount += amount;
+      }
+      
+      // Calculate net amount (assuming 10% discount for taxes/fees)
+      summary.totalNetAmount = summary.totalGrossAmount * 0.9;
+    }
+    
+    return Array.from(doctorSummaries.values());
+  }
+
+  async processPayroll(month: number, year: number): Promise<void> {
+    // Mark all calculations for this period as processed
+    await db.update(paymentCalculations)
+      .set({ 
+        status: 'processed',
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(paymentCalculations.periodMonth, month),
+          eq(paymentCalculations.periodYear, year)
+        )
+      );
+  }
+
   // Payment processing
   async getPayments(filters?: {
     doctorId?: string;
