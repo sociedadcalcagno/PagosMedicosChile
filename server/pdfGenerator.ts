@@ -275,7 +275,7 @@ export function generatePayrollPDF(data: PDFPayrollData): string {
 <body>
     <div class="document-container">
     <div class="header">
-        <div class="title">CARTOLA DE PAGO - Participaciones</div>
+        <div class="title">CARTOLA DE PAGO${data.participacionAttentions.length > 0 && data.hmqAttentions.length > 0 ? '' : data.participacionAttentions.length > 0 ? ' - Participaciones' : data.hmqAttentions.length > 0 ? ' - HMQ' : ''}</div>
         <div class="subtitle">PORTAL PAGOS MÉDICOS</div>
         <div class="date">FECHA PAGO: ${currentDate}</div>
     </div>
@@ -365,25 +365,21 @@ export function generatePayrollPDF(data: PDFPayrollData): string {
             `).join('')}
         </tbody>
     </table>
-    ` : `
-    <div class="section-title">HMQ</div>
-    <div class="table-header">
-        Fecha Atención&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RUT&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Paciente&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Previsión&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Código Prestación&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Nombre&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Horario&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bruto&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;%&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Monto Participación&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Comisión
-    </div>
-    <div class="no-data">No se encontraron datos</div>
-    `}
+    ` : ''}
 
     <div class="totals">
+        ${data.participacionTotal > 0 ? `
         <div class="total-row">
             <span class="total-label">TOTAL PARTICIPACIONES:</span>
             <span class="total-amount">$${formatCurrency(data.participacionTotal)}</span>
-        </div>
+        </div>` : ''}
+        ${data.hmqTotal > 0 ? `
         <div class="total-row">
             <span class="total-label">TOTAL HMQ:</span>
             <span class="total-amount">$${formatCurrency(data.hmqTotal)}</span>
-        </div>
+        </div>` : ''}
         <div class="total-row">
-            <span class="total-label">TOTAL GENERAL:</span>
+            <span class="total-label">${data.participacionTotal > 0 && data.hmqTotal > 0 ? 'TOTAL GENERAL:' : data.participacionTotal > 0 ? 'TOTAL PARTICIPACIONES:' : 'TOTAL HMQ:'}</span>
             <span class="total-amount">$${formatCurrency(data.totalAmount)}</span>
         </div>
     </div>
