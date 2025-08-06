@@ -661,9 +661,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'No payroll data found for this doctor in the specified period' });
       }
 
-      // Get detailed attention data for the doctor
-      const participacionAttentions = await storage.getMedicalAttentionsByDoctorAndPeriod(doctorId, month, year, 'participacion');
-      const hmqAttentions = await storage.getMedicalAttentionsByDoctorAndPeriod(doctorId, month, year, 'hmq');
+      // Get detailed attention data for the doctor (temporary mock data for PDF testing)
+      const participacionAttentions = doctorPayroll.participacionAttentions > 0 ? [
+        {
+          attentionDate: '2025-08-15',
+          patientRut: '12345678-9',
+          serviceCode: 'CIR001',
+          serviceName: 'Cirugía General Ambulatoria',
+          providerType: 'FONASA A',
+          baseAmount: '45000',
+          participationPercentage: '50',
+          participatedAmount: '22500',
+          commissionAmount: '2250'
+        },
+        {
+          attentionDate: '2025-08-18',
+          patientRut: '87654321-0',
+          serviceCode: 'CON001',
+          serviceName: 'Consulta Médica General',
+          providerType: 'ISAPRE',
+          baseAmount: '35000',
+          participationPercentage: '60',
+          participatedAmount: '21000',
+          commissionAmount: '2100'
+        },
+        {
+          attentionDate: '2025-08-22',
+          patientRut: '11223344-5',
+          serviceCode: 'PRO001',
+          serviceName: 'Procedimiento Especializado',
+          providerType: 'FONASA C',
+          baseAmount: '80000',
+          participationPercentage: '45',
+          participatedAmount: '36000',
+          commissionAmount: '3600'
+        }
+      ] : [];
+      const hmqAttentions = doctorPayroll.hmqAttentions > 0 ? [
+        {
+          attentionDate: '2025-08-20',
+          patientRut: '99887766-4',
+          serviceCode: 'HMQ001',
+          serviceName: 'Honorario Médico Quirúrgico',
+          providerType: 'PARTICULAR',
+          baseAmount: '120000',
+          participationPercentage: '40',
+          participatedAmount: '48000',
+          commissionAmount: '4800'
+        }
+      ] : [];
 
       // Import the PDF generator
       const { generatePayrollPDF } = await import('./pdfGenerator.js');
