@@ -1094,6 +1094,39 @@ export class DatabaseStorage implements IStorage {
 
     return newPayment;
   }
+
+  async getMedicalAttentionsByDoctorAndPeriod(doctorId: string, month: number, year: number, recordType: 'participacion' | 'hmq'): Promise<any[]> {
+    const dateFrom = `${year}-${month.toString().padStart(2, '0')}-01`;
+    const dateEnd = new Date(year, month, 0).getDate();
+    const dateTo = `${year}-${month.toString().padStart(2, '0')}-${dateEnd.toString().padStart(2, '0')}`;
+    
+    const attentions = await this.getMedicalAttentions({
+      doctorId,
+      dateFrom,
+      dateTo,
+      recordTypes: [recordType]
+    });
+
+    // Get detailed information for each attention including service and provider data
+    const detailedAttentions = [];
+    for (const attention of attentions) {
+      const service = await this.getServiceById(attention.serviceId || '');
+      const providerType = await this.getProviderTypeById(attention.providerTypeId || '');
+      
+      detailedAttentions.push({
+        ...attention,
+        serviceCode: service?.code || '',
+        serviceName: service?.name || '',
+        providerType: providerType?.name || '',
+        baseAmount: attention.participatedAmount || '0',
+        participationPercentage: attention.participationPercentage || '0',
+        participatedAmount: attention.participatedAmount || '0',
+        commissionAmount: attention.commissionAmount || '0'
+      });
+    }
+    
+    return detailedAttentions;
+  }
 }
 
 export const storage = new DatabaseStorage();

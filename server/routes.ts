@@ -661,6 +661,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'No payroll data found for this doctor in the specified period' });
       }
 
+      // Get detailed attention data for the doctor
+      const participacionAttentions = await storage.getMedicalAttentionsByDoctorAndPeriod(doctorId, month, year, 'participacion');
+      const hmqAttentions = await storage.getMedicalAttentionsByDoctorAndPeriod(doctorId, month, year, 'hmq');
+
       // Import the PDF generator
       const { generatePayrollPDF } = await import('./pdfGenerator.js');
 
@@ -673,8 +677,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         societyRut: society?.rut,
         month,
         year,
-        participacionAttentions: doctorPayroll.participacionAttentions || [],
-        hmqAttentions: doctorPayroll.hmqAttentions || [],
+        participacionAttentions: participacionAttentions || [],
+        hmqAttentions: hmqAttentions || [],
         participacionTotal: doctorPayroll.participacionAmount,
         hmqTotal: doctorPayroll.hmqAmount,
         totalAmount: (doctorPayroll.participacionAmount || 0) + (doctorPayroll.hmqAmount || 0),
