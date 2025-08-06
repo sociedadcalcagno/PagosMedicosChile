@@ -677,7 +677,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hmqAttentions: doctorPayroll.hmqAttentions || [],
         participacionTotal: doctorPayroll.participacionAmount,
         hmqTotal: doctorPayroll.hmqAmount,
-        totalAmount: doctorPayroll.totalAmount,
+        totalAmount: (doctorPayroll.participacionAmount || 0) + (doctorPayroll.hmqAmount || 0),
       };
 
       const html = generatePayrollPDF(pdfData);
@@ -687,18 +687,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       (global as any).pdfStorage = (global as any).pdfStorage || {};
       (global as any).pdfStorage[pdfId] = html;
       
+      console.log('PDF generated with pdfId:', pdfId);
       res.json({ 
         message: 'PDF generated successfully',
         doctorId,
         period: `${month}/${year}`,
         pdfId,
         downloadUrl: `/api/download-pdf/${pdfId}`,
-        html,
-        data: pdfData
+        success: true
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('PDF generation error:', error);
-      res.status(500).json({ error: "Failed to generate PDF" });
+      res.status(500).json({ error: "Failed to generate PDF", details: error.message });
     }
   });
 

@@ -112,22 +112,35 @@ export default function PayrollProcessing() {
   const generatePdfMutation = useMutation({
     mutationFn: async (doctorId: string) => {
       if (!selectedPeriod) throw new Error('No period selected');
-      const response = await apiRequest(`/api/generate-payslip/${doctorId}`, 'POST', selectedPeriod);
+      const response = await fetch(`/api/generate-payslip/${doctorId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(selectedPeriod)
+      });
       
-      if (response.pdfId && response.downloadUrl) {
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+      
+      const data = await response.json();
+      
+      if (data.pdfId && data.downloadUrl) {
         // Open PDF in new tab to view
-        window.open(`/api/download-pdf/${response.pdfId}`, '_blank');
+        window.open(`/api/download-pdf/${data.pdfId}`, '_blank');
         
         // Also provide download option
         const downloadLink = document.createElement('a');
-        downloadLink.href = `/api/download-pdf-file/${response.pdfId}`;
+        downloadLink.href = `/api/download-pdf-file/${data.pdfId}`;
         downloadLink.download = `liquidacion_${doctorId}_${selectedPeriod.month}_${selectedPeriod.year}.html`;
         downloadLink.style.display = 'none';
         document.body.appendChild(downloadLink);
         downloadLink.click();
         document.body.removeChild(downloadLink);
         
-        return response;
+        return data;
       } else {
         throw new Error('PDF generation failed - no PDF ID returned');
       }
