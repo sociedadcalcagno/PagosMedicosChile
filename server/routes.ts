@@ -681,16 +681,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const html = generatePayrollPDF(pdfData);
       
+      // Store the HTML in memory for download (in production, use a proper storage solution)
+      const pdfId = `${doctorId}_${month}_${year}_${Date.now()}`;
+      global.pdfStorage = global.pdfStorage || {};
+      global.pdfStorage[pdfId] = html;
+      
       res.json({ 
         message: 'PDF generated successfully',
         doctorId,
         period: `${month}/${year}`,
+        pdfId,
+        downloadUrl: `/api/download-pdf/${pdfId}`,
         html,
         data: pdfData
       });
     } catch (error) {
       console.error('PDF generation error:', error);
       res.status(500).json({ error: "Failed to generate PDF" });
+    }
+  });
+
+  // PDF download endpoint
+  app.get('/api/download-pdf/:pdfId', async (req, res) => {
+    try {
+      const { pdfId } = req.params;
+      
+      if (!global.pdfStorage || !global.pdfStorage[pdfId]) {
+        return res.status(404).json({ error: 'PDF not found' });
+      }
+      
+      const html = global.pdfStorage[pdfId];
+      
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Content-Disposition', `inline; filename="liquidacion_${pdfId}.html"`);
+      res.send(html);
+    } catch (error) {
+      console.error('PDF download error:', error);
+      res.status(500).json({ error: "Failed to download PDF" });
+    }
+  });
+
+  // PDF download as file endpoint
+  app.get('/api/download-pdf-file/:pdfId', async (req, res) => {
+    try {
+      const { pdfId } = req.params;
+      
+      if (!global.pdfStorage || !global.pdfStorage[pdfId]) {
+        return res.status(404).json({ error: 'PDF not found' });
+      }
+      
+      const html = global.pdfStorage[pdfId];
+      
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="liquidacion_${pdfId}.html"`);
+      res.send(html);
+    } catch (error) {
+      console.error('PDF file download error:', error);
+      res.status(500).json({ error: "Failed to download PDF file" });
     }
   });
 
