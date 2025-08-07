@@ -631,6 +631,13 @@ function generateSystemManualContent(doc: PDFKit.PDFDocument, pageNumber: number
     'FONDO: Imagen médica con overlay oscuro',
     'MENSAJE: "Desconectado con éxito" en la parte inferior'
   ]);
+
+  addParagraph(doc, 'FUNCIONALIDAD E INNOVACIÓN:');
+  addBulletPoint(doc, 'VALIDACIÓN RUT CHILENO: Implementa algoritmo módulo 11 propietario para validar formato estándar chileno XX.XXX.XXX-Y, rechazando automáticamente RUTs malformados o con dígito verificador incorrecto.');
+  addBulletPoint(doc, 'AUTENTICACIÓN MULTI-NIVEL: Sistema de roles diferenciados que redirige automáticamente según perfil (Administrador → panel completo, Supervisor → módulos limitados, Médico → dashboard personal).');
+  addBulletPoint(doc, 'MODO DESARROLLO INTEGRADO: Perfiles de prueba pre-configurados que permiten testing completo sin afectar datos productivos, manteniendo trazabilidad de sesiones de desarrollo.');
+  addBulletPoint(doc, 'SEGURIDAD VISUAL: Toggle de visibilidad de contraseña con estados seguros que previene shoulder surfing manteniendo experiencia de usuario.');
+  addBulletPoint(doc, 'RECUPERACIÓN AUTOMÁTICA: Sistema de gestión de sesiones perdidas con redirección inteligente y mantenimiento de estado de trabajo previo.');
   
   doc.addPage();
   pageNumber++;
@@ -644,17 +651,23 @@ function generateSystemManualContent(doc: PDFKit.PDFDocument, pageNumber: number
     '  - Tarjeta Roja: Ícono AlertTriangle + Número "Vencidas"',
     '  - Tarjeta Azul: Ícono TrendingUp + "1,247 Cálculos Este Mes"',
     'SECCIÓN IZQUIERDA: "Resumen del Sistema"',
-    '  - Médicos Registrados: Badge con número',
-    '  - Especialidades: Badge con número',
-    '  - Prestaciones: Badge con número',
-    '  - Reglas de Cálculo: Badge con número',
+    '  - Médicos Registrados: Badge con contador dinámico',
+    '  - Especialidades: Badge con total de especialidades activas',
+    '  - Prestaciones: Badge con servicios médicos disponibles',
+    '  - Reglas de Cálculo: Badge con total de reglas configuradas',
     'SECCIÓN DERECHA: "Actividad Reciente"',
-    '  - Lista con puntos de colores (verde/azul/naranja/púrpura)',
-    '  - Texto: "Nueva regla R005 creada para Cardiología"',
-    '  - Texto: "Médico Dr. García actualizado"',
-    'ACCIONES RÁPIDAS (parte inferior):',
-    '  - 4 tarjetas clickeables: Crear Nueva Regla, Registrar Médico, Ver Reportes, Configuración'
+    '  - Indicadores de colores: verde, azul, naranja, púrpura',
+    '  - Mensajes de actividad: "Nueva regla creada", "Médico actualizado"',
+    'SECCIÓN INFERIOR: "Acciones Rápidas"',
+    '  - 4 botones: Crear Nueva Regla, Registrar Médico, Ver Reportes, Configuración'
   ]);
+
+  addParagraph(doc, 'FUNCIONALIDAD E INNOVACIÓN:');
+  addBulletPoint(doc, 'MÉTRICAS EN TIEMPO REAL: Dashboard actualiza automáticamente contadores de reglas activas/vencidas mediante queries optimizadas que analizan fechas de vigencia y estado de activación.');
+  addBulletPoint(doc, 'DIFERENCIACIÓN POR ROLES: Interfaz adaptativa que muestra diferentes módulos según permisos (Administrador ve todo, Supervisor módulos limitados, Médico solo dashboard personal).');
+  addBulletPoint(doc, 'ACTIVIDAD CENTRALIZADA: Feed de eventos del sistema que rastrea cambios críticos (creación de reglas, actualizaciones de médicos, vencimientos) con códigos de color para priorización visual.');
+  addBulletPoint(doc, 'ACCIONES CONTEXTUALES: Botones de acceso rápido que redirigen dinámicamente a funciones más utilizadas según el perfil del usuario y estadísticas de uso.');
+  addBulletPoint(doc, 'CÁLCULOS AGREGADOS: Procesamiento automático de estadísticas mensuales de cálculos realizados, mostrando tendencias y volúmenes de trabajo del sistema.');
   
   doc.addPage();
   pageNumber++;
@@ -845,6 +858,12 @@ function generateSystemManualContent(doc: PDFKit.PDFDocument, pageNumber: number
   addBulletPoint(doc, '7. TIPO: Seleccionar "Individual" o "Sociedad" en dropdown');
   addBulletPoint(doc, '8. BANCO: Llenar información bancaria en sección inferior');
   addBulletPoint(doc, '9. GUARDAR: Click "Crear" → modal se cierra → tabla se actualiza');
+
+  addParagraph(doc, 'VALOR FUNCIONAL DE ESTE PROCESO:');
+  addBulletPoint(doc, 'VALIDACIÓN INTEGRAL: Sistema valida automáticamente formato RUT chileno, existencia de especialidad, y completitud de datos bancarios obligatorios.');
+  addBulletPoint(doc, 'INTEGRIDAD REFERENCIAL: Evita duplicación de médicos y mantiene consistencia con tabla de especialidades y sociedades médicas registradas.');
+  addBulletPoint(doc, 'CONFIGURACIÓN AUTOMÁTICA: Pre-llena campos de sociedad médica y calcula automáticamente parámetros de pago según tipo seleccionado (Individual vs Sociedad).');
+  addBulletPoint(doc, 'TRAZABILIDAD COMPLETA: Registra timestamp de creación, usuario creador, y mantiene histórico de modificaciones para auditoría.');
   
   addSubsectionHeader(doc, '5.2 Caso: Cálculo de Pagos Mensual');
   addParagraph(doc, 'FLUJO COMPLETO CON PANTALLAS:');
@@ -858,10 +877,39 @@ function generateSystemManualContent(doc: PDFKit.PDFDocument, pageNumber: number
   addBulletPoint(doc, '5. DETALLE: Revisar tabla "Atenciones Pendientes" con datos');
   addBulletPoint(doc, '6. CÁLCULO: Click botón central "Calcular Pagos (X atenciones)"');
   addBulletPoint(doc, '7. RESULTADO: Sistema procesa y muestra confirmación de éxito');
+
+  addParagraph(doc, 'VALOR FUNCIONAL DE ESTE PROCESO:');
+  addBulletPoint(doc, 'ALGORITMO DE SELECCIÓN: Motor inteligente que aplica reglas de cálculo más específicas primero, garantizando máxima precisión en cálculos de participaciones.');
+  addBulletPoint(doc, 'PROCESAMIENTO MASIVO: Capacidad de procesar múltiples atenciones simultáneamente aplicando diferentes reglas según especialidad y tipo de prestación.');
+  addBulletPoint(doc, 'VALIDACIÓN DE NEGOCIO: Aplica automáticamente topes máximos, porcentajes permitidos, y comisiones según normativa chilena de salud.');
+  addBulletPoint(doc, 'GENERACIÓN DE RESPALDOS: Crea registros de cálculo con trazabilidad completa, permitiendo auditorías posteriores y re-cálculos si es necesario.');
   
   doc.addPage();
   pageNumber++;
   
+  addSubsectionHeader(doc, '5.3 Gestión de Especialidades y Prestaciones');
+  addParagraph(doc, 'FUNCIONALIDAD CLAVE DEL SISTEMA:');
+  addBulletPoint(doc, 'CATÁLOGO DINÁMICO: Sistema mantiene actualizado automáticamente el código de prestaciones médicas según nomenclatura oficial chilena (FONASA/ISAPREs).');
+  addBulletPoint(doc, 'VALIDACIÓN CRUZADA: Verifica automáticamente que especialidades médicas coincidan con prestaciones permitidas según regulaciones del MINSAL.');
+  addBulletPoint(doc, 'HISTORIZACIÓN DE CAMBIOS: Mantiene versiones históricas de códigos y tarifas para garantizar cálculos correctos de períodos anteriores.');
+  addBulletPoint(doc, 'INTEGRACIÓN NORMATIVA: Actualiza automáticamente tarifas y códigos según boletines oficiales del sistema de salud chileno.');
+
+  addSubsectionHeader(doc, '5.4 Sistema de Importación Inteligente');
+  addParagraph(doc, 'INNOVACIÓN TÉCNICA PATENTABLE:');
+  addBulletPoint(doc, 'AUTO-CREACIÓN DE ENTIDADES: Durante importación masiva CSV, sistema detecta automáticamente médicos y servicios faltantes, los crea dinámicamente manteniendo integridad referencial.');
+  addBulletPoint(doc, 'VALIDACIÓN EN TIEMPO REAL: Procesa miles de registros simultáneamente aplicando validaciones específicas del sistema médico chileno (RUT, códigos FONASA, especialidades).');
+  addBulletPoint(doc, 'MAPPEO INTELIGENTE: Algoritmo propietario que identifica equivalencias entre códigos de sistemas externos (HIS hospitalarios) y nomenclatura interna.');
+  addBulletPoint(doc, 'RECUPERACIÓN DE ERRORES: Sistema de rollback automático que deshace importaciones fallidas manteniendo consistencia de base de datos.');
+  addBulletPoint(doc, 'MÚLTIPLES FUENTES: Capacidad de importar desde CSV, APIs externas, y sistemas HIS hospitalarios con formatos unificados.');
+
+  addSubsectionHeader(doc, '5.5 Generación de Documentos Profesionales');
+  addParagraph(doc, 'SISTEMA DE REPORTES ADAPTATIVOS:');
+  addBulletPoint(doc, 'PDF DINÁMICOS: Genera cartolas de pago que muestran automáticamente solo secciones relevantes (Participaciones, HMQ, o ambas) según datos disponibles.');
+  addBulletPoint(doc, 'DISEÑO PROFESIONAL: Aplica automáticamente estilo corporativo chileno con gradientes, tipografía médica, y elementos visuales de identificación institucional.');
+  addBulletPoint(doc, 'DATOS EN VIVO: Conecta directamente con base de datos para mostrar información actualizada sin necesidad de exportar/importar datos.');
+  addBulletPoint(doc, 'COMPROBANTES OFICIALES: Genera documentos con numeración correlativa y trazabilidad completa para auditorías contables.');
+  addBulletPoint(doc, 'FORMATOS BANCARIOS: Produce archivos de nómina compatible con todos los bancos chilenos (Santander, BCI, Chile, Estado).');
+
   // Innovaciones y Ventajas Competitivas
   addSectionHeader(doc, '6. INNOVACIONES PATENTABLES');
   
