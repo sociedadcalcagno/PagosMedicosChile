@@ -915,11 +915,12 @@ export class DatabaseStorage implements IStorage {
           doctorId,
           periodMonth: data.month,
           periodYear: data.year,
-          amount: doctorTotal.toString(),
+          totalAmount: doctorTotal.toString(),
+          totalAttentions: attentions.length,
           paymentMethod: data.paymentMethod,
           status: 'processed',
-          notes: data.notes || `Pago procesado masivamente - ${data.month}/${data.year}`,
           paymentDate: new Date(),
+          processedAt: new Date(),
         });
 
         processedCount++;
