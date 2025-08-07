@@ -438,13 +438,9 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
 
 // Función para generar PDFs profesionales de manuales
 export async function generateManualPDF(manualType: 'sistema' | 'tecnico' | 'competitivo'): Promise<Buffer> {
-  const fileName = manualType === 'sistema' ? 'MANUAL_DE_SISTEMA.md' : 
-                   manualType === 'tecnico' ? 'MANUAL_TECNICO.md' : 'MANUAL_COMPETITIVO.md';
   const title = manualType === 'sistema' ? 'MANUAL DE SISTEMA' : 
                 manualType === 'tecnico' ? 'MANUAL TÉCNICO' : 'MANUAL DE VENTAJAS COMPETITIVAS';
   
-  // Leer el archivo Markdown
-  const markdownContent = readFileSync(fileName, 'utf-8');
   const currentDate = new Date().toLocaleDateString('es-CL');
   
   return new Promise((resolve, reject) => {
@@ -473,7 +469,7 @@ export async function generateManualPDF(manualType: 'sistema' | 'tecnico' | 'com
       pageNumber++;
       
       // ÍNDICE DE CONTENIDO
-      createTableOfContents(doc, markdownContent);
+      createTableOfContents(doc, manualType);
       doc.addPage();
       pageNumber++;
       
@@ -552,49 +548,60 @@ function createCoverPage(doc: PDFKit.PDFDocument, title: string, currentDate: st
 }
 
 // Crear índice de contenidos
-function createTableOfContents(doc: PDFKit.PDFDocument, markdownContent: string) {
+function createTableOfContents(doc: PDFKit.PDFDocument, manualType: 'sistema' | 'tecnico' | 'competitivo') {
   doc.fontSize(24)
      .fillColor('#1e3a8a')
      .text('ÍNDICE DE CONTENIDOS', 72, 100, { underline: true });
   
   let yPosition = 150;
-  const lines = markdownContent.split('\n');
-  let sectionNumber = 1;
-  let subsectionNumber = 1;
+  let sections: string[] = [];
   
-  lines.forEach(line => {
-    const trimmed = line.trim();
-    
-    if (trimmed.startsWith('## ')) {
-      if (yPosition > 650) {
-        doc.addPage();
-        yPosition = 100;
-      }
-      
-      const sectionTitle = trimmed.substring(3);
-      doc.fontSize(12)
-         .fillColor('#1e40af')
-         .text(`${sectionNumber}. ${sectionTitle}`, 72, yPosition);
-      
-      yPosition += 20;
-      sectionNumber++;
-      subsectionNumber = 1;
+  if (manualType === 'sistema') {
+    sections = [
+      'Introducción al Sistema',
+      'Pantallas Principales del Sistema',
+      'Gestión de Profesionales Médicos',
+      'Sistema de Cálculo de Participaciones',
+      'Integración con Previsiones Chilenas',
+      'Reportes y Documentos',
+      'Asistente de IA Especializado',
+      'Casos de Uso Prácticos'
+    ];
+  } else if (manualType === 'tecnico') {
+    sections = [
+      'Arquitectura del Sistema',
+      'Stack Tecnológico',
+      'Base de Datos y Modelos',
+      'APIs y Endpoints',
+      'Algoritmos de Cálculo',
+      'Integraciones Externas',
+      'Seguridad y Validaciones',
+      'Innovaciones Patentables'
+    ];
+  } else {
+    sections = [
+      'Resumen Ejecutivo',
+      'Análisis del Mercado Chileno',
+      'Propuesta de Valor por Stakeholder',
+      'Comparación Competitiva',
+      'ROI y Justificación Financiera',
+      'Argumentos de Venta',
+      'Manejo de Objeciones',
+      'Estrategia de Implementación'
+    ];
+  }
+  
+  sections.forEach((section, index) => {
+    if (yPosition > 650) {
+      doc.addPage();
+      yPosition = 100;
     }
     
-    if (trimmed.startsWith('### ')) {
-      if (yPosition > 650) {
-        doc.addPage();
-        yPosition = 100;
-      }
-      
-      const subsectionTitle = trimmed.substring(4);
-      doc.fontSize(11)
-         .fillColor('#374151')
-         .text(`    ${sectionNumber - 1}.${subsectionNumber} ${subsectionTitle}`, 90, yPosition);
-      
-      yPosition += 18;
-      subsectionNumber++;
-    }
+    doc.fontSize(12)
+       .fillColor('#1e40af')
+       .text(`${index + 1}. ${section}`, 72, yPosition);
+    
+    yPosition += 20;
   });
 }
 
