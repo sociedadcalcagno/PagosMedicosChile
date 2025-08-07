@@ -26,6 +26,15 @@ const mockUsers = [
     lastName: "López",
     profileImageUrl: null,
     role: "user"
+  },
+  {
+    id: "mock_doctor_carlos",
+    email: "cperez@hospital.cl",
+    firstName: "Dr. Carlos Alberto",
+    lastName: "Pérez Morales",
+    profileImageUrl: null,
+    role: "user",
+    linkedDoctorId: "doc003" // Vinculado al perfil del doctor
   }
 ];
 
@@ -87,6 +96,15 @@ export function setupMockAuth(app: Express) {
       lastName: mockUser.lastName,
       profileImageUrl: mockUser.profileImageUrl,
     });
+
+    // If user has a linked doctor, set up the relationship
+    if ((mockUser as any).linkedDoctorId) {
+      try {
+        await storage.linkUserToDoctor(mockUser.id, (mockUser as any).linkedDoctorId);
+      } catch (error) {
+        console.error("Error linking doctor profile:", error);
+      }
+    }
 
     // Set session
     (req.session as any).mockUser = mockUser.id;
