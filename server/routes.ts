@@ -5,6 +5,7 @@ import { setupAuth } from "./replitAuth";
 import { setupMockAuth } from "./mockAuth";
 import { authMiddleware } from "./authMiddleware";
 import { honorariosAgent, type AIMessage } from "./openai";
+import { generateManualPDF } from "./pdfGenerator";
 import {
   insertDoctorSchema,
   insertSpecialtySchema,
@@ -2053,6 +2054,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Error al descargar archivo bancario' });
     }
   });
+
+  // ENDPOINTS DE DESCARGA DE MANUALES
+  // Descargar Manual de Sistema
+  app.get('/api/download-manual/sistema', authMiddleware, async (req, res) => {
+    try {
+      const pdfBuffer = await generateManualPDF('sistema');
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="Manual_Sistema_Portal_Pagos_Medicos.pdf"');
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error('Error generating sistema manual PDF:', error);
+      res.status(500).json({ error: 'Error al generar PDF del Manual de Sistema' });
+    }
+  });
+  
+  // Descargar Manual Técnico
+  app.get('/api/download-manual/tecnico', authMiddleware, async (req, res) => {
+    try {
+      const pdfBuffer = await generateManualPDF('tecnico');
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="Manual_Tecnico_Portal_Pagos_Medicos.pdf"');
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error('Error generating tecnico manual PDF:', error);
+      res.status(500).json({ error: 'Error al generar PDF del Manual Técnico' });
+    }
+  });
+
+  const httpServer = createServer(app);
 
   return httpServer;
 }

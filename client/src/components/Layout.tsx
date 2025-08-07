@@ -19,6 +19,7 @@ import {
   CheckSquare,
   Building2,
   Banknote,
+  FileText,
 } from "lucide-react";
 import AIChat from "@/components/AIChat";
 
@@ -117,6 +118,12 @@ export default function Layout({ children }: LayoutProps) {
           label: "Reporte Prestaciones",
           icon: BarChart3,
           section: "Reportes",
+        },
+        {
+          href: "/descarga-manuales",
+          label: "Descarga de Manuales",
+          icon: FileText,
+          section: "Documentación",
         },
         ...baseItems,
         {

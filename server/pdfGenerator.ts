@@ -433,3 +433,407 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
   
   return htmlBuffer;
 }
+
+// Función para generar PDFs de manuales desde Markdown
+export async function generateManualPDF(manualType: 'sistema' | 'tecnico'): Promise<Buffer> {
+  const fileName = manualType === 'sistema' ? 'MANUAL_DE_SISTEMA.md' : 'MANUAL_TECNICO.md';
+  const title = manualType === 'sistema' ? 'MANUAL DE SISTEMA' : 'MANUAL TÉCNICO';
+  const subtitle = 'Portal de Pagos Médicos - Chile';
+  
+  // Leer el archivo Markdown
+  const markdownContent = readFileSync(fileName, 'utf-8');
+  
+  // Convertir Markdown a HTML básico
+  const htmlContent = convertMarkdownToHTML(markdownContent);
+  
+  const currentDate = new Date().toLocaleDateString('es-CL');
+  
+  // HTML template profesional para documentación
+  const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title} - Portal Pagos Médicos</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            font-size: 11px;
+            line-height: 1.6;
+            margin: 0;
+            padding: 40px;
+            color: #1f2937;
+            background: #ffffff;
+            max-width: none;
+        }
+        
+        .document-container {
+            background: #ffffff;
+            margin: 0 auto;
+            padding: 0;
+        }
+        
+        .cover-page {
+            text-align: center;
+            padding: 80px 60px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%);
+            color: white;
+            page-break-after: always;
+            border-radius: 0;
+            margin-bottom: 60px;
+        }
+        
+        .cover-title {
+            font-size: 42px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            letter-spacing: -1px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .cover-subtitle {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 40px;
+            opacity: 0.95;
+            letter-spacing: 0.5px;
+        }
+        
+        .cover-info {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 12px;
+            margin: 40px auto;
+            max-width: 500px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .cover-info p {
+            font-size: 16px;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .content {
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1e3a8a;
+            margin: 50px 0 25px 0;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #3b82f6;
+            page-break-before: always;
+        }
+        
+        h1:first-of-type {
+            page-break-before: auto;
+        }
+        
+        h2 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #1e40af;
+            margin: 40px 0 20px 0;
+            padding: 12px 0;
+            border-bottom: 2px solid #dbeafe;
+        }
+        
+        h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2563eb;
+            margin: 30px 0 15px 0;
+        }
+        
+        h4 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #3730a3;
+            margin: 25px 0 12px 0;
+        }
+        
+        h5 {
+            font-size: 13px;
+            font-weight: 600;
+            color: #4338ca;
+            margin: 20px 0 10px 0;
+        }
+        
+        p {
+            margin: 12px 0;
+            text-align: justify;
+            line-height: 1.7;
+        }
+        
+        ul, ol {
+            margin: 15px 0;
+            padding-left: 25px;
+        }
+        
+        li {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+        
+        ul li {
+            list-style-type: none;
+            position: relative;
+            padding-left: 20px;
+        }
+        
+        ul li:before {
+            content: "•";
+            color: #3b82f6;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+        
+        code {
+            background: #f1f5f9;
+            color: #1e40af;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+        }
+        
+        pre {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            line-height: 1.5;
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+            border-radius: 0;
+            color: #374151;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 10px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 10px;
+            line-height: 1.4;
+            vertical-align: top;
+        }
+        
+        tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .info-box {
+            background: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+            border-left: 4px solid #0ea5e9;
+        }
+        
+        .warning-box {
+            background: #fefce8;
+            border: 1px solid #eab308;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+            border-left: 4px solid #eab308;
+        }
+        
+        .success-box {
+            background: #f0fdf4;
+            border: 1px solid #22c55e;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+            border-left: 4px solid #22c55e;
+        }
+        
+        .footer-info {
+            margin-top: 80px;
+            padding: 30px;
+            background: #f8fafc;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+            page-break-inside: avoid;
+        }
+        
+        .footer-info h4 {
+            color: #1e3a8a;
+            margin-bottom: 15px;
+        }
+        
+        .footer-info p {
+            margin: 5px 0;
+            font-size: 12px;
+            color: #64748b;
+        }
+        
+        strong {
+            font-weight: 600;
+            color: #1e40af;
+        }
+        
+        em {
+            font-style: italic;
+            color: #4338ca;
+        }
+        
+        hr {
+            border: none;
+            border-top: 2px solid #e2e8f0;
+            margin: 40px 0;
+        }
+        
+        blockquote {
+            border-left: 4px solid #3b82f6;
+            padding-left: 20px;
+            margin: 20px 0;
+            color: #4b5563;
+            font-style: italic;
+            background: #f8fafc;
+            padding: 15px 20px;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        @page {
+            margin: 2cm;
+            @bottom-center {
+                content: counter(page);
+                font-size: 10px;
+                color: #64748b;
+            }
+        }
+        
+        .page-break {
+            page-break-before: always;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="document-container">
+        <div class="cover-page">
+            <div class="cover-title">${title}</div>
+            <div class="cover-subtitle">${subtitle}</div>
+            <div class="cover-info">
+                <p><strong>Versión:</strong> 1.0</p>
+                <p><strong>Fecha:</strong> ${currentDate}</p>
+                <p><strong>País:</strong> Chile</p>
+                <p><strong>Documento:</strong> Propiedad Intelectual</p>
+            </div>
+        </div>
+        
+        <div class="content">
+            ${htmlContent}
+            
+            <div class="footer-info">
+                <h4>Información del Documento</h4>
+                <p><strong>Generado para:</strong> Instituto Nacional de Propiedad Industrial (INAPI) - Chile</p>
+                <p><strong>Fecha de Generación:</strong> ${new Date().toLocaleString('es-CL')}</p>
+                <p><strong>Sistema:</strong> Portal de Pagos Médicos</p>
+                <p><strong>Confidencialidad:</strong> Documento de Propiedad Intelectual</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
+  
+  // Generar PDF (por ahora HTML como simulación)
+  const pdfId = `manual_${manualType}_${Date.now()}`;
+  const htmlFilePath = join(TEMP_DIR, `${pdfId}.html`);
+  
+  writeFileSync(htmlFilePath, html);
+  
+  // Leer HTML como buffer
+  const htmlBuffer = readFileSync(htmlFilePath);
+  
+  return htmlBuffer;
+}
+
+// Función auxiliar para convertir Markdown a HTML
+function convertMarkdownToHTML(markdown: string): string {
+  let html = markdown
+    // Títulos
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+    .replace(/^#### (.*$)/gim, '<h4>$1</h4>')
+    .replace(/^##### (.*$)/gim, '<h5>$1</h5>')
+    
+    // Texto en negrita y cursiva
+    .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    
+    // Código inline y bloques
+    .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+    .replace(/`(.*?)`/g, '<code>$1</code>')
+    
+    // Enlaces
+    .replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2">$1</a>')
+    
+    // Líneas horizontales
+    .replace(/^---$/gim, '<hr>')
+    
+    // Saltos de línea y párrafos
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, ' ');
+  
+  // Envolver en párrafos
+  html = '<p>' + html + '</p>';
+  
+  // Limpiar párrafos vacíos y mal formados
+  html = html
+    .replace(/<p><\/p>/g, '')
+    .replace(/<p>(<h[1-6]>.*?<\/h[1-6]>)<\/p>/g, '$1')
+    .replace(/<p>(<hr>)<\/p>/g, '$1')
+    .replace(/<p>(<pre>.*?<\/pre>)<\/p>/g, '$1')
+    .replace(/<p>(<table>.*?<\/table>)<\/p>/g, '$1');
+  
+  return html;
+}
