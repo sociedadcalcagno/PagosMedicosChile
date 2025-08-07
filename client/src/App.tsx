@@ -16,6 +16,7 @@ import Rules from "@/pages/Rules.tsx";
 import Reports from "@/pages/Reports.tsx";
 import Profile from "@/pages/Profile";
 import DoctorDashboard from "@/pages/DoctorDashboard";
+import ProfessionalLogin from "@/pages/ProfessionalLogin";
 import MedicalAttentions from "@/pages/MedicalAttentions";
 import CalculatePayments from "@/pages/CalculatePayments";
 import ProcessPayments from "@/pages/ProcessPayments";
@@ -36,7 +37,12 @@ function Router() {
 
   // Show login page if no user authenticated
   if (!user) {
-    return <Login />;
+    return (
+      <Switch>
+        <Route path="/professional-login" component={ProfessionalLogin} />
+        <Route component={Login} />
+      </Switch>
+    );
   }
 
   // Route users based on their profile

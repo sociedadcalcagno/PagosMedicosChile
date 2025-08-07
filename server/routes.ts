@@ -1741,5 +1741,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return 'pending';
   }
 
+  // Professional login endpoint
+  app.post('/api/professional-login', async (req, res) => {
+    try {
+      const { rut, password } = req.body;
+      
+      if (!rut || !password) {
+        return res.status(400).json({ message: 'RUT y contraseña son requeridos' });
+      }
+      
+      // Find doctor by RUT
+      const doctors = await storage.getDoctors();
+      const doctor = doctors.find((d: any) => d.rut === rut);
+      
+      if (!doctor) {
+        return res.status(401).json({ message: 'RUT no encontrado en el sistema' });
+      }
+      
+      // For development, accept any password for existing doctors
+      // In production, this would validate against a proper password hash
+      if (password.length < 1) {
+        return res.status(401).json({ message: 'Contraseña incorrecta' });
+      }
+      
+      // Create or get user for this doctor
+      let userId = `doctor_${doctor.id}`;
+      
+      try {
+        // Try to get existing user
+        await storage.getUser(userId);
+      } catch (error) {
+        // User doesn't exist, create it
+        await storage.upsertUser({
+          id: userId,
+          email: doctor.email,
+          firstName: doctor.name.split(' ')[0],
+          lastName: doctor.name.split(' ').slice(1).join(' '),
+          profileImageUrl: null,
+        });
+        
+        // Link to doctor profile
+        await storage.linkUserToDoctor(userId, doctor.id);
+      }
+      
+      // Set session
+      (req.session as any).mockUser = userId;
+      
+      res.json({
+        success: true,
+        doctorId: doctor.id,
+        doctorName: doctor.name,
+        message: 'Login exitoso'
+      });
+      
+    } catch (error) {
+      console.error('Professional login error:', error);
+      res.status(500).json({ message: 'Error interno del servidor' });
+    }
+  });
+
   return httpServer;
 }

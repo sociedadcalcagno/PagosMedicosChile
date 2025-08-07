@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, UserCheck } from "lucide-react";
+import { Link } from "wouter";
 
 // Import the logo image
 import logoImage from "@assets/logo_1754398855957.png";
@@ -181,6 +182,19 @@ export default function Login() {
                 >
                   Médico - Dra. Ana López
                 </Button>
+              </div>
+              
+              {/* Professional Login Access */}
+              <div className="border-t pt-4 mt-4">
+                <Link href="/professional-login">
+                  <Button
+                    variant="outline"
+                    className="w-full border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
+                  >
+                    <UserCheck className="w-4 h-4 mr-2" />
+                    Acceso Profesional (RUT/Contraseña)
+                  </Button>
+                </Link>
               </div>
             </div>
           </CardContent>
