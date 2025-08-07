@@ -2086,6 +2086,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Error al generar PDF del Manual Técnico' });
     }
   });
+  
+  // Descargar Manual de Ventajas Competitivas
+  app.get('/api/download-manual/competitivo', authMiddleware, async (req, res) => {
+    try {
+      const pdfBuffer = await generateManualPDF('competitivo');
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="Manual_Ventajas_Competitivas_Portal_Pagos_Medicos.pdf"');
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error('Error generating competitive manual PDF:', error);
+      res.status(500).json({ error: 'Error al generar PDF del Manual de Ventajas Competitivas' });
+    }
+  });
 
   const httpServer = createServer(app);
 

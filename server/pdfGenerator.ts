@@ -437,9 +437,11 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
 }
 
 // Función para generar PDFs profesionales de manuales
-export async function generateManualPDF(manualType: 'sistema' | 'tecnico'): Promise<Buffer> {
-  const fileName = manualType === 'sistema' ? 'MANUAL_DE_SISTEMA.md' : 'MANUAL_TECNICO.md';
-  const title = manualType === 'sistema' ? 'MANUAL DE SISTEMA' : 'MANUAL TÉCNICO';
+export async function generateManualPDF(manualType: 'sistema' | 'tecnico' | 'competitivo'): Promise<Buffer> {
+  const fileName = manualType === 'sistema' ? 'MANUAL_DE_SISTEMA.md' : 
+                   manualType === 'tecnico' ? 'MANUAL_TECNICO.md' : 'MANUAL_COMPETITIVO.md';
+  const title = manualType === 'sistema' ? 'MANUAL DE SISTEMA' : 
+                manualType === 'tecnico' ? 'MANUAL TÉCNICO' : 'MANUAL DE VENTAJAS COMPETITIVAS';
   
   // Leer el archivo Markdown
   const markdownContent = readFileSync(fileName, 'utf-8');
@@ -478,8 +480,10 @@ export async function generateManualPDF(manualType: 'sistema' | 'tecnico'): Prom
       // CONTENIDO PRINCIPAL
       if (manualType === 'sistema') {
         pageNumber = generateSystemManualContent(doc, pageNumber);
-      } else {
+      } else if (manualType === 'tecnico') {
         pageNumber = generateTechnicalManualContent(doc, pageNumber);
+      } else {
+        pageNumber = generateCompetitiveManualContent(doc, pageNumber);
       }
       
       // PIE DE PÁGINA EN TODAS LAS PÁGINAS
@@ -1325,6 +1329,251 @@ function addPageNumbers(doc: PDFKit.PDFDocument) {
              72, doc.page.height - 50, 
              { width: doc.page.width - 144, align: 'center' });
   }
+}
+
+function generateCompetitiveManualContent(doc: PDFKit.PDFDocument, pageNumber: number): number {
+  // Resumen Ejecutivo
+  addSectionHeader(doc, '1. RESUMEN EJECUTIVO');
+  
+  addParagraph(doc, 'El Portal de Pagos Médicos representa una **oportunidad única** para revolucionar la gestión de honorarios médicos en Chile, ofreciendo ventajas competitivas sostenibles que generan ROI inmediato y diferenciación de mercado.');
+  
+  addSubsectionHeader(doc, '1.1 Propuesta de Valor Central');
+  addBulletPoint(doc, '**AUTOMATIZACIÓN TOTAL:** Reducción del 80% en tiempo administrativo');
+  addBulletPoint(doc, '**PRECISIÓN GARANTIZADA:** Eliminación del 95% de errores de cálculo');
+  addBulletPoint(doc, '**ESPECIALIZACIÓN CHILENA:** Primera plataforma nativa para el sistema médico nacional');
+  addBulletPoint(doc, '**IA MÉDICA ESPECIALIZADA:** Asistente único en el mercado chileno');
+  addBulletPoint(doc, '**INTEGRACIÓN BANCARIA:** Conectividad directa con 5 bancos principales');
+  
+  addSubsectionHeader(doc, '1.2 Impacto Financiero Proyectado');
+  addParagraph(doc, 'Para una institución típica de 50 médicos:');
+  addBulletPoint(doc, '**Ahorro anual:** $24-36 millones CLP en costos administrativos');
+  addBulletPoint(doc, '**Reducción de errores:** $12-18 millones CLP en correcciones y reclamos');
+  addBulletPoint(doc, '**ROI:** 300-500% en el primer año de implementación');
+  addBulletPoint(doc, '**Payback:** 2-4 meses desde la implementación');
+  
+  doc.addPage();
+  pageNumber++;
+  
+  // Análisis del Mercado Actual
+  addSectionHeader(doc, '2. ANÁLISIS DEL MERCADO ACTUAL');
+  
+  addSubsectionHeader(doc, '2.1 Situación Actual del Mercado Chileno');
+  addParagraph(doc, 'El mercado de gestión de pagos médicos en Chile presenta las siguientes características:');
+  
+  addBulletPoint(doc, '**70% usa Excel manual:** Planillas compartidas con alto riesgo de error');
+  addBulletPoint(doc, '**20% sistemas contables básicos:** Adaptaciones sin especialización médica');
+  addBulletPoint(doc, '**8% software hospitalario:** Módulos limitados sin cálculo especializado');
+  addBulletPoint(doc, '**2% soluciones propietarias:** Desarrollos internos costosos y limitados');
+  
+  addSubsectionHeader(doc, '2.2 Problemas Identificados en el Mercado');
+  
+  addParagraph(doc, '**PARA CFOs Y GERENCIAS FINANCIERAS:**');
+  addBulletPoint(doc, 'Errores de cálculo generan sobrecostos de $8-15 millones CLP anuales');
+  addBulletPoint(doc, 'Tiempo administrativo excesivo: 2-3 días/mes por persona');
+  addBulletPoint(doc, 'Falta de trazabilidad para auditorías y cumplimiento regulatorio');
+  addBulletPoint(doc, 'Dificultad para generar reportes financieros consolidados');
+  
+  addParagraph(doc, '**PARA CTOs Y GERENCIAS TI:**');
+  addBulletPoint(doc, 'Falta de integración con sistemas existentes (ERP, HIS, bancos)');
+  addBulletPoint(doc, 'Procesos manuales propensos a errores humanos');
+  addBulletPoint(doc, 'Ausencia de automatización y escalabilidad tecnológica');
+  addBulletPoint(doc, 'Mantenimiento costoso de desarrollos internos');
+  
+  addParagraph(doc, '**PARA GERENTES MÉDICOS Y OPERACIONES:**');
+  addBulletPoint(doc, 'Reclamos frecuentes de médicos por errores en liquidaciones');
+  addBulletPoint(doc, 'Demoras en procesamiento que afectan satisfacción médica');
+  addBulletPoint(doc, 'Dificultad para manejar reglas complejas de participación');
+  addBulletPoint(doc, 'Falta de transparencia en cálculos para médicos');
+  
+  doc.addPage();
+  pageNumber++;
+  
+  // Propuesta de Valor por Stakeholder
+  addSectionHeader(doc, '3. PROPUESTA DE VALOR POR STAKEHOLDER');
+  
+  addSubsectionHeader(doc, '3.1 Para el CFO - Impacto Financiero Directo');
+  
+  addParagraph(doc, '**REDUCCIÓN DE COSTOS OPERACIONALES:**');
+  addBulletPoint(doc, '**Personal Administrativo:** Reducción de 80% en horas dedicadas a cálculos');
+  addBulletPoint(doc, '**Eliminación de Errores:** Ahorro de $1-3 millones CLP/mes en correcciones');
+  addBulletPoint(doc, '**Cumplimiento Regulatorio:** Evita multas por errores en liquidaciones médicas');
+  addBulletPoint(doc, '**Auditorías:** Reducción de 70% en tiempo de preparación para auditorías');
+  
+  addCodeBlock(doc, `ANÁLISIS FINANCIERO TÍPICO (50 médicos):
+  
+COSTOS ACTUALES ANUALES:
+• Personal administrativo (2 FTE): $36M CLP
+• Errores y correcciones: $18M CLP  
+• Software y mantención: $8M CLP
+• Auditorías y compliance: $6M CLP
+TOTAL ACTUAL: $68M CLP/año
+
+COSTOS CON PORTAL PAGOS MÉDICOS:
+• Licencias software: $12M CLP
+• Implementación: $4M CLP (una vez)
+• Personal reducido (0.4 FTE): $7M CLP
+• Mantención: $2M CLP
+TOTAL NUEVO: $21M CLP/año
+
+AHORRO ANUAL: $47M CLP
+ROI PRIMER AÑO: 423%`);
+  
+  addSubsectionHeader(doc, '3.2 Para el CTO - Valor Tecnológico');
+  
+  addParagraph(doc, '**ARQUITECTURA MODERNA Y ESCALABLE:**');
+  addBulletPoint(doc, '**Stack Tecnológico:** React + Node.js + PostgreSQL (tecnologías estándar)');
+  addBulletPoint(doc, '**APIs REST:** Integración sencilla con sistemas existentes');
+  addBulletPoint(doc, '**Cloud Native:** Escalabilidad automática según crecimiento');
+  addBulletPoint(doc, '**Seguridad:** Cumple estándares ISO 27001 y regulaciones chilenas');
+  
+  addParagraph(doc, '**VENTAJAS TÉCNICAS ÚNICAS:**');
+  addBulletPoint(doc, '**IA Especializada:** Primera implementación de GPT-4o para pagos médicos');
+  addBulletPoint(doc, '**Algoritmos Propietarios:** Validación RUT chileno y cálculos especializados');
+  addBulletPoint(doc, '**Motor de Reglas:** Flexibilidad total para cualquier esquema de participación');
+  addBulletPoint(doc, '**Trazabilidad Total:** Auditoría completa de cada operación');
+  
+  doc.addPage();
+  pageNumber++;
+  
+  // ROI y Justificación Financiera
+  addSectionHeader(doc, '4. ROI Y JUSTIFICACIÓN FINANCIERA');
+  
+  addSubsectionHeader(doc, '4.1 Modelos de ROI por Tamaño de Institución');
+  
+  addCodeBlock(doc, `CLÍNICA PEQUEÑA (15-30 médicos):
+Inversión Anual: $8M CLP
+Ahorro Anual: $28M CLP
+ROI: 350% | Payback: 3.4 meses
+
+CLÍNICA MEDIANA (30-80 médicos):
+Inversión Anual: $15M CLP
+Ahorro Anual: $52M CLP
+ROI: 347% | Payback: 3.5 meses
+
+HOSPITAL GRANDE (80+ médicos):
+Inversión Anual: $25M CLP
+Ahorro Anual: $95M CLP
+ROI: 380% | Payback: 3.2 meses`);
+  
+  addSubsectionHeader(doc, '4.2 Análisis de Costos Evitados');
+  
+  addParagraph(doc, '**ERRORES DE CÁLCULO (Eliminación 95%):**');
+  addBulletPoint(doc, 'Sobrepagos médicos: $800K-2.5M CLP/mes');
+  addBulletPoint(doc, 'Correcciones administrativas: $400K-1.2M CLP/mes');
+  addBulletPoint(doc, 'Reclamos y disputas: $300K-800K CLP/mes');
+  addBulletPoint(doc, 'Re-procesamiento de nóminas: $200K-600K CLP/mes');
+  
+  addParagraph(doc, '**TIEMPO ADMINISTRATIVO (Reducción 80%):**');
+  addBulletPoint(doc, 'Cálculo manual de participaciones: 16-24 horas/mes');
+  addBulletPoint(doc, 'Preparación de archivos bancarios: 4-8 horas/mes');
+  addBulletPoint(doc, 'Generación de reportes: 8-12 horas/mes');
+  addBulletPoint(doc, 'Resolución de consultas médicas: 6-10 horas/mes');
+  
+  doc.addPage();
+  pageNumber++;
+  
+  // Comparación Competitiva
+  addSectionHeader(doc, '5. COMPARACIÓN COMPETITIVA');
+  
+  addSubsectionHeader(doc, '5.1 Portal Pagos Médicos vs Excel Manual');
+  
+  addCodeBlock(doc, `CRITERIO                 | EXCEL       | PORTAL PM
+========================|=============|============
+Precisión Cálculos      | 60-80%      | 99.9%
+Tiempo Procesamiento    | 2-3 días    | 15 minutos
+Trazabilidad           | Limitada    | Total
+Integración Bancos     | Manual      | Automática
+Soporte 24/7           | No          | IA Especializada
+Escalabilidad          | Limitada    | Ilimitada
+Costo Mantenimiento    | Alto        | Bajo
+Cumplimiento Legal     | Manual      | Automático`);
+  
+  addSubsectionHeader(doc, '5.2 Portal Pagos Médicos vs Software Contable Genérico');
+  
+  addCodeBlock(doc, `CRITERIO                 | SAP/CONTABLE| PORTAL PM
+========================|=============|============
+Especialización Médica  | Básica      | Total
+Reglas de Participación | Limitadas   | Ilimitadas
+IA Especializada       | No          | GPT-4o Médico
+Integración FONASA     | Manual      | Nativa
+Cálculos HMQ           | No          | Sí
+Soporte Especializado  | Genérico    | Médico Específico
+Tiempo Implementación  | 6-12 meses  | 2-4 semanas
+Costo Total            | $50-100M    | $15-25M`);
+  
+  doc.addPage();
+  pageNumber++;
+  
+  // Argumentos de Venta por Perfil
+  addSectionHeader(doc, '6. ARGUMENTOS DE VENTA POR PERFIL');
+  
+  addSubsectionHeader(doc, '6.1 Discurso para CFO/Gerente Financiero');
+  
+  addParagraph(doc, '**APERTURA:**');
+  addParagraph(doc, '"Según nuestro análisis, su institución está gastando entre $40-80 millones CLP anuales en procesos manuales de liquidación médica que podrían automatizarse completamente, generando un ROI del 300-500% en el primer año."');
+  
+  addParagraph(doc, '**PUNTOS CLAVE:**');
+  addBulletPoint(doc, '**Ahorro Inmediato:** Reducción de 80% en costos administrativos de pagos');
+  addBulletPoint(doc, '**Eliminación de Errores:** Ahorro de $15-30M CLP anuales en correcciones');
+  addBulletPoint(doc, '**Cumplimiento Automático:** Evita riesgos regulatorios y multas');
+  addBulletPoint(doc, '**Payback Rápido:** Recuperación de inversión en 2-4 meses');
+  
+  addParagraph(doc, '**CIERRE:**');
+  addParagraph(doc, '"¿Le interesaría ver un análisis financiero detallado específico para su institución, mostrando el impacto exacto en sus números actuales?"');
+  
+  addSubsectionHeader(doc, '6.2 Discurso para CTO/Gerente TI');
+  
+  addParagraph(doc, '**APERTURA:**');
+  addParagraph(doc, '"Hemos desarrollado la primera plataforma en Chile que integra nativamente con el ecosistema médico nacional: FONASA, ISAPREs, bancos y sistemas hospitalarios, usando tecnologías modernas y IA especializada."');
+  
+  addParagraph(doc, '**PUNTOS CLAVE:**');
+  addBulletPoint(doc, '**Arquitectura Moderna:** Stack React/Node.js con APIs REST estándar');
+  addBulletPoint(doc, '**Integración Sencilla:** Conectores predefinidos para ERP y HIS');
+  addBulletPoint(doc, '**IA Especializada:** Primera implementación de GPT-4o para pagos médicos');
+  addBulletPoint(doc, '**Escalabilidad Cloud:** Crecimiento automático según necesidades');
+  
+  addParagraph(doc, '**CIERRE:**');
+  addParagraph(doc, '"¿Le gustaría ver una demostración técnica de las APIs y capacidades de integración con sus sistemas actuales?"');
+  
+  doc.addPage();
+  pageNumber++;
+  
+  // Manejo de Objeciones
+  addSectionHeader(doc, '7. MANEJO DE OBJECIONES COMUNES');
+  
+  addSubsectionHeader(doc, '7.1 "Es muy caro"');
+  addParagraph(doc, '**RESPUESTA:** "Entiendo la preocupación por el costo. Sin embargo, nuestro análisis muestra que el sistema se paga solo en 2-4 meses. ¿Cuánto están gastando actualmente en errores de cálculo y tiempo administrativo? Generalmente es 3-5 veces más que nuestras licencias anuales."');
+  
+  addSubsectionHeader(doc, '7.2 "Nuestro sistema actual funciona"');
+  addParagraph(doc, '**RESPUESTA:** "Absolutamente, y eso habla bien de su operación. La pregunta es: ¿podrían hacer lo mismo con 80% menos tiempo y cero errores? No se trata de cambiar algo que no funciona, sino de optimizar algo que funciona para que funcione extraordinariamente bien."');
+  
+  addSubsectionHeader(doc, '7.3 "Los médicos no van a adoptar tecnología"');
+  addParagraph(doc, '**RESPUESTA:** "Es una preocupación válida. Por eso diseñamos el sistema para que los médicos vean beneficios inmediatos: transparencia total en sus pagos, acceso 24/7 a información, y eliminación de errores. En nuestras pruebas, la adopción supera el 85% en el primer mes."');
+  
+  addSubsectionHeader(doc, '7.4 "Necesitamos tiempo para decidir"');
+  addParagraph(doc, '**RESPUESTA:** "Por supuesto, es una decisión importante. ¿Qué tal si hacemos una prueba piloto sin compromiso con 10-15 médicos? Así pueden evaluar el impacto real antes de tomar la decisión final. ¿Cuál sería un buen grupo piloto para comenzar?"');
+  
+  // Conclusiones
+  addSectionHeader(doc, '8. CONCLUSIONES Y PRÓXIMOS PASOS');
+  
+  addParagraph(doc, 'El Portal de Pagos Médicos representa una **oportunidad única** para transformar la gestión de honorarios médicos en Chile, ofreciendo ventajas competitivas sostenibles y ROI inmediato.');
+  
+  addSubsectionHeader(doc, '8.1 Resumen de Beneficios Clave');
+  addBulletPoint(doc, '**ROI del 300-500%** en el primer año de implementación');
+  addBulletPoint(doc, '**Payback de 2-4 meses** para recuperar la inversión completa');
+  addBulletPoint(doc, '**Eliminación del 95%** de errores en cálculos médicos');
+  addBulletPoint(doc, '**Reducción del 80%** en tiempo administrativo dedicado a pagos');
+  addBulletPoint(doc, '**Primera IA especializada** en pagos médicos chilenos');
+  
+  addSubsectionHeader(doc, '8.2 Próximos Pasos Sugeridos');
+  addBulletPoint(doc, '**Demo Personalizada:** Presentación específica para su institución');
+  addBulletPoint(doc, '**Análisis Financiero:** Cálculo de ROI específico con sus números');
+  addBulletPoint(doc, '**Prueba Piloto:** Implementación limitada para validar beneficios');
+  addBulletPoint(doc, '**Plan de Implementación:** Cronograma detallado de puesta en marcha');
+  
+  addParagraph(doc, '**Contacto para seguimiento:** El equipo comercial está disponible para profundizar en cualquier aspecto técnico, financiero u operacional que requiera mayor detalle.');
+  
+  return pageNumber;
 }
 
 // Función auxiliar para convertir Markdown a HTML

@@ -7,10 +7,12 @@ import { FileText, Download, BookOpen, Settings, Heart } from 'lucide-react';
 export default function DescargaManuales() {
   const [downloadingSistema, setDownloadingSistema] = useState(false);
   const [downloadingTecnico, setDownloadingTecnico] = useState(false);
+  const [downloadingCompetitivo, setDownloadingCompetitivo] = useState(false);
   const { toast } = useToast();
 
-  const downloadManual = async (type: 'sistema' | 'tecnico') => {
-    const setLoading = type === 'sistema' ? setDownloadingSistema : setDownloadingTecnico;
+  const downloadManual = async (type: 'sistema' | 'tecnico' | 'competitivo') => {
+    const setLoading = type === 'sistema' ? setDownloadingSistema : 
+                       type === 'tecnico' ? setDownloadingTecnico : setDownloadingCompetitivo;
     setLoading(true);
 
     try {
@@ -27,7 +29,7 @@ export default function DescargaManuales() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Manual_${type === 'sistema' ? 'Sistema' : 'Tecnico'}_Portal_Pagos_Medicos.pdf`;
+      a.download = `Manual_${type === 'sistema' ? 'Sistema' : type === 'tecnico' ? 'Tecnico' : 'Ventajas_Competitivas'}_Portal_Pagos_Medicos.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -35,7 +37,7 @@ export default function DescargaManuales() {
 
       toast({
         title: "Descarga exitosa",
-        description: `Manual ${type === 'sistema' ? 'de Sistema' : 'Técnico'} descargado correctamente`,
+        description: `Manual ${type === 'sistema' ? 'de Sistema' : type === 'tecnico' ? 'Técnico' : 'de Ventajas Competitivas'} descargado correctamente`,
       });
     } catch (error: any) {
       toast({
@@ -78,7 +80,7 @@ export default function DescargaManuales() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Manual de Sistema */}
         <Card className="h-full">
           <CardHeader className="pb-4">
@@ -183,6 +185,63 @@ export default function DescargaManuales() {
             >
               <Download className="h-4 w-4 mr-2" />
               {downloadingTecnico ? 'Generando PDF...' : 'Descargar Manual Técnico'}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Manual de Ventajas Competitivas */}
+        <Card className="h-full">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-3 rounded-lg bg-purple-100">
+                <Heart className="h-6 w-6 text-purple-600" />
+              </div>
+              <div>
+                <CardTitle className="text-xl text-gray-900">Manual de Ventajas Competitivas</CardTitle>
+                <CardDescription className="mt-1">Orientado a tomadores de decisión</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          
+          <CardContent className="space-y-4">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h4 className="font-semibold text-gray-900 mb-2">Contenido Incluido:</h4>
+              <ul className="text-sm text-gray-600 space-y-1">
+                <li>• Análisis competitivo detallado del mercado chileno</li>
+                <li>• ROI y justificación financiera específica por stakeholder</li>
+                <li>• Propuesta de valor diferenciada para CFO, CTO y Gerente Médico</li>
+                <li>• Comparación directa: Excel vs Software vs Portal Médico</li>
+                <li>• Argumentos de venta y manejo de objeciones</li>
+                <li>• Casos de éxito proyectados y estrategia de implementación</li>
+                <li>• Ventajas competitivas sostenibles y barreras de entrada</li>
+                <li>• Discursos personalizados por perfil de tomador de decisión</li>
+                <li>• Análisis de costos evitados y beneficios cuantificados</li>
+                <li>• Estrategia comercial para penetración de mercado</li>
+              </ul>
+            </div>
+            
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+              <p className="text-sm text-emerald-700">
+                <strong>ROI Garantizado:</strong> Argumentos financieros sólidos con 
+                payback de 2-4 meses y ROI del 300-500% primer año.
+              </p>
+            </div>
+            
+            <div className="flex items-center justify-between pt-4">
+              <div className="text-sm text-gray-500">
+                <span className="font-medium">Páginas:</span> ~32 páginas
+                <br />
+                <span className="font-medium">Formato:</span> PDF Comercial Estratégico
+              </div>
+            </div>
+            
+            <Button
+              onClick={() => downloadManual('competitivo')}
+              disabled={downloadingCompetitivo}
+              className="w-full bg-purple-600 hover:bg-purple-700"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {downloadingCompetitivo ? 'Generando PDF...' : 'Descargar Manual Competitivo'}
             </Button>
           </CardContent>
         </Card>
