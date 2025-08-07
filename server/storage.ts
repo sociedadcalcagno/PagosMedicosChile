@@ -833,7 +833,7 @@ export class DatabaseStorage implements IStorage {
     const attentions = await db.select()
     .from(medicalAttentions)
     .leftJoin(doctors, eq(medicalAttentions.doctorId, doctors.id))
-    .leftJoin(medicalSocieties, eq(doctors.societyId, medicalSocieties.id))
+    .leftJoin(medicalSocieties, eq(doctors.societyRut, medicalSocieties.rut))
     .where(and(...whereConditions));
 
     // Group by doctor
@@ -852,7 +852,7 @@ export class DatabaseStorage implements IStorage {
           doctorId,
           doctorName: doctor?.name || 'Desconocido',
           doctorEmail: doctor?.email || '',
-          societyId: doctor?.societyId || null,
+          societyId: doctor?.societyRut || null,
           societyName: society?.name || null,
           participacionCount: 0,
           hmqCount: 0,
