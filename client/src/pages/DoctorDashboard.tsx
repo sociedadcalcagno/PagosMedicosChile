@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import {
   DollarSign,
   Clock,
@@ -17,13 +20,94 @@ import {
   Heart,
   User as UserIcon,
   LogOut,
+  Download,
 } from "lucide-react";
 import type { User } from "@shared/schema";
 import AIChat from "@/components/AIChat";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function DoctorDashboard() {
   const { user } = useAuth() as { user: User | undefined; isLoading: boolean; isAuthenticated: boolean };
   const [activeTab, setActiveTab] = useState("pagos");
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const { toast } = useToast();
+
+  // Query para obtener los datos del doctor autenticado
+  const { data: doctorProfile } = useQuery({
+    queryKey: ['/api/user-doctor'],
+    enabled: !!user,
+  });
+
+  // Mutación para generar PDF de cartola
+  const generateCartolaRDFMutation = useMutation({
+    mutationFn: async () => {
+      if (!doctorProfile?.id) throw new Error('Doctor profile not found');
+      
+      const response = await fetch(`/api/generate-payslip/${doctorProfile.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ month: selectedMonth, year: selectedYear })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate cartola');
+      }
+      
+      const data = await response.json();
+      
+      if (data.pdfId && data.downloadUrl) {
+        // Abrir el documento de liquidación en nueva ventana con diálogo de impresión
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+          // Obtener el contenido HTML
+          fetch(`/api/download-pdf/${data.pdfId}`)
+            .then(response => response.text())
+            .then(html => {
+              newWindow.document.write(html);
+              newWindow.document.close();
+              
+              // Agregar estilos adicionales optimizados para impresión
+              const style = newWindow.document.createElement('style');
+              style.textContent = `
+                @media print {
+                  body { margin: 0; }
+                  .container { margin: 0; padding: 20px; }
+                  @page { margin: 1cm; size: A4; }
+                }
+              `;
+              newWindow.document.head.appendChild(style);
+              
+              // Abrir automáticamente el diálogo de impresión
+              setTimeout(() => {
+                newWindow.focus();
+                newWindow.print();
+              }, 1000);
+            });
+        }
+        
+        return data;
+      } else {
+        throw new Error('PDF generation failed - no PDF ID returned');
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Cartola generada exitosamente",
+        description: "Su liquidación se abrió en nueva pestaña con opción de impresión",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error al generar cartola",
+        description: error.message || "No se pudo generar la cartola",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Mock data for doctor's payments and participations
   const mockPayments = [
@@ -349,23 +433,112 @@ export default function DoctorDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Reportes de Actividad</CardTitle>
+                <p className="text-sm text-gray-600">Genere y descargue sus reportes mensuales de liquidaciones</p>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Button variant="outline" className="h-24 flex flex-col items-center justify-center space-y-2">
-                      <Calendar className="w-6 h-6 text-blue-600" />
-                      <span>Reporte Mensual</span>
-                    </Button>
-                    <Button variant="outline" className="h-24 flex flex-col items-center justify-center space-y-2">
-                      <BarChart3 className="w-6 h-6 text-green-600" />
-                      <span>Análisis de Pagos</span>
-                    </Button>
-                    <Button variant="outline" className="h-24 flex flex-col items-center justify-center space-y-2">
-                      <FileText className="w-6 h-6 text-purple-600" />
-                      <span>Resumen Anual</span>
-                    </Button>
+                <div className="space-y-6">
+                  {/* Selección de período */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h3 className="font-medium text-gray-900 mb-3">Seleccionar Período</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-2 block">Mes</label>
+                        <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar mes" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 12 }, (_, i) => (
+                              <SelectItem key={i + 1} value={(i + 1).toString()}>
+                                {new Date(2025, i).toLocaleDateString('es-CL', { month: 'long' })}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-2 block">Año</label>
+                        <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar año" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="2024">2024</SelectItem>
+                            <SelectItem value="2025">2025</SelectItem>
+                            <SelectItem value="2026">2026</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Opciones de reportes */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card className="border-2 border-green-200 bg-green-50">
+                      <CardContent className="p-6">
+                        <div className="flex items-center space-x-4">
+                          <div className="bg-green-100 p-3 rounded-full">
+                            <FileText className="w-6 h-6 text-green-600" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900">Cartola de Liquidación</h3>
+                            <p className="text-sm text-gray-600 mb-3">
+                              Descargue su liquidación detallada del período seleccionado
+                            </p>
+                            <Button 
+                              onClick={() => generateCartolaRDFMutation.mutate()}
+                              disabled={generateCartolaRDFMutation.isPending}
+                              className="w-full bg-green-600 hover:bg-green-700"
+                            >
+                              <Download className="w-4 h-4 mr-2" />
+                              {generateCartolaRDFMutation.isPending ? "Generando..." : "Generar Cartola"}
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-2 border-blue-200 bg-blue-50">
+                      <CardContent className="p-6">
+                        <div className="flex items-center space-x-4">
+                          <div className="bg-blue-100 p-3 rounded-full">
+                            <BarChart3 className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900">Análisis de Pagos</h3>
+                            <p className="text-sm text-gray-600 mb-3">
+                              Resumen estadístico de sus atenciones y participaciones
+                            </p>
+                            <Button variant="outline" className="w-full border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white">
+                              <BarChart3 className="w-4 h-4 mr-2" />
+                              Ver Análisis
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Información del doctor */}
+                  {doctorProfile && (
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <h3 className="font-medium text-gray-900 mb-2">Información del Profesional</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-600">Nombre:</span>
+                          <p className="font-medium">{doctorProfile.name}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">RUT:</span>
+                          <p className="font-medium">{doctorProfile.rut}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Especialidad:</span>
+                          <p className="font-medium">{doctorProfile.specialtyName || 'No especificada'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
