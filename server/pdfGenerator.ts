@@ -1,5 +1,6 @@
-import { writeFileSync, readFileSync } from 'fs';
+import { writeFileSync, readFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
+import puppeteer from 'puppeteer';
 
 const TEMP_DIR = '/tmp';
 
@@ -783,16 +784,49 @@ export async function generateManualPDF(manualType: 'sistema' | 'tecnico'): Prom
 </body>
 </html>`;
   
-  // Generar PDF (por ahora HTML como simulación)
+  // Generar PDF usando Puppeteer
   const pdfId = `manual_${manualType}_${Date.now()}`;
   const htmlFilePath = join(TEMP_DIR, `${pdfId}.html`);
   
   writeFileSync(htmlFilePath, html);
   
-  // Leer HTML como buffer
-  const htmlBuffer = readFileSync(htmlFilePath);
+  // Usar Puppeteer para generar PDF
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
   
-  return htmlBuffer;
+  const page = await browser.newPage();
+  await page.goto(`file://${htmlFilePath}`, { waitUntil: 'networkidle0' });
+  
+  const pdfBuffer = await page.pdf({
+    format: 'A4',
+    printBackground: true,
+    margin: {
+      top: '20px',
+      right: '20px',
+      bottom: '20px',
+      left: '20px'
+    },
+    displayHeaderFooter: true,
+    headerTemplate: '<div></div>',
+    footerTemplate: `
+      <div style="font-size: 10px; text-align: center; width: 100%; color: #666; padding: 5px;">
+        <span class="pageNumber"></span> / <span class="totalPages"></span> - ${title} - Portal Pagos Médicos Chile
+      </div>
+    `
+  });
+  
+  await browser.close();
+  
+  // Limpiar archivo temporal
+  try {
+    unlinkSync(htmlFilePath);
+  } catch (error) {
+    console.log('Warning: Could not delete temporary HTML file');
+  }
+  
+  return Buffer.from(pdfBuffer);
 }
 
 // Función auxiliar para convertir Markdown a HTML
