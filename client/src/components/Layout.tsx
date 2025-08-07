@@ -388,6 +388,32 @@ export default function Layout({ children }: LayoutProps) {
                 })}
               </div>
 
+              {/* Documentación */}
+              {getSectionItems("Documentación").length > 0 && (
+                <div className="border-t border-gray-200 pt-4 mt-6">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                    Documentación
+                  </h3>
+                  {getSectionItems("Documentación").map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link key={item.href} href={item.href}>
+                        <div
+                          className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                            isActive(item.href)
+                              ? "bg-medical-blue text-white"
+                              : "text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <Icon className="w-5 text-gray-400 mr-3" />
+                          <span className="font-medium">{item.label}</span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+
               {/* Configuración */}
               <div className="border-t border-gray-200 pt-4 mt-6">
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
@@ -545,6 +571,33 @@ export default function Layout({ children }: LayoutProps) {
                   );
                 })}
               </div>
+
+              {/* Documentación - Mobile */}
+              {getSectionItems("Documentación").length > 0 && (
+                <div className="border-t border-gray-200 pt-4 mt-6">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                    Documentación
+                  </h3>
+                  {getSectionItems("Documentación").map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link key={item.href} href={item.href}>
+                        <div
+                          className={`flex items-center px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                            isActive(item.href)
+                              ? "bg-medical-blue text-white"
+                              : "text-gray-700 hover:bg-gray-100"
+                          }`}
+                          onClick={() => setIsSidebarOpen(false)}
+                        >
+                          <Icon className="w-5 text-gray-400 mr-3" />
+                          <span className="font-medium">{item.label}</span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Configuración */}
               <div className="border-t border-gray-200 pt-4 mt-6">
