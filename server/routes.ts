@@ -20,7 +20,7 @@ import {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Always setup session middleware
   const sessionModule = await import("./session");
-  sessionModule.setupSession(app);
+  await sessionModule.setupSession(app);
   
   // Only setup real auth in production, use mock auth in development
   if (process.env.NODE_ENV === "production") {

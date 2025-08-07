@@ -1,15 +1,15 @@
 import session from "express-session";
 import type { Express } from "express";
 import MemoryStore from "memorystore";
+import connectPgSimple from "connect-pg-simple";
 
-export function setupSession(app: Express) {
+export async function setupSession(app: Express) {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   
   // Use memory store for development, PostgreSQL store for production
   let store;
   if (process.env.NODE_ENV === "production") {
-    const connectPg = require("connect-pg-simple");
-    const pgStore = connectPg(session);
+    const pgStore = connectPgSimple(session);
     store = new pgStore({
       conString: process.env.DATABASE_URL,
       createTableIfMissing: false,
