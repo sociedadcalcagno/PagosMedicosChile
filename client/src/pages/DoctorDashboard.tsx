@@ -37,7 +37,7 @@ export default function DoctorDashboard() {
   const { data: doctorProfile } = useQuery({
     queryKey: ['/api/user-doctor'],
     enabled: !!user,
-  });
+  }) as { data: any };
 
   // Mutación para generar PDF de cartola
   const generateCartolaRDFMutation = useMutation({
@@ -526,15 +526,15 @@ export default function DoctorDashboard() {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                         <div>
                           <span className="text-gray-600">Nombre:</span>
-                          <p className="font-medium">{doctorProfile.name}</p>
+                          <p className="font-medium">{doctorProfile?.name || 'N/A'}</p>
                         </div>
                         <div>
                           <span className="text-gray-600">RUT:</span>
-                          <p className="font-medium">{doctorProfile.rut}</p>
+                          <p className="font-medium">{doctorProfile?.rut || 'N/A'}</p>
                         </div>
                         <div>
                           <span className="text-gray-600">Especialidad:</span>
-                          <p className="font-medium">{doctorProfile.specialtyName || 'No especificada'}</p>
+                          <p className="font-medium">{doctorProfile?.specialtyName || 'No especificada'}</p>
                         </div>
                       </div>
                     </div>
