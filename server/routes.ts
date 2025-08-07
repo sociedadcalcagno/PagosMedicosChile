@@ -22,13 +22,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const sessionModule = await import("./session");
   await sessionModule.setupSession(app);
   
-  // Only setup real auth in production, use mock auth in development
-  if (process.env.NODE_ENV === "production") {
-    await setupAuth(app);
-  } else {
-    // Setup mock auth for development (multiple user testing)
+  // Use mock auth for now (OAuth not configured yet)
+  // TODO: Setup real auth when OAuth is configured
+  // if (process.env.NODE_ENV === "production" && process.env.REPLIT_DOMAINS) {
+  //   await setupAuth(app);
+  // } else {
+    // Setup mock auth for development and deployment (multiple user testing)
     setupMockAuth(app);
-  }
+  // }
 
   // Auth routes - support both real and mock auth
   app.get('/api/auth/user', async (req: any, res) => {
