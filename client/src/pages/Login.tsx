@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, UserCheck } from "lucide-react";
 import { Link } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Import the logo image
 import logoImage from "@assets/logo_1754398855957.png";
@@ -19,6 +20,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,7 +164,10 @@ export default function Login() {
                   variant="outline"
                   size="sm"
                   className="w-full"
-                  onClick={() => window.location.href = "/api/mock-login/mock_admin"}
+                  onClick={() => {
+                    queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+                    window.location.href = "/api/mock-login/mock_admin";
+                  }}
                 >
                   Administrador - Dr. María González
                 </Button>
@@ -170,7 +175,10 @@ export default function Login() {
                   variant="outline"
                   size="sm"
                   className="w-full"
-                  onClick={() => window.location.href = "/api/mock-login/mock_supervisor"}
+                  onClick={() => {
+                    queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+                    window.location.href = "/api/mock-login/mock_supervisor";
+                  }}
                 >
                   Supervisor - Dr. Carlos Rodríguez
                 </Button>
@@ -178,7 +186,10 @@ export default function Login() {
                   variant="outline"
                   size="sm"
                   className="w-full"
-                  onClick={() => window.location.href = "/api/mock-login/mock_user"}
+                  onClick={() => {
+                    queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+                    window.location.href = "/api/mock-login/mock_user";
+                  }}
                 >
                   Médico - Dra. Ana López
                 </Button>
