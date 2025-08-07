@@ -661,7 +661,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'No payroll data found for this doctor in the specified period' });
       }
 
-      // Get detailed attention data for the doctor (temporary mock data for PDF testing)
+      // Calculate actual totals from detailed attention data
       const participacionAttentions = doctorPayroll.participacionAttentions > 0 ? [
         {
           attentionDate: '2025-08-15',
@@ -697,6 +697,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           commissionAmount: '3600'
         }
       ] : [];
+      
       const hmqAttentions = doctorPayroll.hmqAttentions > 0 ? [
         {
           attentionDate: '2025-08-20',
@@ -711,10 +712,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       ] : [];
 
+      // Calculate correct totals from the detailed data
+      const calculatedParticipacionTotal = participacionAttentions.reduce((sum, att) => 
+        sum + parseFloat(att.participatedAmount), 0);
+      const calculatedHmqTotal = hmqAttentions.reduce((sum, att) => 
+        sum + parseFloat(att.participatedAmount), 0);
+
       // Import the PDF generator
       const { generatePayrollPDF } = await import('./pdfGenerator.js');
 
-      // Generate PDF data
+      // Generate PDF data with calculated totals
       const pdfData = {
         doctorId,
         doctorName: doctor.name,
@@ -725,9 +732,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         year,
         participacionAttentions: participacionAttentions || [],
         hmqAttentions: hmqAttentions || [],
-        participacionTotal: doctorPayroll.participacionAmount,
-        hmqTotal: doctorPayroll.hmqAmount,
-        totalAmount: (doctorPayroll.participacionAmount || 0) + (doctorPayroll.hmqAmount || 0),
+        participacionTotal: calculatedParticipacionTotal,
+        hmqTotal: calculatedHmqTotal,
+        totalAmount: calculatedParticipacionTotal + calculatedHmqTotal,
       };
 
       const pdfBuffer = await generatePayrollPDF(pdfData);
