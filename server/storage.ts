@@ -913,13 +913,13 @@ export class DatabaseStorage implements IStorage {
         await db.insert(payments).values({
           id: crypto.randomUUID(),
           doctorId,
+          periodMonth: data.month,
+          periodYear: data.year,
           amount: doctorTotal.toString(),
           paymentMethod: data.paymentMethod,
           status: 'processed',
           notes: data.notes || `Pago procesado masivamente - ${data.month}/${data.year}`,
           paymentDate: new Date(),
-          createdAt: new Date(),
-          updatedAt: new Date(),
         });
 
         processedCount++;
