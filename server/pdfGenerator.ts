@@ -83,8 +83,8 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
             text-align: center;
             margin-bottom: 48px;
             padding: 32px 0;
-            border-bottom: 3px solid #0f766e;
-            background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
+            border-bottom: 3px solid #4f46e5;
+            background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
             border-radius: 8px;
             margin: -24px -24px 48px -24px;
             padding: 32px 24px;
@@ -92,14 +92,14 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
         .title {
             font-size: 28px;
             font-weight: 700;
-            color: #0f766e;
+            color: #312e81;
             margin-bottom: 8px;
             letter-spacing: -0.5px;
         }
         .subtitle {
             font-size: 16px;
             font-weight: 500;
-            color: #0d9488;
+            color: #4f46e5;
             margin-bottom: 8px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -111,14 +111,14 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
             margin-bottom: 0;
         }
         .cartola-info {
-            background: #f8fafc;
+            background: #eef2ff;
             padding: 20px 24px;
             border-radius: 8px;
-            border-left: 4px solid #3b82f6;
+            border-left: 4px solid #4f46e5;
             margin-bottom: 32px;
             font-weight: 600;
             font-size: 16px;
-            color: #1e40af;
+            color: #312e81;
         }
         .doctor-info {
             background: #fefefe;
@@ -131,7 +131,7 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
         .doctor-info .rut {
-            color: #0f766e;
+            color: #4f46e5;
             font-weight: 600;
         }
         .doctor-info .name {
@@ -143,14 +143,13 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
             font-weight: 700;
             font-size: 18px;
             margin: 48px 0 24px 0;
-            color: #0f766e;
-            padding: 12px 20px;
-            background: linear-gradient(90deg, #0f766e 0%, #14b8a6 100%);
             color: white;
+            padding: 12px 20px;
+            background: linear-gradient(90deg, #4f46e5 0%, #6366f1 100%);
             border-radius: 6px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            box-shadow: 0 2px 8px rgba(15, 118, 110, 0.2);
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
         }
         .table-header {
             font-weight: bold;
@@ -188,12 +187,12 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
         }
         .total-row:last-child {
             border-bottom: none;
-            border-top: 2px solid #0f766e;
+            border-top: 2px solid #4f46e5;
             margin-top: 16px;
             padding-top: 24px;
             font-weight: 700;
             font-size: 18px;
-            color: #0f766e;
+            color: #312e81;
         }
         .total-label {
             font-weight: 600;
@@ -201,10 +200,11 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
         }
         .total-amount {
             font-weight: 700;
-            color: #0f766e;
+            color: #312e81;
             font-size: 16px;
             text-align: right;
             min-width: 150px;
+            font-family: 'Courier New', monospace;
         }
         .footer {
             margin-top: 64px;
@@ -218,7 +218,7 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
             line-height: 1.8;
         }
         .footer strong {
-            color: #0f766e;
+            color: #4f46e5;
             font-weight: 600;
         }
         .no-data {
@@ -240,7 +240,7 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
         }
         
         th {
-            background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
             color: white;
             padding: 8px 6px;
             text-align: left;
@@ -248,7 +248,7 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
             font-size: 8px;
             text-transform: uppercase;
             letter-spacing: 0.3px;
-            border-bottom: 2px solid #0d9488;
+            border-bottom: 2px solid #4338ca;
         }
         
         td {
@@ -270,7 +270,7 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
         .amount {
             text-align: right;
             font-weight: 600;
-            color: #059669;
+            color: #1e40af;
         }
         
         .center {
@@ -285,8 +285,8 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
         }
         
         .percentage {
-            background: #dcfce7;
-            color: #15803d;
+            background: #e0e7ff;
+            color: #312e81;
             padding: 4px 8px;
             border-radius: 4px;
             font-weight: 600;
