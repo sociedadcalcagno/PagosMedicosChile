@@ -366,16 +366,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(rule);
     } catch (error) {
       console.error("Error updating calculation rule:", error);
-      if (error.name === 'ZodError') {
-        console.error("Validation errors:", error.issues);
+      if ((error as any).name === 'ZodError') {
+        console.error("Validation errors:", (error as any).issues);
         res.status(400).json({ 
           message: "Invalid calculation rule data", 
-          validationErrors: error.issues 
+          validationErrors: (error as any).issues 
         });
       } else {
         res.status(500).json({ 
           message: "Failed to update calculation rule", 
-          error: error.message 
+          error: (error as any).message 
         });
       }
     }
@@ -679,13 +679,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const participacionAttentions = (participacionAttentionsRaw || []).map(att => ({
         attentionDate: att.attentionDate,
         patientRut: att.patientRut || 'No informado',
-        serviceCode: att.serviceCode || '',
+        serviceCode: att.serviceName || '',
         serviceName: att.serviceName || 'Servicio no especificado',
-        providerType: att.providerType || 'No informado',
-        baseAmount: att.baseAmount || '0',
+        providerType: att.providerName || 'No informado',
+        baseAmount: att.grossAmount?.toString() || '0',
         participationPercentage: att.participationPercentage || '0',
         participatedAmount: att.participatedAmount || '0',
-        commissionAmount: att.commissionAmount || '0'
+        commissionAmount: att.netAmount?.toString() || '0'
       }));
       
       // Get HMQ attentions for this doctor
@@ -701,13 +701,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hmqAttentions = (hmqAttentionsRaw || []).map(att => ({
         attentionDate: att.attentionDate,
         patientRut: att.patientRut || 'No informado',
-        serviceCode: att.serviceCode || '',
+        serviceCode: att.serviceName || '',
         serviceName: att.serviceName || 'Servicio no especificado',
-        providerType: att.providerType || 'No informado',
-        baseAmount: att.baseAmount || '0',
+        providerType: att.providerName || 'No informado',
+        baseAmount: att.grossAmount?.toString() || '0',
         participationPercentage: att.participationPercentage || '0',
         participatedAmount: att.participatedAmount || '0',
-        commissionAmount: att.commissionAmount || '0'
+        commissionAmount: att.netAmount?.toString() || '0'
       }));
       
       console.log(`DEBUG - Doctor ${doctorId}: Participaciones=${participacionAttentions.length}, HMQ=${hmqAttentions.length}`);
@@ -1970,7 +1970,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           accountType,
           amount: parseFloat(payment.totalAmount),
           reference: `HON-${month}${year}-${payment.id.slice(0, 6)}`,
-          societyInfo: doctor.societyId ? {
+          societyInfo: doctor.societyRut ? {
             name: 'Sociedad Médica Demo',
             rut: '76.123.456-7'
           } : undefined

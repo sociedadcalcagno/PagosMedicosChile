@@ -62,7 +62,7 @@ export default function ProcessPayments() {
       ]);
       
       // Obtener información del doctor
-      const doctor = doctors.find((d: any) => d.id === payment.doctorId);
+      const doctor = (doctors as any[]).find((d: any) => d.id === payment.doctorId);
       const period = `${months.find(m => m.value === payment.periodMonth.toString())?.label} ${payment.periodYear}`;
       
       // Datos de cada cálculo
@@ -138,7 +138,7 @@ export default function ProcessPayments() {
   // Queries
   const { data: doctors = [] } = useQuery({
     queryKey: ['/api/doctors'],
-  });
+  }) as { data: any[] };
 
   const { data: calculations = [] } = useQuery({
     queryKey: ['/api/payment-calculations', selectedPeriod],
@@ -224,8 +224,8 @@ export default function ProcessPayments() {
     const variants = {
       pending: "default",
       calculated: "secondary",
-      approved: "success",
-      paid: "success",
+      approved: "secondary",
+      paid: "secondary",
       processing: "outline",
     } as const;
     
@@ -299,7 +299,7 @@ export default function ProcessPayments() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {doctors.map((doctor: any) => (
+                          {(doctors as any[]).map((doctor: any) => (
                             <SelectItem key={doctor.id} value={doctor.id}>
                               {doctor.name}
                             </SelectItem>
@@ -440,7 +440,7 @@ export default function ProcessPayments() {
                       </div>
                       <div>
                         <div className="font-medium">
-                          {doctors.find((d: any) => d.id === payment.doctorId)?.name || 'Doctor'}
+                          {(doctors as any[]).find((d: any) => d.id === payment.doctorId)?.name || 'Doctor'}
                         </div>
                         <div className="text-sm text-gray-500">
                           {months.find(m => m.value === payment.periodMonth.toString())?.label} {payment.periodYear}
@@ -484,7 +484,7 @@ export default function ProcessPayments() {
                         </div>
                         <div>
                           <div className="font-semibold text-lg">
-                            {doctors.find((d: any) => d.id === payment.doctorId)?.name || 'Doctor'}
+                            {(doctors as any[]).find((d: any) => d.id === payment.doctorId)?.name || 'Doctor'}
                           </div>
                           <div className="text-gray-600">
                             {months.find(m => m.value === payment.periodMonth.toString())?.label} {payment.periodYear}
@@ -556,7 +556,7 @@ export default function ProcessPayments() {
                                 <div>
                                   <label className="text-sm font-medium text-gray-600">Doctor</label>
                                   <p className="font-medium">
-                                    {doctors.find((d: any) => d.id === selectedPayment.doctorId)?.name}
+                                    {(doctors as any[]).find((d: any) => d.id === selectedPayment.doctorId)?.name}
                                   </p>
                                 </div>
                                 <div>
