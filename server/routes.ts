@@ -661,56 +661,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'No payroll data found for this doctor in the specified period' });
       }
 
-      // Calculate actual totals from detailed attention data
-      const participacionAttentions = doctorPayroll.participacionAttentions > 0 ? [
-        {
-          attentionDate: '2025-08-15',
-          patientRut: '12345678-9',
-          serviceCode: 'CIR001',
-          serviceName: 'Cirugía General Ambulatoria',
-          providerType: 'FONASA A',
-          baseAmount: '45000',
-          participationPercentage: '50',
-          participatedAmount: '22500',
-          commissionAmount: '2250'
-        },
-        {
-          attentionDate: '2025-08-18',
-          patientRut: '87654321-0',
-          serviceCode: 'CON001',
-          serviceName: 'Consulta Médica General',
-          providerType: 'ISAPRE',
-          baseAmount: '35000',
-          participationPercentage: '60',
-          participatedAmount: '21000',
-          commissionAmount: '2100'
-        },
-        {
-          attentionDate: '2025-08-22',
-          patientRut: '11223344-5',
-          serviceCode: 'PRO001',
-          serviceName: 'Procedimiento Especializado',
-          providerType: 'FONASA C',
-          baseAmount: '80000',
-          participationPercentage: '45',
-          participatedAmount: '36000',
-          commissionAmount: '3600'
-        }
-      ] : [];
+      // Get real medical attentions data for this specific doctor
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(year, month, 0);
       
-      const hmqAttentions = doctorPayroll.hmqAttentions > 0 ? [
-        {
-          attentionDate: '2025-08-20',
-          patientRut: '99887766-4',
-          serviceCode: 'HMQ001',
-          serviceName: 'Honorario Médico Quirúrgico',
-          providerType: 'PARTICULAR',
-          baseAmount: '120000',
-          participationPercentage: '40',
-          participatedAmount: '48000',
-          commissionAmount: '4800'
-        }
-      ] : [];
+      // Get participación attentions for this doctor
+      const participacionFilters = {
+        doctorId: doctorId,
+        dateFrom: startDate.toISOString().split('T')[0],
+        dateTo: endDate.toISOString().split('T')[0],
+        recordTypes: ['participacion']
+        // Include all statuses - pending and processed
+      };
+      
+      const participacionAttentionsRaw = await storage.getMedicalAttentions(participacionFilters);
+      const participacionAttentions = (participacionAttentionsRaw || []).map(att => ({
+        attentionDate: att.attentionDate,
+        patientRut: att.patientRut || 'No informado',
+        serviceCode: att.serviceCode || '',
+        serviceName: att.serviceName || 'Servicio no especificado',
+        providerType: att.providerType || 'No informado',
+        baseAmount: att.baseAmount || '0',
+        participationPercentage: att.participationPercentage || '0',
+        participatedAmount: att.participatedAmount || '0',
+        commissionAmount: att.commissionAmount || '0'
+      }));
+      
+      // Get HMQ attentions for this doctor
+      const hmqFilters = {
+        doctorId: doctorId,
+        dateFrom: startDate.toISOString().split('T')[0],
+        dateTo: endDate.toISOString().split('T')[0],
+        recordTypes: ['hmq']
+        // Include all statuses - pending and processed
+      };
+      
+      const hmqAttentionsRaw = await storage.getMedicalAttentions(hmqFilters);
+      const hmqAttentions = (hmqAttentionsRaw || []).map(att => ({
+        attentionDate: att.attentionDate,
+        patientRut: att.patientRut || 'No informado',
+        serviceCode: att.serviceCode || '',
+        serviceName: att.serviceName || 'Servicio no especificado',
+        providerType: att.providerType || 'No informado',
+        baseAmount: att.baseAmount || '0',
+        participationPercentage: att.participationPercentage || '0',
+        participatedAmount: att.participatedAmount || '0',
+        commissionAmount: att.commissionAmount || '0'
+      }));
+      
+      console.log(`DEBUG - Doctor ${doctorId}: Participaciones=${participacionAttentions.length}, HMQ=${hmqAttentions.length}`);
 
       // Calculate correct totals from the detailed data (participation amount minus commission)
       const calculatedParticipacionTotal = participacionAttentions.reduce((sum, att) => {
