@@ -46,7 +46,7 @@ function Router() {
   }
 
   // Route users based on their profile
-  if (user.profile === "user") {
+  if (user.profile === "doctor" || user.profile === "user") {
     // Regular users (doctors) get their own dashboard
     return <DoctorDashboard />;
   }
