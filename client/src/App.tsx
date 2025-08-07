@@ -22,6 +22,8 @@ import CalculatePayments from "@/pages/CalculatePayments";
 import ProcessPayments from "@/pages/ProcessPayments";
 import PayrollProcessing from "@/pages/PayrollProcessing";
 import ProcessPaymentsEnhanced from "@/pages/ProcessPaymentsEnhanced";
+import ExportacionContable from "@/pages/ExportacionContable";
+import NominaBancaria from "@/pages/NominaBancaria";
 import type { User } from "@shared/schema";
 
 function Router() {
@@ -65,6 +67,8 @@ function Router() {
         <Route path="/procesar-pagos" component={ProcessPayments} />
         <Route path="/procesar-pagos-avanzado" component={ProcessPaymentsEnhanced} />
         <Route path="/nomina" component={PayrollProcessing} />
+        <Route path="/exportacion-contable" component={ExportacionContable} />
+        <Route path="/nomina-bancaria" component={NominaBancaria} />
         <Route path="/reportes" component={Reports} />
         <Route path="/perfil" component={Profile} />
         <Route path="/configuracion" component={Home} />

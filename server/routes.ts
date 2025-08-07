@@ -1814,5 +1814,245 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== CONTABILIDAD TESORERÍA ====================
+
+  // Generate accounting export
+  app.post('/api/generate-accounting-export', async (req, res) => {
+    try {
+      const { month, year, exportFormat, includeDetail, notes } = req.body;
+      
+      // Get payment data for the period
+      const payments = await storage.getPayments({ month, year, status: 'processed' });
+      
+      // Generate accounting entries
+      const entries = [];
+      let totalDebits = 0;
+      let totalCredits = 0;
+      
+      for (const payment of payments) {
+        // Debit entry - Honorarios Médicos expense
+        const debitEntry = {
+          account: '5110001',
+          accountName: 'Honorarios Médicos Profesionales',
+          debit: parseFloat(payment.totalAmount),
+          credit: 0,
+          description: `Honorarios médicos ${month}/${year}`,
+          reference: `PAY-${payment.id.slice(0, 8)}`
+        };
+        
+        // Credit entry - Bank account
+        const creditEntry = {
+          account: '1110001',
+          accountName: 'Banco Cuenta Corriente',
+          debit: 0,
+          credit: parseFloat(payment.totalAmount),
+          description: `Pago honorarios médicos ${month}/${year}`,
+          reference: `PAY-${payment.id.slice(0, 8)}`
+        };
+        
+        entries.push(debitEntry, creditEntry);
+        totalDebits += debitEntry.debit;
+        totalCredits += creditEntry.credit;
+      }
+      
+      const summary = {
+        totalEntries: entries.length,
+        totalDebits,
+        totalCredits,
+        balanceCheck: Math.abs(totalDebits - totalCredits) < 0.01,
+        period: `${month}/${year}`
+      };
+      
+      res.json({ summary, entries });
+    } catch (error: any) {
+      console.error('Error generating accounting export:', error);
+      res.status(500).json({ error: 'Error al generar exportación contable' });
+    }
+  });
+
+  // Download accounting export file
+  app.post('/api/download-accounting-export', async (req, res) => {
+    try {
+      const { month, year, format } = req.body;
+      
+      // Get payment data for the period
+      const payments = await storage.getPayments({ month, year, status: 'processed' });
+      
+      // Generate accounting entries
+      const entries = [];
+      for (const payment of payments) {
+        entries.push(
+          {
+            account: '5110001',
+            accountName: 'Honorarios Médicos Profesionales',
+            debit: parseFloat(payment.totalAmount),
+            credit: 0,
+            description: `Honorarios médicos ${month}/${year}`,
+            reference: `PAY-${payment.id.slice(0, 8)}`
+          },
+          {
+            account: '1110001',
+            accountName: 'Banco Cuenta Corriente',
+            debit: 0,
+            credit: parseFloat(payment.totalAmount),
+            description: `Pago honorarios médicos ${month}/${year}`,
+            reference: `PAY-${payment.id.slice(0, 8)}`
+          }
+        );
+      }
+      
+      let content = '';
+      let contentType = 'text/plain';
+      let filename = `exportacion_contable_${month}_${year}`;
+      
+      if (format === 'csv') {
+        contentType = 'text/csv';
+        filename += '.csv';
+        content = 'Cuenta,Nombre Cuenta,Débito,Crédito,Descripción,Referencia\n';
+        content += entries.map(entry => 
+          `"${entry.account}","${entry.accountName}","${entry.debit}","${entry.credit}","${entry.description}","${entry.reference}"`
+        ).join('\n');
+      } else if (format === 'excel') {
+        contentType = 'application/vnd.ms-excel';
+        filename += '.xls';
+        content = 'Cuenta\tNombre Cuenta\tDébito\tCrédito\tDescripción\tReferencia\n';
+        content += entries.map(entry => 
+          `${entry.account}\t${entry.accountName}\t${entry.debit}\t${entry.credit}\t${entry.description}\t${entry.reference}`
+        ).join('\n');
+      } else {
+        filename += '.txt';
+        content = entries.map(entry => 
+          `${entry.account}|${entry.accountName}|${entry.debit}|${entry.credit}|${entry.description}|${entry.reference}`
+        ).join('\n');
+      }
+      
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(content);
+    } catch (error: any) {
+      console.error('Error downloading accounting export:', error);
+      res.status(500).json({ error: 'Error al descargar exportación' });
+    }
+  });
+
+  // Generate bank payroll
+  app.post('/api/generate-bank-payroll', async (req, res) => {
+    try {
+      const { month, year, bankFormat, includeOnlyProcessed } = req.body;
+      
+      // Get processed payments for the period
+      const payments = await storage.getPayments({ 
+        month, 
+        year, 
+        status: includeOnlyProcessed ? 'processed' : undefined 
+      });
+      
+      // Get doctor details for each payment
+      const transfers = [];
+      const byBank: Record<string, { count: number; amount: number }> = {};
+      
+      for (const payment of payments) {
+        const doctor = await storage.getDoctorById(payment.doctorId);
+        if (!doctor) continue;
+        
+        // Mock bank details (in real implementation, these would come from doctor profile)
+        const bankName = 'Banco Santander';
+        const bankAccount = `${Math.random().toString().slice(2, 12)}`;
+        const accountType = 'Cuenta Corriente';
+        
+        const transfer = {
+          id: payment.id,
+          doctorName: doctor.name,
+          doctorRut: doctor.rut,
+          email: doctor.email || `${doctor.rut.replace('-', '')}@medico.cl`,
+          bankName,
+          bankAccount,
+          accountType,
+          amount: parseFloat(payment.totalAmount),
+          reference: `HON-${month}${year}-${payment.id.slice(0, 6)}`,
+          societyInfo: doctor.societyId ? {
+            name: 'Sociedad Médica Demo',
+            rut: '76.123.456-7'
+          } : undefined
+        };
+        
+        transfers.push(transfer);
+        
+        if (!byBank[bankName]) {
+          byBank[bankName] = { count: 0, amount: 0 };
+        }
+        byBank[bankName].count++;
+        byBank[bankName].amount += transfer.amount;
+      }
+      
+      const summary = {
+        totalTransfers: transfers.length,
+        totalAmount: transfers.reduce((sum, t) => sum + t.amount, 0),
+        byBank,
+        period: `${month}/${year}`
+      };
+      
+      res.json({ summary, transfers });
+    } catch (error: any) {
+      console.error('Error generating bank payroll:', error);
+      res.status(500).json({ error: 'Error al generar nómina bancaria' });
+    }
+  });
+
+  // Download bank file
+  app.post('/api/download-bank-file', async (req, res) => {
+    try {
+      const { month, year, bankFormat, selectedTransfers } = req.body;
+      
+      // Get selected payments
+      const payments = await storage.getPayments({ month, year });
+      const selectedPayments = payments.filter(p => selectedTransfers.includes(p.id));
+      
+      let content = '';
+      const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      
+      // Generate bank format file
+      if (bankFormat === 'santander') {
+        content = '001' + today + '001\n'; // Header
+        
+        for (const payment of selectedPayments) {
+          const doctor = await storage.getDoctorById(payment.doctorId);
+          if (!doctor) continue;
+          
+          const amount = Math.round(parseFloat(payment.totalAmount));
+          const line = [
+            '002', // Record type
+            '01', // Bank code
+            '0'.repeat(12 - doctor.rut.replace(/\D/g, '').length) + doctor.rut.replace(/\D/g, ''), // Account
+            amount.toString().padStart(15, '0'), // Amount
+            doctor.name.padEnd(40, ' ').slice(0, 40), // Name
+            doctor.rut.padEnd(12, ' '), // RUT
+            `HON${month}${year}`.padEnd(20, ' ') // Reference
+          ].join('');
+          content += line + '\n';
+        }
+        
+        content += '999' + selectedPayments.length.toString().padStart(6, '0'); // Footer
+      } else {
+        // Universal format
+        content = 'RUT,NOMBRE,BANCO,CUENTA,MONTO,REFERENCIA\n';
+        
+        for (const payment of selectedPayments) {
+          const doctor = await storage.getDoctorById(payment.doctorId);
+          if (!doctor) continue;
+          
+          content += `"${doctor.rut}","${doctor.name}","Banco Santander","${Math.random().toString().slice(2, 12)}","${payment.totalAmount}","HON-${month}${year}-${payment.id.slice(0, 6)}"\n`;
+        }
+      }
+      
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="nomina_bancaria_${month}_${year}.txt"`);
+      res.send(content);
+    } catch (error: any) {
+      console.error('Error downloading bank file:', error);
+      res.status(500).json({ error: 'Error al descargar archivo bancario' });
+    }
+  });
+
   return httpServer;
 }
