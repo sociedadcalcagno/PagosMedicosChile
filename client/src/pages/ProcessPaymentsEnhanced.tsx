@@ -58,6 +58,7 @@ type ProcessPaymentForm = z.infer<typeof processPaymentSchema>;
 export default function ProcessPaymentsEnhanced() {
   const [paymentSummaries, setPaymentSummaries] = useState<PaymentSummary[]>([]);
   const [selectAll, setSelectAll] = useState(false);
+  const [notes, setNotes] = useState('');
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -152,7 +153,7 @@ export default function ProcessPaymentsEnhanced() {
       });
       return;
     }
-    processPaymentsMutation.mutate(data);
+    processPaymentsMutation.mutate({ ...data, notes });
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -463,19 +464,11 @@ export default function ProcessPaymentsEnhanced() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex justify-between items-center">
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem className="flex-1 mr-4">
-                      <FormControl>
-                        <Input
-                          placeholder="Notas adicionales para el procesamiento..."
-                          {...field}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
+                <Input
+                  placeholder="Notas adicionales para el procesamiento..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="flex-1 mr-4"
                 />
                 
                 <Button 
