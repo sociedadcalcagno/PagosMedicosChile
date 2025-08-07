@@ -594,7 +594,7 @@ function createTableOfContents(doc: PDFKit.PDFDocument, markdownContent: string)
   });
 }
 
-// Generar contenido del manual de sistema
+// Generar contenido del manual de sistema con pantallas detalladas
 function generateSystemManualContent(doc: PDFKit.PDFDocument, pageNumber: number): number {
   // Introducción
   addSectionHeader(doc, '1. INTRODUCCIÓN AL SISTEMA');
@@ -612,10 +612,171 @@ function generateSystemManualContent(doc: PDFKit.PDFDocument, pageNumber: number
   doc.addPage();
   pageNumber++;
   
-  // Módulo de Maestros
-  addSectionHeader(doc, '2. MÓDULO DE MAESTROS');
+  // PANTALLAS DEL SISTEMA
+  addSectionHeader(doc, '2. PANTALLAS PRINCIPALES DEL SISTEMA');
   
-  addSubsectionHeader(doc, '2.1 Gestión de Médicos');
+  addSubsectionHeader(doc, '2.1 Pantalla de Acceso/Login');
+  addScreenDescription(doc, 'PANTALLA DE ACCESO AL SISTEMA', [
+    'ELEMENTO VISUAL: Logo institucional "Pagos Médicos Chile" centrado en la parte superior',
+    'TÍTULO PRINCIPAL: "Portal Pagos Médicos" con subtítulo "Chile" en azul',
+    'CAMPO RUT: Input con placeholder "12345678-9" y etiqueta "RUT sin puntos con guión"',
+    'CAMPO CONTRASEÑA: Input con botón mostrar/ocultar contraseña',
+    'BOTÓN PRINCIPAL: "🔒 Iniciar Sesión" en azul, ancho completo',
+    'ENLACE: "¿Olvidó mi clave?" alineado a la derecha',
+    'SECCIÓN DESARROLLO: 3 botones para perfiles de prueba',
+    '  - Administrador - Dr. María González',
+    '  - Supervisor - Dr. Carlos Rodríguez', 
+    '  - Médico - Dra. Ana López',
+    'ACCESO PROFESIONAL: Botón verde "Acceso Profesional (RUT/Contraseña)"',
+    'FONDO: Imagen médica con overlay oscuro',
+    'MENSAJE: "Desconectado con éxito" en la parte inferior'
+  ]);
+  
+  doc.addPage();
+  pageNumber++;
+  
+  addSubsectionHeader(doc, '2.2 Dashboard Principal (Panel de Control)');
+  addScreenDescription(doc, 'PANEL DE CONTROL - VISTA ADMINISTRADOR', [
+    'ENCABEZADO: "Panel de Control" con descripción "Resumen general del sistema"',
+    'TARJETAS ESTADÍSTICAS (fila superior):',
+    '  - Tarjeta Verde: Ícono CheckCircle + Número "Reglas Activas"',
+    '  - Tarjeta Naranja: Ícono Clock + Número "En Revisión"', 
+    '  - Tarjeta Roja: Ícono AlertTriangle + Número "Vencidas"',
+    '  - Tarjeta Azul: Ícono TrendingUp + "1,247 Cálculos Este Mes"',
+    'SECCIÓN IZQUIERDA: "Resumen del Sistema"',
+    '  - Médicos Registrados: Badge con número',
+    '  - Especialidades: Badge con número',
+    '  - Prestaciones: Badge con número',
+    '  - Reglas de Cálculo: Badge con número',
+    'SECCIÓN DERECHA: "Actividad Reciente"',
+    '  - Lista con puntos de colores (verde/azul/naranja/púrpura)',
+    '  - Texto: "Nueva regla R005 creada para Cardiología"',
+    '  - Texto: "Médico Dr. García actualizado"',
+    'ACCIONES RÁPIDAS (parte inferior):',
+    '  - 4 tarjetas clickeables: Crear Nueva Regla, Registrar Médico, Ver Reportes, Configuración'
+  ]);
+  
+  doc.addPage();
+  pageNumber++;
+  
+  addSubsectionHeader(doc, '2.3 Gestión de Médicos');
+  addScreenDescription(doc, 'PANTALLA CONFIGURACIÓN MÉDICOS', [
+    'ENCABEZADO: "Configuración Médicos" + botón azul "+ Nuevo Médico"',
+    'DESCRIPCIÓN: "Gestiona la información de los profesionales médicos"',
+    'CARD FILTROS: "Filtros de Búsqueda"',
+    '  - Campo búsqueda con ícono Search',
+    '  - Dropdown "Filtrar por Especialidad"',
+    '  - Botón "Buscar"',
+    'TABLA PRINCIPAL (columnas):',
+    '  - RUT (formato chileno con guión)',
+    '  - Nombre Completo',
+    '  - Especialidad (badge)',
+    '  - Email',
+    '  - Tipo (Individual/Sociedad)',
+    '  - Acciones: Botones Editar (azul) y Eliminar (rojo)',
+    'MODAL CREAR/EDITAR MÉDICO:',
+    '  - Título: "Crear Nuevo Médico" o "Editar Médico"',
+    '  - Campos en grilla 2 columnas:',
+    '    * RUT (requerido)',
+    '    * Nombre Completo (requerido)',
+    '    * Email y Teléfono',
+    '    * Especialidad (dropdown)',
+    '    * Tipo HMQ',
+    '    * Estación/Departamento',
+    '    * Tipo Sociedad (Individual/Sociedad)',
+    '    * Tipo de Pago (Transferencia/Cheque/Depósito)',
+    '  - Sección Información Bancaria:',
+    '    * Banco, Número de Cuenta',
+    '    * Titular Cuenta, RUT Titular',
+    '  - Botones: "Cancelar" (gris) y "Crear"/"Actualizar" (azul)'
+  ]);
+  
+  doc.addPage();
+  pageNumber++;
+  
+  addSubsectionHeader(doc, '2.4 Calcular Pagos');
+  addScreenDescription(doc, 'PANTALLA CALCULAR PAGOS', [
+    'ENCABEZADO: Ícono Calculator + "Calcular Pagos"',
+    'DESCRIPCIÓN: "Analiza la producción médica y calcula pagos por participaciones"',
+    'LAYOUT: 3 columnas - Filtros (izq) + Resultados (centro-derecha)',
+    'PANEL FILTROS:',
+    '  - Título: "Filtros de Búsqueda"',
+    '  - Dropdown "Doctor/Profesional" con "Todos los médicos"',
+    '  - Campos fecha: "Fecha Desde" y "Fecha Hasta"',
+    '  - Checkboxes:',
+    '    * ✓ Registros Participaciones',
+    '    * ✓ Registros HMQ',
+    '  - Botón azul: "Analizar Producción"',
+    'PANEL RESULTADOS:',
+    '  - Card "Resumen de Producción":',
+    '    * 4 métricas en tarjetas de colores:',
+    '      - Azul: Total Atenciones',
+    '      - Verde: Participaciones', 
+    '      - Púrpura: Registros HMQ',
+    '      - Naranja: Monto Total (formato $CLP)',
+    '    * Promedio por atención en fondo gris',
+    '  - Card "Atenciones Pendientes de Cálculo":',
+    '    * Tabla con columnas:',
+    '      - Paciente (nombre + RUT)',
+    '      - Fecha (dd/mm/yyyy)',
+    '      - Servicio',
+    '      - Tipo (badge Participación/HMQ)',
+    '      - Monto (formato moneda chilena)',
+    '    * Mensaje "Y X atenciones más..."',
+    '    * Botón central "Calcular Pagos (X atenciones)"',
+    'ESTADO SIN DATOS:',
+    '  - Ícono AlertCircle grande',
+    '  - Título "Sin datos para el período seleccionado"',
+    '  - Sugerencias de verificación'
+  ]);
+  
+  doc.addPage();
+  pageNumber++;
+  
+  addSubsectionHeader(doc, '2.5 Nómina Bancaria');
+  addScreenDescription(doc, 'PANTALLA NÓMINA BANCARIA', [
+    'ENCABEZADO: Ícono Banknote + "Nómina Bancaria"',
+    'DESCRIPCIÓN: "Genera archivos de transferencias bancarias"',
+    'CARD CONFIGURACIÓN:',
+    '  - Título "Configuración de Nómina Bancaria"',
+    '  - 4 campos en línea:',
+    '    * Dropdown "Mes" (Enero-Diciembre)',
+    '    * Campo "Año" (numérico)',
+    '    * Dropdown "Formato Bancario":',
+    '      - Banco Santander',
+    '      - Banco BCI',
+    '      - Banco de Chile',
+    '      - BancoEstado',
+    '      - Formato Universal',
+    '    * Botón verde "Generar Nómina"',
+    '  - Campo "Notas Adicionales" (textarea)',
+    'RESUMEN GENERADO:',
+    '  - 3 tarjetas estadísticas:',
+    '    * Total Transferencias (ícono FileText)',
+    '    * Monto Total (ícono DollarSign, formato CLP)',
+    '    * Formato (ícono Building, nombre banco)',
+    'SELECCIÓN TRANSFERENCIAS:',
+    '  - Checkbox "Seleccionar todas" + contador',
+    '  - Lista de transferencias con:',
+    '    * Checkbox individual',
+    '    * Nombre médico + RUT',
+    '    * Información sociedad (si aplica)', 
+    '    * Email',
+    '    * Monto en verde',
+    '    * Detalles bancarios en grilla:',
+    '      - Banco, Cuenta, Tipo Cuenta, Referencia',
+    'GENERACIÓN ARCHIVO:',
+    '  - Card "Generar Archivo Bancario"',
+    '  - Botón verde "Descargar Archivo (X transferencias)"'
+  ]);
+  
+  doc.addPage();
+  pageNumber++;
+  
+  // Módulo de Maestros
+  addSectionHeader(doc, '3. FUNCIONALIDADES POR MÓDULO');
+  
+  addSubsectionHeader(doc, '3.1 Gestión de Médicos');
   addParagraph(doc, 'El sistema permite registrar profesionales médicos con toda la información requerida por la legislación chilena:');
   
   addBulletPoint(doc, 'RUT chileno con validación de dígito verificador');
@@ -624,21 +785,7 @@ function generateSystemManualContent(doc: PDFKit.PDFDocument, pageNumber: number
   addBulletPoint(doc, 'Datos bancarios para transferencias electrónicas');
   addBulletPoint(doc, 'Configuración de porcentajes de participación personalizados');
   
-  addSubsectionHeader(doc, '2.2 Prestaciones Médicas');
-  addParagraph(doc, 'Catálogo completo de prestaciones médicas chilenas con códigos GES y FONASA:');
-  
-  addBulletPoint(doc, 'Códigos de prestaciones según nomenclatura nacional');
-  addBulletPoint(doc, 'Clasificación por tipo: Participaciones vs HMQ (Honorarios por Cantidad)');
-  addBulletPoint(doc, 'Especialidades médicas asociadas a cada prestación');
-  addBulletPoint(doc, 'Tarifas por tipo de previsión (FONASA A/B/C/D, ISAPREs)');
-  
-  doc.addPage();
-  pageNumber++;
-  
-  // Sistema de Pagos
-  addSectionHeader(doc, '3. SISTEMA DE PAGOS MÉDICOS');
-  
-  addSubsectionHeader(doc, '3.1 Motor de Cálculo');
+  addSubsectionHeader(doc, '3.2 Motor de Cálculo');
   addParagraph(doc, 'El corazón del sistema es su motor de cálculo adaptativo que procesa automáticamente:');
   
   addBulletPoint(doc, 'Aplicación de reglas según especialidad médica');
@@ -647,7 +794,7 @@ function generateSystemManualContent(doc: PDFKit.PDFDocument, pageNumber: number
   addBulletPoint(doc, 'Validación de topes y rangos según normativa');
   addBulletPoint(doc, 'Generación automática de comprobantes');
   
-  addSubsectionHeader(doc, '3.2 Tipos de Previsión');
+  addSubsectionHeader(doc, '3.3 Tipos de Previsión');
   addParagraph(doc, 'Integración completa con el sistema previsional chileno:');
   
   addBulletPoint(doc, 'FONASA Tramo A: Población más vulnerable, copago 0%');
@@ -681,22 +828,52 @@ function generateSystemManualContent(doc: PDFKit.PDFDocument, pageNumber: number
   addBulletPoint(doc, 'BancoEstado: Archivo compatible con plataforma estatal');
   addBulletPoint(doc, 'Formato Universal: Compatible con otros bancos');
   
-  // Continuar con más secciones...
+  doc.addPage();
+  pageNumber++;
+  
+  // Casos de Uso Prácticos
+  addSectionHeader(doc, '5. CASOS DE USO CON PANTALLAS');
+  
+  addSubsectionHeader(doc, '5.1 Caso: Registro de Nuevo Médico');
+  addParagraph(doc, 'FLUJO PASO A PASO CON PANTALLAS:');
+  addBulletPoint(doc, '1. ACCESO: Login como Administrador usando pantalla de acceso');
+  addBulletPoint(doc, '2. NAVEGACIÓN: Desde dashboard → menú "Maestros" → "Médicos"');
+  addBulletPoint(doc, '3. PANTALLA: Se carga "Configuración Médicos" con tabla existente');
+  addBulletPoint(doc, '4. ACCIÓN: Click botón azul "+ Nuevo Médico" (esquina superior)');
+  addBulletPoint(doc, '5. MODAL: Se abre formulario "Crear Nuevo Médico"');
+  addBulletPoint(doc, '6. DATOS: Completar RUT (validado), nombre, email, especialidad');
+  addBulletPoint(doc, '7. TIPO: Seleccionar "Individual" o "Sociedad" en dropdown');
+  addBulletPoint(doc, '8. BANCO: Llenar información bancaria en sección inferior');
+  addBulletPoint(doc, '9. GUARDAR: Click "Crear" → modal se cierra → tabla se actualiza');
+  
+  addSubsectionHeader(doc, '5.2 Caso: Cálculo de Pagos Mensual');
+  addParagraph(doc, 'FLUJO COMPLETO CON PANTALLAS:');
+  addBulletPoint(doc, '1. ACCESO: Desde dashboard → "Sistema de Pagos" → "Calcular Pagos"');
+  addBulletPoint(doc, '2. FILTROS: En panel izquierdo configurar:');
+  addBulletPoint(doc, '   - Doctor: "Todos los médicos" o seleccionar uno específico');
+  addBulletPoint(doc, '   - Fechas: "01/08/2025" hasta "31/08/2025"');
+  addBulletPoint(doc, '   - Tipos: Ambos checkboxes marcados');
+  addBulletPoint(doc, '3. ANÁLISIS: Click "Analizar Producción" → panel derecho se llena');
+  addBulletPoint(doc, '4. REVISIÓN: Verificar "Resumen de Producción" con 4 métricas');
+  addBulletPoint(doc, '5. DETALLE: Revisar tabla "Atenciones Pendientes" con datos');
+  addBulletPoint(doc, '6. CÁLCULO: Click botón central "Calcular Pagos (X atenciones)"');
+  addBulletPoint(doc, '7. RESULTADO: Sistema procesa y muestra confirmación de éxito');
+  
   doc.addPage();
   pageNumber++;
   
   // Innovaciones y Ventajas Competitivas
-  addSectionHeader(doc, '5. INNOVACIONES PATENTABLES');
+  addSectionHeader(doc, '6. INNOVACIONES PATENTABLES');
   
   addParagraph(doc, 'El sistema incorpora tres innovaciones principales susceptibles de protección intelectual:');
   
-  addSubsectionHeader(doc, '5.1 Motor de Cálculo Adaptativo');
+  addSubsectionHeader(doc, '6.1 Motor de Cálculo Adaptativo');
   addParagraph(doc, 'Algoritmo propietario que selecciona automáticamente las reglas de cálculo más específicas según criterios jerárquicos. Esta innovación elimina la necesidad de configuración manual compleja.');
   
-  addSubsectionHeader(doc, '5.2 Sistema de Importación Inteligente');
+  addSubsectionHeader(doc, '6.2 Sistema de Importación Inteligente');
   addParagraph(doc, 'Tecnología que auto-crea entidades faltantes durante importación masiva, manteniendo integridad referencial. Reduce significativamente errores de carga de datos.');
   
-  addSubsectionHeader(doc, '5.3 Generación Adaptativa de Documentos');
+  addSubsectionHeader(doc, '6.3 Generación Adaptativa de Documentos');
   addParagraph(doc, 'Sistema que genera documentos PDF dinámicos mostrando solo secciones relevantes según tipo de datos disponibles. Optimiza presentación de información.');
   
   return pageNumber;
@@ -1042,6 +1219,46 @@ function addCodeBlock(doc: PDFKit.PDFDocument, code: string) {
   
   doc.font('Helvetica'); // Volver a fuente normal
   doc.moveDown(1);
+}
+
+function addScreenDescription(doc: PDFKit.PDFDocument, title: string, elements: string[]) {
+  if (doc.y > 600) doc.addPage();
+  
+  // Título de pantalla en fondo azul
+  doc.rect(72, doc.y - 10, doc.page.width - 144, 30)
+     .fill('#3b82f6');
+  
+  doc.fontSize(12)
+     .fillColor('white')
+     .text(title, 82, doc.y - 5, { 
+       width: doc.page.width - 164
+     });
+  
+  doc.moveDown(1);
+  
+  // Lista de elementos de la pantalla
+  elements.forEach(element => {
+    if (doc.y > 720) doc.addPage();
+    
+    if (element.startsWith('  ')) {
+      // Elemento indentado (sub-elemento)
+      doc.fontSize(10)
+         .fillColor('#374151')
+         .text(element, 110, doc.y, { 
+           width: doc.page.width - 182
+         });
+    } else {
+      // Elemento principal
+      doc.fontSize(10)
+         .fillColor('#1f2937')
+         .text(`• ${element}`, 90, doc.y, { 
+           width: doc.page.width - 162
+         });
+    }
+    doc.moveDown(0.3);
+  });
+  
+  doc.moveDown(0.5);
 }
 
 function addPageNumbers(doc: PDFKit.PDFDocument) {
