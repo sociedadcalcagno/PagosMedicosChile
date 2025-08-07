@@ -62,8 +62,8 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-            font-size: 13px;
-            line-height: 1.6;
+            font-size: 10px;
+            line-height: 1.4;
             margin: 0;
             padding: 40px;
             color: #1a1a1a;
@@ -167,7 +167,8 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
         }
         .attention-details {
             margin-left: 0px;
-            font-size: 11px;
+            font-size: 9px;
+            line-height: 1.3;
         }
         .totals {
             margin-top: 48px;
@@ -202,6 +203,8 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
             font-weight: 700;
             color: #0f766e;
             font-size: 16px;
+            text-align: right;
+            min-width: 150px;
         }
         .footer {
             margin-top: 64px;
@@ -223,58 +226,78 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
             font-style: italic;
             color: #94a3b8;
             margin: 32px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 9px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+            color: white;
+            padding: 8px 6px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border-bottom: 2px solid #0d9488;
+        }
+        
+        td {
+            padding: 6px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 9px;
+            line-height: 1.3;
+            vertical-align: middle;
+        }
+        
+        tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        tr:hover {
+            background: #f1f5f9;
+        }
+        
+        .amount {
+            text-align: right;
+            font-weight: 600;
+            color: #059669;
+        }
+        
+        .center {
+            text-align: center;
+        }
+        
+        /* Fix RUT alignment */
+        .rut-number {
+            white-space: nowrap;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.5px;
+        }
+        
+        .percentage {
+            background: #dcfce7;
+            color: #15803d;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
             padding: 32px;
             background: #f8fafc;
             border-radius: 8px;
             border: 1px dashed #cbd5e1;
             font-size: 14px;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 32px;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-            border: 1px solid #e2e8f0;
-        }
-        th, td {
-            text-align: left;
-            padding: 16px 20px;
-            border-bottom: 1px solid #f1f5f9;
-            font-size: 13px;
-        }
-        th {
-            font-weight: 600;
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            color: #475569;
-            text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 0.5px;
-            border-bottom: 2px solid #cbd5e1;
-        }
-        tbody tr:hover {
-            background-color: #f8fafc;
-        }
-        tbody tr:last-child td {
-            border-bottom: none;
-        }
-        .amount {
-            text-align: right;
-            font-weight: 600;
-            color: #059669;
-        }
-        .center {
-            text-align: center;
-        }
-        .percentage {
-            background: #ecfdf5;
-            color: #059669;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: 600;
-        }
+
     </style>
 </head>
 <body>
@@ -315,7 +338,7 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
             ${data.participacionAttentions.map(att => `
             <tr>
                 <td>${formatDate(att.attentionDate)}</td>
-                <td>${att.patientRut || ''}</td>
+                <td><span class="rut-number">${att.patientRut || ''}</span></td>
                 <td>${att.providerType || ''}</td>
                 <td>${att.serviceCode || ''}</td>
                 <td>${att.serviceName || ''}</td>
@@ -357,7 +380,7 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
             ${data.hmqAttentions.map(att => `
             <tr>
                 <td>${formatDate(att.attentionDate)}</td>
-                <td>${att.patientRut || ''}</td>
+                <td><span class="rut-number">${att.patientRut || ''}</span></td>
                 <td>${att.providerType || ''}</td>
                 <td>${att.serviceCode || ''}</td>
                 <td>${att.serviceName || ''}</td>
