@@ -97,22 +97,24 @@ export default function DescargaManuales() {
             <div className="bg-gray-50 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-2">Contenido Incluido:</h4>
               <ul className="text-sm text-gray-600 space-y-1">
-                <li>• Funcionalidades completas del sistema</li>
-                <li>• Flujos de trabajo y procesos de negocio</li>
-                <li>• Casos de uso específicos del sector médico chileno</li>
-                <li>• Interfaces de usuario y navegación</li>
-                <li>• Módulos de maestros, pagos, contabilidad y tesorería</li>
-                <li>• Sistema de importación y exportación</li>
-                <li>• Asistente virtual con IA especializada</li>
-                <li>• Terminología médica y previsional chilena</li>
+                <li>• Introducción completa al sistema médico chileno</li>
+                <li>• Gestión de profesionales y sociedades médicas</li>
+                <li>• Motor de cálculo de participaciones y HMQ</li>
+                <li>• Integración FONASA, ISAPREs y previsión particular</li>
+                <li>• Sistema de nómina bancaria (5 bancos chilenos)</li>
+                <li>• Exportación contable automatizada</li>
+                <li>• Reportes PDF profesionales (cartolas de pago)</li>
+                <li>• Asistente IA especializado en normativa médica</li>
+                <li>• Casos de uso detallados con ejemplos prácticos</li>
+                <li>• Innovaciones patentables identificadas y explicadas</li>
               </ul>
             </div>
             
             <div className="flex items-center justify-between pt-4">
               <div className="text-sm text-gray-500">
-                <span className="font-medium">Páginas:</span> ~111 páginas
+                <span className="font-medium">Páginas:</span> ~28 páginas
                 <br />
-                <span className="font-medium">Formato:</span> PDF Profesional
+                <span className="font-medium">Formato:</span> PDF Profesional con Índice
               </div>
             </div>
             
@@ -145,15 +147,17 @@ export default function DescargaManuales() {
             <div className="bg-gray-50 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-2">Contenido Incluido:</h4>
               <ul className="text-sm text-gray-600 space-y-1">
-                <li>• Arquitectura completa del sistema (3-Tier)</li>
-                <li>• Stack tecnológico detallado (React + Node.js)</li>
-                <li>• Esquemas de base de datos PostgreSQL</li>
-                <li>• APIs REST completas con especificaciones</li>
-                <li>• Algoritmos de cálculo de pagos médicos</li>
-                <li>• Integraciones externas (OpenAI, HIS, APIs)</li>
-                <li>• <strong>Innovaciones patentables identificadas</strong></li>
-                <li>• Documentación de seguridad y rendimiento</li>
-                <li>• Configuraciones de deployment y DevOps</li>
+                <li>• Arquitectura 3-Tier completa con diagramas técnicos</li>
+                <li>• Stack tecnológico: React 18 + Node.js 20 + PostgreSQL</li>
+                <li>• 15 entidades de base de datos con relaciones</li>
+                <li>• 25+ endpoints API REST con ejemplos de código</li>
+                <li>• Algoritmos propietarios de cálculo médico</li>
+                <li>• Validación RUT chileno (módulo 11)</li>
+                <li>• Integración OpenAI GPT-4o especializada</li>
+                <li>• Sistema de índices y optimización PostgreSQL</li>
+                <li>• Códigos fuente de funciones críticas</li>
+                <li>• <strong>3 innovaciones patentables detalladas</strong></li>
+                <li>• Documentación para registro INAPI Chile</li>
               </ul>
             </div>
             
@@ -166,9 +170,9 @@ export default function DescargaManuales() {
             
             <div className="flex items-center justify-between pt-4">
               <div className="text-sm text-gray-500">
-                <span className="font-medium">Páginas:</span> ~95 páginas
+                <span className="font-medium">Páginas:</span> ~42 páginas
                 <br />
-                <span className="font-medium">Formato:</span> PDF Profesional
+                <span className="font-medium">Formato:</span> PDF Profesional con Código
               </div>
             </div>
             
@@ -213,7 +217,7 @@ export default function DescargaManuales() {
         <Card>
           <CardContent className="pt-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">206</div>
+              <div className="text-2xl font-bold text-blue-600">70</div>
               <div className="text-sm text-gray-600">Páginas Totales</div>
             </div>
           </CardContent>
