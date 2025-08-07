@@ -712,11 +712,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       ] : [];
 
-      // Calculate correct totals from the detailed data
+      // Calculate correct totals from the detailed data (participation amount minus commission)
       const calculatedParticipacionTotal = participacionAttentions.reduce((sum, att) => 
-        sum + parseFloat(att.participatedAmount), 0);
+        sum + (parseFloat(att.participatedAmount) - parseFloat(att.commissionAmount)), 0);
       const calculatedHmqTotal = hmqAttentions.reduce((sum, att) => 
-        sum + parseFloat(att.participatedAmount), 0);
+        sum + (parseFloat(att.participatedAmount) - parseFloat(att.commissionAmount)), 0);
 
       // Import the PDF generator
       const { generatePayrollPDF } = await import('./pdfGenerator.js');
