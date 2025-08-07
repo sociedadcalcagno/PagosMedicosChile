@@ -713,10 +713,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ] : [];
 
       // Calculate correct totals from the detailed data (participation amount minus commission)
-      const calculatedParticipacionTotal = participacionAttentions.reduce((sum, att) => 
-        sum + (parseFloat(att.participatedAmount) - parseFloat(att.commissionAmount)), 0);
-      const calculatedHmqTotal = hmqAttentions.reduce((sum, att) => 
-        sum + (parseFloat(att.participatedAmount) - parseFloat(att.commissionAmount)), 0);
+      const calculatedParticipacionTotal = participacionAttentions.reduce((sum, att) => {
+        const netAmount = parseFloat(att.participatedAmount) - parseFloat(att.commissionAmount);
+        console.log(`DEBUG - Participacion: ${att.participatedAmount} - ${att.commissionAmount} = ${netAmount}`);
+        return sum + netAmount;
+      }, 0);
+      const calculatedHmqTotal = hmqAttentions.reduce((sum, att) => {
+        const netAmount = parseFloat(att.participatedAmount) - parseFloat(att.commissionAmount);
+        console.log(`DEBUG - HMQ: ${att.participatedAmount} - ${att.commissionAmount} = ${netAmount}`);
+        return sum + netAmount;
+      }, 0);
+      
+      console.log(`DEBUG - TOTALES CALCULADOS: Participaciones=${calculatedParticipacionTotal}, HMQ=${calculatedHmqTotal}, Total=${calculatedParticipacionTotal + calculatedHmqTotal}`);
 
       // Import the PDF generator
       const { generatePayrollPDF } = await import('./pdfGenerator.js');
