@@ -251,68 +251,88 @@ export default function DoctorDashboard() {
 
       <div className="p-6">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Bienvenido, {user?.firstName}
-          </h2>
-          <p className="text-gray-600">
-            Gestiona tus pagos, participaciones y revisa tu actividad médica.
-          </p>
+        <div className="mb-8 relative">
+          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-purple-700 rounded-2xl p-8 text-white shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">
+                  Bienvenido, Dr. {doctorProfile?.name?.split(' ')[1] || user?.firstName}
+                </h1>
+                <p className="text-blue-100 text-lg mb-1">
+                  Especialidad: {doctorProfile?.specialtyName || 'Pediatría'}
+                </p>
+                <p className="text-blue-200 text-sm">
+                  Gestiona tus honorarios médicos y actividad profesional
+                </p>
+              </div>
+              <div className="hidden md:block">
+                <div className="bg-white/10 backdrop-blur-sm rounded-full p-4">
+                  <Heart className="w-16 h-16 text-white" />
+                </div>
+              </div>
+            </div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full transform translate-x-16 -translate-y-16"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full transform -translate-x-12 translate-y-12"></div>
+          </div>
         </div>
 
-        {/* Summary Cards */}
+        {/* Summary Cards - Diseño Premium */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
+          <Card className="bg-gradient-to-br from-green-500 to-green-600 border-0 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
             <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <DollarSign className="h-8 w-8 text-green-600" />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-100 text-sm font-medium">Total del Mes</p>
+                  <p className="text-3xl font-bold">$2.847.500</p>
+                  <p className="text-green-200 text-xs mt-1">+12% vs mes anterior</p>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total del Mes</p>
-                  <p className="text-2xl font-bold text-gray-900">$200,000</p>
+                <div className="bg-white/20 p-3 rounded-full">
+                  <DollarSign className="h-8 w-8" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gradient-to-br from-amber-500 to-orange-500 border-0 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
             <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <Clock className="h-8 w-8 text-yellow-600" />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-orange-100 text-sm font-medium">Por Procesar</p>
+                  <p className="text-3xl font-bold">8</p>
+                  <p className="text-orange-200 text-xs mt-1">Pendientes liquidación</p>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Pendientes</p>
-                  <p className="text-2xl font-bold text-gray-900">2</p>
+                <div className="bg-white/20 p-3 rounded-full">
+                  <Clock className="h-8 w-8" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-0 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
             <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <FileText className="h-8 w-8 text-blue-600" />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-100 text-sm font-medium">Atenciones</p>
+                  <p className="text-3xl font-bold">47</p>
+                  <p className="text-blue-200 text-xs mt-1">Este mes</p>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Atenciones</p>
-                  <p className="text-2xl font-bold text-gray-900">15</p>
+                <div className="bg-white/20 p-3 rounded-full">
+                  <FileText className="h-8 w-8" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 border-0 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
             <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <TrendingUp className="h-8 w-8 text-purple-600" />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-100 text-sm font-medium">Promedio/Día</p>
+                  <p className="text-3xl font-bold">$60.585</p>
+                  <p className="text-purple-200 text-xs mt-1">Últimos 30 días</p>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Promedio</p>
-                  <p className="text-2xl font-bold text-gray-900">$13,333</p>
+                <div className="bg-white/20 p-3 rounded-full">
+                  <TrendingUp className="h-8 w-8" />
                 </div>
               </div>
             </CardContent>
@@ -473,45 +493,79 @@ export default function DoctorDashboard() {
                   </div>
 
                   {/* Opciones de reportes */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card className="border-2 border-green-200 bg-green-50">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-green-100 hover:shadow-lg transition-all duration-300">
                       <CardContent className="p-6">
-                        <div className="flex items-center space-x-4">
-                          <div className="bg-green-100 p-3 rounded-full">
-                            <FileText className="w-6 h-6 text-green-600" />
+                        <div className="text-center space-y-4">
+                          <div className="bg-green-500 p-4 rounded-full mx-auto w-fit">
+                            <FileText className="w-8 h-8 text-white" />
                           </div>
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900">Cartola de Liquidación</h3>
-                            <p className="text-sm text-gray-600 mb-3">
-                              Descargue su liquidación detallada del período seleccionado
+                          <div>
+                            <h3 className="font-bold text-gray-900 text-lg">Cartola de Liquidación</h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                              Descarga tu liquidación profesional del período seleccionado con formato PDF oficial
                             </p>
                             <Button 
                               onClick={() => generateCartolaRDFMutation.mutate()}
                               disabled={generateCartolaRDFMutation.isPending}
-                              className="w-full bg-green-600 hover:bg-green-700"
+                              className="w-full bg-green-600 hover:bg-green-700 shadow-lg text-white font-medium"
                             >
                               <Download className="w-4 h-4 mr-2" />
-                              {generateCartolaRDFMutation.isPending ? "Generando..." : "Generar Cartola"}
+                              {generateCartolaRDFMutation.isPending ? "Generando PDF..." : "Generar Cartola PDF"}
                             </Button>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
 
-                    <Card className="border-2 border-blue-200 bg-blue-50">
+                    <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all duration-300">
                       <CardContent className="p-6">
-                        <div className="flex items-center space-x-4">
-                          <div className="bg-blue-100 p-3 rounded-full">
-                            <BarChart3 className="w-6 h-6 text-blue-600" />
+                        <div className="text-center space-y-4">
+                          <div className="bg-blue-500 p-4 rounded-full mx-auto w-fit">
+                            <BarChart3 className="w-8 h-8 text-white" />
                           </div>
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900">Análisis de Pagos</h3>
-                            <p className="text-sm text-gray-600 mb-3">
-                              Resumen estadístico de sus atenciones y participaciones
+                          <div>
+                            <h3 className="font-bold text-gray-900 text-lg">Análisis de Pagos</h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                              Resumen estadístico detallado de atenciones y participaciones profesionales
                             </p>
-                            <Button variant="outline" className="w-full border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white">
+                            <Button 
+                              variant="outline" 
+                              className="w-full border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white shadow-lg font-medium"
+                              onClick={() => toast({
+                                title: "Análisis de Pagos",
+                                description: "Funcionalidad próximamente disponible para estadísticas avanzadas"
+                              })}
+                            >
                               <BarChart3 className="w-4 h-4 mr-2" />
-                              Ver Análisis
+                              Ver Análisis Detallado
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all duration-300">
+                      <CardContent className="p-6">
+                        <div className="text-center space-y-4">
+                          <div className="bg-purple-500 p-4 rounded-full mx-auto w-fit">
+                            <UserIcon className="w-8 h-8 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-gray-900 text-lg">Historial Médico</h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                              Exporta tu historial completo de actividad profesional y facturación
+                            </p>
+                            <Button 
+                              variant="outline" 
+                              className="w-full border-purple-600 text-purple-600 hover:bg-purple-600 hover:text-white shadow-lg font-medium"
+                              onClick={() => toast({
+                                title: "Historial Médico",
+                                description: "Exportación de historial próximamente disponible"
+                              })}
+                            >
+                              <Download className="w-4 h-4 mr-2" />
+                              Exportar Historial
                             </Button>
                           </div>
                         </div>
