@@ -1041,6 +1041,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const attentionDate = values[14] || '';
           const patientName = values[15] || '';
           
+          // Remove debug logging for production
+          
           // Validate critical fields - allow multiple date formats
           const isValidDate = attentionDate.match(/^\d{2}-[A-Z]{3}-\d{2}$/) || 
                              attentionDate.match(/^\d{2}-[A-Z][a-z]{2}-\d{2}$/) ||
