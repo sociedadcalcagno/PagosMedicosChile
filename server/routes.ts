@@ -902,28 +902,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Helper function to find or create doctor from CSV data
   async function findOrCreateDoctor(medId: string, doctorInternalCode: string, specialtyId: string) {
     try {
-      // First try to find existing doctor by internal code
+      // First try to find existing doctor by internal code or RUT patterns
       const existingDoctors = await storage.getDoctors();
+      
+      // Check by internal code first (most reliable)
       let doctor = existingDoctors.find((d: any) => d.internalCode === doctorInternalCode);
-      
       if (doctor) {
         return doctor.id;
       }
 
-      // Also check by generated RUT to avoid duplicates
-      const potentialRut = `${medId.replace('MED', '')}-K`;
-      doctor = existingDoctors.find((d: any) => d.rut === potentialRut);
+      // Check by various RUT patterns that might exist
+      const baseRut = medId.replace('MED', '');
+      const rutPatterns = [
+        `${baseRut}-K`,
+        `${baseRut}-1-K`,
+        `${doctorInternalCode}-K`
+      ];
       
+      for (const rutPattern of rutPatterns) {
+        doctor = existingDoctors.find((d: any) => d.rut === rutPattern);
+        if (doctor) {
+          return doctor.id;
+        }
+      }
+
+      // Check by name similarity to avoid creating duplicates
+      doctor = existingDoctors.find((d: any) => 
+        d.name.toLowerCase().includes(doctorInternalCode.toLowerCase()) ||
+        doctorInternalCode.toLowerCase().includes(d.name.toLowerCase().replace('dr./dra. ', ''))
+      );
       if (doctor) {
         return doctor.id;
       }
 
-      // If not found, create a new doctor entry with unique RUT
-      const timestamp = Date.now().toString().slice(-6);
+      // If not found anywhere, create a new doctor with truly unique RUT
+      const timestamp = Date.now();
+      const randomSuffix = Math.floor(Math.random() * 1000);
+      const uniqueRut = `${baseRut}-${timestamp}-${randomSuffix}-K`;
+      
       const newDoctor = {
-        rut: `${medId.replace('MED', '')}-${timestamp}-K`, // More unique RUT
+        rut: uniqueRut,
         name: `Dr./Dra. ${doctorInternalCode}`,
-        email: `${doctorInternalCode.toLowerCase().replace(/\s+/g, '')}@hospital.cl`,
+        email: `${doctorInternalCode.toLowerCase().replace(/[^a-z0-9]/g, '')}@hospital.cl`,
         phone: '',
         specialties: specialtyId ? [specialtyId] : [],
         participationType: 'individual' as const,
@@ -936,24 +956,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const createdDoctor = await storage.createDoctor(newDoctor);
       return createdDoctor.id;
     } catch (error) {
-      // If still fails, try to find by partial matches
+      console.error('Error finding/creating doctor:', error);
+      
+      // If creation failed due to duplicate, try one final search
       try {
         const existingDoctors = await storage.getDoctors();
-        const partialMatch = existingDoctors.find((d: any) => 
-          d.name.toLowerCase().includes(doctorInternalCode.toLowerCase()) ||
-          d.internalCode === doctorInternalCode
+        const fallbackMatch = existingDoctors.find((d: any) => 
+          d.internalCode === doctorInternalCode ||
+          d.name.toLowerCase().includes(doctorInternalCode.toLowerCase())
         );
         
-        if (partialMatch) {
-          return partialMatch.id;
+        if (fallbackMatch) {
+          return fallbackMatch.id;
+        }
+        
+        // If still not found, return first available doctor to prevent infinite loops
+        if (existingDoctors.length > 0) {
+          return existingDoctors[0].id;
         }
       } catch (searchError) {
         console.error('Error in fallback search:', searchError);
       }
       
-      // Final fallback
-      const doctors = await storage.getDoctors();
-      return doctors.length > 0 ? doctors[0].id : 'doc001';
+      // Absolute last resort to prevent infinite loops
+      return 'doc001';
     }
   }
 
