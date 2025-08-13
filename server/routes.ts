@@ -951,6 +951,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Verificar límite de registros recomendado (10,000 registros por archivo)
+      const maxRecommendedRecords = 10000;
+      if (lines.length - 1 > maxRecommendedRecords) {
+        return res.json({
+          success: false,
+          data: [],
+          errors: [`El archivo contiene ${lines.length - 1} registros. Se recomienda dividir en archivos de máximo ${maxRecommendedRecords} registros para mejor rendimiento.`],
+          total: lines.length - 1,
+          imported: 0,
+        });
+      }
+
       const errors: string[] = [];
       const importedData: any[] = [];
       let imported = 0;
@@ -1056,6 +1068,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data: [],
           errors: ['El archivo CSV debe contener al menos una fila de datos'],
           total: 0,
+          imported: 0,
+        });
+      }
+
+      // Verificar límite de registros recomendado (10,000 registros por archivo)
+      const maxRecommendedRecords = 10000;
+      if (lines.length - 1 > maxRecommendedRecords) {
+        return res.json({
+          success: false,
+          data: [],
+          errors: [`El archivo contiene ${lines.length - 1} registros. Se recomienda dividir en archivos de máximo ${maxRecommendedRecords} registros para mejor rendimiento.`],
+          total: lines.length - 1,
           imported: 0,
         });
       }
@@ -1169,6 +1193,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data: [],
           errors: ['El archivo CSV debe contener al menos una fila de datos'],
           total: 0,
+          imported: 0,
+        });
+      }
+
+      // Verificar límite de registros recomendado (10,000 registros por archivo)
+      const maxRecommendedRecords = 10000;
+      if (lines.length - 1 > maxRecommendedRecords) {
+        return res.json({
+          success: false,
+          data: [],
+          errors: [`El archivo contiene ${lines.length - 1} registros. Se recomienda dividir en archivos de máximo ${maxRecommendedRecords} registros para mejor rendimiento.`],
+          total: lines.length - 1,
           imported: 0,
         });
       }
@@ -2101,6 +2137,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error generating competitive manual PDF:', error);
       res.status(500).json({ error: 'Error al generar PDF del Manual de Ventajas Competitivas' });
+    }
+  });
+
+  // Endpoint para consultar información sobre límites de importación
+  app.get('/api/import/limits', authMiddleware, async (req, res) => {
+    try {
+      const limits = {
+        maxFileSize: '50MB',
+        maxFileSizeBytes: 50 * 1024 * 1024,
+        maxRecordsPerFile: 10000,
+        supportedFormats: ['CSV'],
+        recommendedBatchSize: 5000,
+        importTypes: [
+          {
+            type: 'participacion',
+            name: 'Registros Participaciones',
+            description: 'Registros de participaciones médicas (TMP_REGISTROS_PARTICIPACION)',
+            maxRecords: 10000,
+            estimatedProcessingTime: '2-5 minutos por 1000 registros'
+          },
+          {
+            type: 'hmq',
+            name: 'Registros HMQ',
+            description: 'Registros de actividades HMQ (TMP_REGISTROS_HMQ)',
+            maxRecords: 10000,
+            estimatedProcessingTime: '2-5 minutos por 1000 registros'
+          },
+          {
+            type: 'attentions',
+            name: 'Atenciones Médicas',
+            description: 'Atenciones médicas generales (backward compatibility)',
+            maxRecords: 10000,
+            estimatedProcessingTime: '1-3 minutos por 1000 registros'
+          }
+        ],
+        tips: [
+          'Para archivos grandes (>5,000 registros), divida en archivos más pequeños',
+          'Asegúrese de que el archivo CSV incluya encabezados en la primera fila',
+          'Los campos obligatorios son: RUT del paciente, nombre del paciente',
+          'Se crearán automáticamente doctores y servicios no existentes',
+          'Verifique que los datos estén en el formato correcto antes de importar',
+          'El sistema procesa aproximadamente 500-1000 registros por minuto'
+        ],
+        lastUpdated: new Date().toISOString()
+      };
+
+      res.json(limits);
+    } catch (error) {
+      console.error('Error getting import limits:', error);
+      res.status(500).json({
+        error: 'Error al obtener información sobre límites de importación'
+      });
     }
   });
 

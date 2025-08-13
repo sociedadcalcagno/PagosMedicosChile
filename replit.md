@@ -67,6 +67,10 @@ The application is designed to handle complex medical payment scenarios includin
 - **LATEST**: Enhanced reports section with three distinct report types: Cartola PDF generation, payment analysis, and medical history export
 - **LATEST**: Implemented professional welcome header with gradient backgrounds, specialty information, and medical-themed iconography
 - **LATEST**: Added hover effects, animations, and premium card designs with realistic Chilean medical payment amounts for presentation quality
+- **LATEST**: Fixed PayloadTooLargeError in CSV imports by increasing Express.js file size limit from default 100kb to 50MB
+- **LATEST**: Implemented comprehensive CSV import limits system with 10,000 records per file maximum and intelligent error handling
+- **LATEST**: Added /api/import/limits endpoint providing detailed information about import constraints, processing times, and best practices
+- **LATEST**: Enhanced all CSV import endpoints (participacion, hmq, attentions) with consistent record limit validation and user-friendly error messages
 
 ## User Preferences
 
