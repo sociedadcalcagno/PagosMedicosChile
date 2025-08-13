@@ -39,8 +39,8 @@ export default function MedicalAttentions() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(20);
   const [showOnlyPending, setShowOnlyPending] = useState(false);
-  const [dateFrom, setDateFrom] = useState("2023-01-01"); // Rango amplio para mostrar todos los datos importados
-  const [dateTo, setDateTo] = useState("2025-12-31"); // Rango amplio para mostrar todos los datos importados
+  const [dateFrom, setDateFrom] = useState(""); // Sin filtro de fecha por defecto
+  const [dateTo, setDateTo] = useState(""); // Sin filtro de fecha por defecto
   const queryClient = useQueryClient();
   
   const form = useForm<AttentionForm>({
@@ -98,12 +98,14 @@ export default function MedicalAttentions() {
     setCurrentPage(1);
   };
 
-  // Queries - Filter with date range and pending status
+  // Queries - Show all data by default, apply filters only when requested
   const { data: allAttentions = [], isLoading } = useQuery({
     queryKey: ['/api/medical-attentions', { showOnlyPending, dateFrom, dateTo }],
     queryFn: async () => {
       const params = new URLSearchParams();
+      // Only apply status filter when checkbox is explicitly checked
       if (showOnlyPending) params.append('status', 'pending');
+      // Only apply date filters when they are explicitly set
       if (dateFrom) params.append('dateFrom', dateFrom);
       if (dateTo) params.append('dateTo', dateTo);
       
