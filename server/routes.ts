@@ -1030,6 +1030,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (let i = 1; i < linesToProcess.length; i++) {
         try {
           const values = lines[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
+          console.log(`Line ${i + 1} amounts:`, {
+            index6: values[6],
+            index7: values[7],
+            index8: values[8],
+            index22: values[22],
+            index23: values[23],
+            index24: values[24]
+          });
           
           // Find or create doctor and service based on CSV data - con manejo de errores mejorado
           let doctorId = 'doc001'; // Doctor por defecto
@@ -1052,14 +1060,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`Warning: Could not find/create service for line ${i + 1}, using default`);
           }
           
-          // Helper function to safely format numbers
+          // Helper function to safely format numbers with overflow protection
           const safeNumber = (value: string): string => {
             if (!value || value.trim() === '') return '0';
             // Remove any non-numeric characters except dots and commas
             const cleanValue = value.replace(/[^0-9.,]/g, '');
             if (!cleanValue || cleanValue === '') return '0';
             // Replace comma with dot for decimal separator
-            return cleanValue.replace(',', '.');
+            let numericValue = cleanValue.replace(',', '.');
+            
+            // Parse and validate the number
+            const parsedNumber = parseFloat(numericValue);
+            if (isNaN(parsedNumber)) return '0';
+            
+            // Limit to maximum value that fits in decimal(10,2) = 99999999.99
+            const maxValue = 99999999.99;
+            const limitedNumber = Math.min(Math.abs(parsedNumber), maxValue);
+            
+            // Return with 2 decimal places maximum
+            return limitedNumber.toFixed(2);
           };
 
           // Map TMP_REGISTROS_PARTICIPACION fields to medical attention format
@@ -1099,11 +1118,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
 
+          console.log(`Processing line ${i + 1}:`, {
+            patientRut: attention.patientRut,
+            grossAmount: attention.grossAmount,
+            netAmount: attention.netAmount,
+            participatedAmount: attention.participatedAmount,
+            rawValues: [values[6], values[7], values[8]]
+          });
+
           await storage.createMedicalAttention(attention);
           importedData.push(attention);
           imported++;
         } catch (error) {
-          errors.push(`Fila ${i + 1}: Error al procesar - ${error}`);
+          console.error(`Error processing line ${i + 1}:`, error);
+          errors.push(`Fila ${i + 1}: Error al procesar - ${error.message || error}`);
         }
       }
 
