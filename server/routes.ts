@@ -1081,20 +1081,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return limitedNumber.toFixed(2);
           };
 
-          // Correct CSV mapping based on actual data structure observed
-          // The CSV appears to be: ID, NUMERO_PAGO, FECHA_SOLICITUD, FECHA_PARTICIPACION, RUT_PAGO, NOMBRE_PAGADOR, RUT_PROF, NOMBRE_PROF, ORIGEN, CODCENTRO, CENTROCOSTO, CODIGO_PRESTACION, NOMBRE_PRESTACION, PREVISION, FECHA_ATENCION, PACIENTE, etc.
+          // Correct CSV mapping based on actual CSV structure:
+          // 0:ID, 1:NUMERO_PAGO, 2:FECHA_SOLICITUD, 3:FECHA_PARTICIPACION, 4:RUT_PAGO, 5:NOMBRE_PAGADOR, 
+          // 6:RUT_PROF, 7:NOMBRE_PROF, 8:ORIGEN, 9:CODCENTRO, 10:CENTROCOSTO, 11:CODIGO_PRESTACION, 
+          // 12:NOMBRE_PRESTACION, 13:PREVISION, 14:FECHA_ATENCION, 15:PACIENTE...
           
           const attention = {
-            patientRut: values[15] || '', // PACIENTE (index 15 based on CSV header)
-            patientName: values[15] || '', // PACIENTE name
+            patientRut: values[15] || '', // PACIENTE - contains patient name, not RUT in this case
+            patientName: values[15] || '', // PACIENTE - full patient name
             doctorId: doctorId, // Use resolved doctor ID
-            serviceId: serviceId, // Use resolved service ID
-            providerTypeId: getProviderTypeFromPrevision(values[13] || ''), // PREVISION (index 13)
-            attentionDate: formatDate(values[14] || ''), // FECHA_ATENCION (index 14)
+            serviceId: serviceId, // Use resolved service ID  
+            providerTypeId: getProviderTypeFromPrevision(values[13] || ''), // PREVISION (CONSALUD, FONASA, etc.)
+            attentionDate: formatDate(values[14] || ''), // FECHA_ATENCION (01-AUG-25 format)
             attentionTime: '09:00', // Default time
             scheduleType: 'regular', // Default schedule
             grossAmount: safeNumber(values[22]), // BRUTO (index 22)
-            netAmount: safeNumber(values[26]), // LIQUIDO (index 26)
+            netAmount: safeNumber(values[26]), // LIQUIDO (index 26) 
             participatedAmount: safeNumber(values[24]), // PARTICIPADO (index 24)
             status: 'pending', // Default status
             recordType: 'participacion',
@@ -1104,7 +1106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             providerName: values[13] || '', // PREVISION (index 13)
             // Medical society and doctor information
             medicalSocietyId: values[4] || '', // RUT_PAGO (index 4)
-            medicalSocietyName: values[5] || '', // NOMBRE_PAGADOR (index 5)
+            medicalSocietyName: values[5] || '', // NOMBRE_PAGADOR (index 5) 
             medicalSocietyRut: values[4] || '', // RUT_PAGO (index 4)
             doctorInternalCode: values[6] || '', // RUT_PROF (index 6)
             specialtyId: values[8] || '', // ORIGEN (index 8)
@@ -1885,6 +1887,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   function formatDate(dateStr: string): string {
     if (!dateStr) return new Date().toISOString().split('T')[0];
+    
+    const cleanDate = dateStr.trim();
+    
+    // Handle DD-MMM-YY format (like "01-AUG-25")
+    if (cleanDate.match(/^\d{2}-[A-Z]{3}-\d{2}$/)) {
+      const parts = cleanDate.split('-');
+      const day = parts[0];
+      const monthAbbr = parts[1];
+      const year = `20${parts[2]}`; // Convert 25 to 2025
+      
+      // Convert month abbreviations to numbers
+      const monthMap: Record<string, string> = {
+        'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04',
+        'MAY': '05', 'JUN': '06', 'JUL': '07', 'AUG': '08',
+        'SEP': '09', 'OCT': '10', 'NOV': '11', 'DEC': '12'
+      };
+      
+      const month = monthMap[monthAbbr] || '01';
+      return `${year}-${month}-${day}`;
+    }
     
     // Handle Oracle date format DD/MM/YYYY or YYYY-MM-DD
     if (dateStr.includes('/')) {
