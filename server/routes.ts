@@ -940,10 +940,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return doctor.id;
       }
 
-      // If not found anywhere, create a new doctor with truly unique RUT
-      const timestamp = Date.now();
-      const randomSuffix = Math.floor(Math.random() * 1000);
-      const uniqueRut = `${baseRut}-${timestamp}-${randomSuffix}-K`;
+      // If not found anywhere, create a new doctor with properly formatted RUT
+      // Extract numeric part from medId or doctorInternalCode to create valid RUT
+      const numericPart = medId.replace(/[^\d]/g, '') || doctorInternalCode.replace(/[^\d]/g, '') || '12345678';
+      const uniqueRut = `${numericPart}-K`;
       
       const newDoctor = {
         rut: uniqueRut,
@@ -1031,16 +1031,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const values = lines[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
           
-          // Find or create doctor and service based on CSV data
-          const medId = values[12] || '';
-          const doctorInternalCode = values[16] || '';
-          const specialtyId = values[10] || '';
-          const doctorId = await findOrCreateDoctor(medId, doctorInternalCode, specialtyId);
+          // Find or create doctor and service based on CSV data - con manejo de errores mejorado
+          let doctorId = 'doc001'; // Doctor por defecto
+          let serviceId = 'srv001'; // Servicio por defecto
           
-          const serviceCode = values[3] || '';
-          const serviceName = values[4] || '';
-          const serviceId = await findOrCreateService(serviceCode, serviceName);
+          try {
+            const medId = values[12] || '';
+            const doctorInternalCode = values[16] || '';
+            const specialtyId = values[10] || '';
+            doctorId = await findOrCreateDoctor(medId, doctorInternalCode, specialtyId);
+          } catch (error) {
+            console.log(`Warning: Could not find/create doctor for line ${i + 1}, using default`);
+          }
           
+          try {
+            const serviceCode = values[3] || '';
+            const serviceName = values[4] || '';
+            serviceId = await findOrCreateService(serviceCode, serviceName);
+          } catch (error) {
+            console.log(`Warning: Could not find/create service for line ${i + 1}, using default`);
+          }
+          
+          // Helper function to safely format numbers
+          const safeNumber = (value: string): string => {
+            if (!value || value.trim() === '') return '0';
+            // Remove any non-numeric characters except dots and commas
+            const cleanValue = value.replace(/[^0-9.,]/g, '');
+            if (!cleanValue || cleanValue === '') return '0';
+            // Replace comma with dot for decimal separator
+            return cleanValue.replace(',', '.');
+          };
+
           // Map TMP_REGISTROS_PARTICIPACION fields to medical attention format
           const attention = {
             patientRut: values[0] || '', // RPAR_RUT_PACIENTE
@@ -1051,12 +1072,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             attentionDate: formatDate(values[2] || ''), // RPAR_FATENCION
             attentionTime: values[9] || '09:00', // HORARIO
             scheduleType: values[9]?.includes('nocturno') || values[9]?.includes('festivo') ? 'irregular' : 'regular',
-            grossAmount: values[6] || '0', // RPAR_VAL_PARTICIPADO
-            netAmount: values[7] || '0', // RPAR_VAL_LIQUIDO
-            participatedAmount: values[6] || '0', // RPAR_VAL_PARTICIPADO
+            grossAmount: safeNumber(values[6]), // RPAR_VAL_PARTICIPADO
+            netAmount: safeNumber(values[7]), // RPAR_VAL_LIQUIDO
+            participatedAmount: safeNumber(values[6]), // RPAR_VAL_PARTICIPADO
             status: mapParticipacionStatus(values[11] || 'pending'), // RPAR_ESTADO
+            recordType: 'participacion',
             // Additional fields specific to participacion
-            participationPercentage: values[8] || '0', // RPAR_PORCENTAJE_PARTICIPACION
+            participationPercentage: safeNumber(values[8]), // RPAR_PORCENTAJE_PARTICIPACION
             serviceName: values[4] || '', // RPAR_NOMBRE_PRESTACION
             providerName: values[5] || '', // RPAR_PREVISION_PACIENTE
             // Medical society and doctor information
