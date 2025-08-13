@@ -100,7 +100,7 @@ export default function MedicalAttentions() {
 
   // Queries - Show all data by default, apply filters only when requested
   const { data: allAttentions = [], isLoading } = useQuery({
-    queryKey: ['/api/medical-attentions', { showOnlyPending, dateFrom, dateTo }],
+    queryKey: ['/api/medical-attentions', showOnlyPending, dateFrom, dateTo],
     queryFn: async () => {
       const params = new URLSearchParams();
       // Only apply status filter when checkbox is explicitly checked
