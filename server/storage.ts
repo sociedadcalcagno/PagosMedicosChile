@@ -569,7 +569,7 @@ export class DatabaseStorage implements IStorage {
       query = query.where(and(...conditions));
     }
 
-    return await query.orderBy(desc(medicalAttentions.attentionDate));
+    return await query.orderBy(desc(medicalAttentions.attentionDate)).execute();
   }
 
   async createMedicalAttention(attention: any): Promise<MedicalAttention> {

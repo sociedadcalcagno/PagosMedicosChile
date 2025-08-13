@@ -103,7 +103,7 @@ export default function MedicalAttentions() {
     queryKey: ['/api/medical-attentions', { showOnlyPending, dateFrom, dateTo }],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (showOnlyPending) params.append('showOnlyPending', 'true');
+      if (showOnlyPending) params.append('status', 'pending');
       if (dateFrom) params.append('dateFrom', dateFrom);
       if (dateTo) params.append('dateTo', dateTo);
       
