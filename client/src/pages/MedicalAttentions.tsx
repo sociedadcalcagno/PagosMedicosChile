@@ -214,7 +214,12 @@ export default function MedicalAttentions() {
             </DialogHeader>
             
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4" onKeyDown={(e) => {
+                // Prevenir submit automático al presionar Enter en campos de fecha
+                if (e.key === 'Enter' && (e.target as HTMLInputElement).type === 'date') {
+                  e.preventDefault();
+                }
+              }}>
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
