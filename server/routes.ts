@@ -1081,31 +1081,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return limitedNumber.toFixed(2);
           };
 
-          // Map TMP_REGISTROS_PARTICIPACION fields to medical attention format
+          // Correct CSV mapping based on actual data structure observed
+          // The CSV appears to be: ID, NUMERO_PAGO, FECHA_SOLICITUD, FECHA_PARTICIPACION, RUT_PAGO, NOMBRE_PAGADOR, RUT_PROF, NOMBRE_PROF, ORIGEN, CODCENTRO, CENTROCOSTO, CODIGO_PRESTACION, NOMBRE_PRESTACION, PREVISION, FECHA_ATENCION, PACIENTE, etc.
+          
           const attention = {
-            patientRut: values[0] || '', // RPAR_RUT_PACIENTE
-            patientName: values[1] || '', // RPAR_NOMBRE_PACIENTE
+            patientRut: values[15] || '', // PACIENTE (index 15 based on CSV header)
+            patientName: values[15] || '', // PACIENTE name
             doctorId: doctorId, // Use resolved doctor ID
             serviceId: serviceId, // Use resolved service ID
-            providerTypeId: getProviderTypeFromPrevision(values[5] || ''), // RPAR_PREVISION_PACIENTE
-            attentionDate: formatDate(values[2] || ''), // RPAR_FATENCION
-            attentionTime: values[9] || '09:00', // HORARIO
-            scheduleType: values[9]?.includes('nocturno') || values[9]?.includes('festivo') ? 'irregular' : 'regular',
-            grossAmount: safeNumber(values[6]), // RPAR_VAL_PARTICIPADO
-            netAmount: safeNumber(values[7]), // RPAR_VAL_LIQUIDO
-            participatedAmount: safeNumber(values[6]), // RPAR_VAL_PARTICIPADO
-            status: mapParticipacionStatus(values[11] || 'pending'), // RPAR_ESTADO
+            providerTypeId: getProviderTypeFromPrevision(values[13] || ''), // PREVISION (index 13)
+            attentionDate: formatDate(values[14] || ''), // FECHA_ATENCION (index 14)
+            attentionTime: '09:00', // Default time
+            scheduleType: 'regular', // Default schedule
+            grossAmount: safeNumber(values[22]), // BRUTO (index 22)
+            netAmount: safeNumber(values[26]), // LIQUIDO (index 26)
+            participatedAmount: safeNumber(values[24]), // PARTICIPADO (index 24)
+            status: 'pending', // Default status
             recordType: 'participacion',
-            // Additional fields specific to participacion
-            participationPercentage: safeNumber(values[8]), // RPAR_PORCENTAJE_PARTICIPACION
-            serviceName: values[4] || '', // RPAR_NOMBRE_PRESTACION
-            providerName: values[5] || '', // RPAR_PREVISION_PACIENTE
+            // Additional fields
+            participationPercentage: safeNumber(values[23]), // PORCENTAGE_PARTICIPACION (index 23)
+            serviceName: values[12] || '', // NOMBRE_PRESTACION (index 12)
+            providerName: values[13] || '', // PREVISION (index 13)
             // Medical society and doctor information
-            medicalSocietyId: values[13] || '', // SOC_ID
-            medicalSocietyName: values[14] || '', // NOMBRE_SOCIEDAD
-            medicalSocietyRut: values[15] || '', // RUT_SOCIEDAD
-            doctorInternalCode: values[16] || '', // CODIGO_INTERNO_MEDICO
-            specialtyId: values[10] || '', // ESP_ID
+            medicalSocietyId: values[4] || '', // RUT_PAGO (index 4)
+            medicalSocietyName: values[5] || '', // NOMBRE_PAGADOR (index 5)
+            medicalSocietyRut: values[4] || '', // RUT_PAGO (index 4)
+            doctorInternalCode: values[6] || '', // RUT_PROF (index 6)
+            specialtyId: values[8] || '', // ORIGEN (index 8)
           };
 
           if (!attention.patientRut || !attention.patientName) {

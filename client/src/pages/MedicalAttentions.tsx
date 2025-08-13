@@ -38,9 +38,9 @@ export default function MedicalAttentions() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(20);
-  const [showOnlyPending, setShowOnlyPending] = useState(true);
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [showOnlyPending, setShowOnlyPending] = useState(false);
+  const [dateFrom, setDateFrom] = useState("2025-07-01"); // Inicio del rango para mostrar datos importados
+  const [dateTo, setDateTo] = useState("2025-08-31"); // Fin del rango para mostrar datos importados
   const queryClient = useQueryClient();
   
   const form = useForm<AttentionForm>({
@@ -63,12 +63,21 @@ export default function MedicalAttentions() {
   // Helper functions for date presets
   const setDatePreset = (preset: string) => {
     const today = new Date();
+    const yesterday = new Date(today.getTime() - (24 * 60 * 60 * 1000));
     const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const previousMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const previousMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
     const last15Days = new Date(today.getTime() - (15 * 24 * 60 * 60 * 1000));
     
     switch (preset) {
+      case 'today':
+        setDateFrom(today.toISOString().split('T')[0]);
+        setDateTo(today.toISOString().split('T')[0]);
+        break;
+      case 'yesterday':
+        setDateFrom(yesterday.toISOString().split('T')[0]);
+        setDateTo(yesterday.toISOString().split('T')[0]);
+        break;
       case 'thisMonth':
         setDateFrom(currentMonth.toISOString().split('T')[0]);
         setDateTo(today.toISOString().split('T')[0]);
@@ -490,6 +499,8 @@ export default function MedicalAttentions() {
                     <SelectValue placeholder="Seleccionar período" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="today">Hoy</SelectItem>
+                    <SelectItem value="yesterday">Ayer</SelectItem>
                     <SelectItem value="thisMonth">Este mes</SelectItem>
                     <SelectItem value="lastMonth">Mes anterior</SelectItem>
                     <SelectItem value="last15Days">Últimos 15 días</SelectItem>
