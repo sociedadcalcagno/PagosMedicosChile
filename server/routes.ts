@@ -910,11 +910,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return doctor.id;
       }
 
-      // If not found, create a new doctor entry
+      // Also check by generated RUT to avoid duplicates
+      const potentialRut = `${medId.replace('MED', '')}-K`;
+      doctor = existingDoctors.find((d: any) => d.rut === potentialRut);
+      
+      if (doctor) {
+        return doctor.id;
+      }
+
+      // If not found, create a new doctor entry with unique RUT
+      const timestamp = Date.now().toString().slice(-6);
       const newDoctor = {
-        rut: `${medId.replace('MED', '')}-K`, // Generate a temporary RUT
+        rut: `${medId.replace('MED', '')}-${timestamp}-K`, // More unique RUT
         name: `Dr./Dra. ${doctorInternalCode}`,
-        email: `${doctorInternalCode.toLowerCase()}@hospital.cl`,
+        email: `${doctorInternalCode.toLowerCase().replace(/\s+/g, '')}@hospital.cl`,
         phone: '',
         specialties: specialtyId ? [specialtyId] : [],
         participationType: 'individual' as const,
@@ -927,8 +936,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const createdDoctor = await storage.createDoctor(newDoctor);
       return createdDoctor.id;
     } catch (error) {
-      console.error('Error finding/creating doctor:', error);
-      // Return first available doctor as fallback
+      // If still fails, try to find by partial matches
+      try {
+        const existingDoctors = await storage.getDoctors();
+        const partialMatch = existingDoctors.find((d: any) => 
+          d.name.toLowerCase().includes(doctorInternalCode.toLowerCase()) ||
+          d.internalCode === doctorInternalCode
+        );
+        
+        if (partialMatch) {
+          return partialMatch.id;
+        }
+      } catch (searchError) {
+        console.error('Error in fallback search:', searchError);
+      }
+      
+      // Final fallback
       const doctors = await storage.getDoctors();
       return doctors.length > 0 ? doctors[0].id : 'doc001';
     }
