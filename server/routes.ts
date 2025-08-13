@@ -1005,16 +1005,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Verificar límite de registros recomendado (10,000 registros por archivo)
-      const maxRecommendedRecords = 10000;
-      if (lines.length - 1 > maxRecommendedRecords) {
-        return res.json({
-          success: false,
-          data: [],
-          errors: [`El archivo contiene ${lines.length - 1} registros. Se recomienda dividir en archivos de máximo ${maxRecommendedRecords} registros para mejor rendimiento.`],
-          total: lines.length - 1,
-          imported: 0,
-        });
+      // Procesar solo los primeros 100 registros por motivos de rendimiento
+      const maxProcessedRecords = 100;
+      const totalRecords = lines.length - 1;
+      let recordsToProcess = Math.min(totalRecords, maxProcessedRecords);
+      const linesToProcess = lines.slice(0, recordsToProcess + 1); // +1 para incluir header
+      
+      if (totalRecords > maxProcessedRecords) {
+        console.log(`Archivo contiene ${totalRecords} registros, procesando solo los primeros ${maxProcessedRecords}`);
       }
 
       const errors: string[] = [];
@@ -1029,7 +1027,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'HORARIO', 'ESP_ID', 'RPAR_ESTADO', 'MED_ID', 'SOC_ID', 'NOMBRE_SOCIEDAD', 'RUT_SOCIEDAD', 'CODIGO_INTERNO_MEDICO'
       ];
 
-      for (let i = 1; i < lines.length; i++) {
+      for (let i = 1; i < linesToProcess.length; i++) {
         try {
           const values = lines[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
           
@@ -1087,12 +1085,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      console.log(`Import complete. Total: ${lines.length - 1}, Imported: ${imported}, Errors: ${errors.length}`);
+      // Agregar mensaje informativo si se procesaron menos registros que el total
+      if (totalRecords > maxProcessedRecords) {
+        errors.unshift(`Información: Se procesaron ${recordsToProcess} registros de ${totalRecords} totales. Para mejor rendimiento, el sistema procesa máximo ${maxProcessedRecords} registros por importación.`);
+      }
+
+      console.log(`Import complete. Total: ${totalRecords}, Processed: ${recordsToProcess}, Imported: ${imported}, Errors: ${errors.length}`);
       res.json({
         success: imported > 0,
         data: importedData,
         errors,
-        total: lines.length - 1,
+        total: totalRecords,
+        processed: recordsToProcess,
         imported,
         recordType: 'participacion'
       });
@@ -1126,16 +1130,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Verificar límite de registros recomendado (10,000 registros por archivo)
-      const maxRecommendedRecords = 10000;
-      if (lines.length - 1 > maxRecommendedRecords) {
-        return res.json({
-          success: false,
-          data: [],
-          errors: [`El archivo contiene ${lines.length - 1} registros. Se recomienda dividir en archivos de máximo ${maxRecommendedRecords} registros para mejor rendimiento.`],
-          total: lines.length - 1,
-          imported: 0,
-        });
+      // Procesar solo los primeros 100 registros por motivos de rendimiento
+      const maxProcessedRecords = 100;
+      const totalRecords = lines.length - 1;
+      let recordsToProcess = Math.min(totalRecords, maxProcessedRecords);
+      const linesToProcess = lines.slice(0, recordsToProcess + 1); // +1 para incluir header
+      
+      if (totalRecords > maxProcessedRecords) {
+        console.log(`Archivo contiene ${totalRecords} registros, procesando solo los primeros ${maxProcessedRecords}`);
       }
 
       const errors: string[] = [];
@@ -1151,7 +1153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'MED_ID', 'SOC_ID', 'NOMBRE_SOCIEDAD', 'RUT_SOCIEDAD', 'CODIGO_INTERNO_MEDICO', 'RHMQ_PARTICIPANTE'
       ];
 
-      for (let i = 1; i < lines.length; i++) {
+      for (let i = 1; i < linesToProcess.length; i++) {
         try {
           const values = lines[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
           
@@ -1214,12 +1216,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      console.log(`HMQ Import complete. Total: ${lines.length - 1}, Imported: ${imported}, Errors: ${errors.length}`);
+      // Agregar mensaje informativo si se procesaron menos registros que el total
+      if (totalRecords > maxProcessedRecords) {
+        errors.unshift(`Información: Se procesaron ${recordsToProcess} registros de ${totalRecords} totales. Para mejor rendimiento, el sistema procesa máximo ${maxProcessedRecords} registros por importación.`);
+      }
+
+      console.log(`HMQ Import complete. Total: ${totalRecords}, Processed: ${recordsToProcess}, Imported: ${imported}, Errors: ${errors.length}`);
       res.json({
         success: imported > 0,
         data: importedData,
         errors,
-        total: lines.length - 1,
+        total: totalRecords,
+        processed: recordsToProcess,
         imported,
         recordType: 'hmq'
       });
@@ -1251,23 +1259,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Verificar límite de registros recomendado (10,000 registros por archivo)
-      const maxRecommendedRecords = 10000;
-      if (lines.length - 1 > maxRecommendedRecords) {
-        return res.json({
-          success: false,
-          data: [],
-          errors: [`El archivo contiene ${lines.length - 1} registros. Se recomienda dividir en archivos de máximo ${maxRecommendedRecords} registros para mejor rendimiento.`],
-          total: lines.length - 1,
-          imported: 0,
-        });
+      // Procesar solo los primeros 100 registros por motivos de rendimiento
+      const maxProcessedRecords = 100;
+      const totalRecords = lines.length - 1;
+      let recordsToProcess = Math.min(totalRecords, maxProcessedRecords);
+      const linesToProcess = lines.slice(0, recordsToProcess + 1); // +1 para incluir header
+      
+      if (totalRecords > maxProcessedRecords) {
+        console.log(`Archivo contiene ${totalRecords} registros, procesando solo los primeros ${maxProcessedRecords}`);
       }
 
       const errors: string[] = [];
       const importedData: any[] = [];
       let imported = 0;
 
-      for (let i = 1; i < lines.length; i++) {
+      for (let i = 1; i < linesToProcess.length; i++) {
         try {
           const values = lines[i].split(',').map((v: string) => v.trim());
           
@@ -1299,11 +1305,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Agregar mensaje informativo si se procesaron menos registros que el total
+      if (totalRecords > maxProcessedRecords) {
+        errors.unshift(`Información: Se procesaron ${recordsToProcess} registros de ${totalRecords} totales. Para mejor rendimiento, el sistema procesa máximo ${maxProcessedRecords} registros por importación.`);
+      }
+
       res.json({
         success: imported > 0,
         data: importedData,
         errors,
-        total: lines.length - 1,
+        total: totalRecords,
+        processed: recordsToProcess,
         imported,
       });
     } catch (error) {
@@ -2200,39 +2212,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limits = {
         maxFileSize: '50MB',
         maxFileSizeBytes: 50 * 1024 * 1024,
-        maxRecordsPerFile: 10000,
+        maxRecordsPerFile: 'Sin límite (archivos grandes permitidos)',
+        maxProcessedRecords: 100,
         supportedFormats: ['CSV'],
-        recommendedBatchSize: 5000,
+        recommendedBatchSize: 100,
         importTypes: [
           {
             type: 'participacion',
             name: 'Registros Participaciones',
             description: 'Registros de participaciones médicas (TMP_REGISTROS_PARTICIPACION)',
-            maxRecords: 10000,
-            estimatedProcessingTime: '2-5 minutos por 1000 registros'
+            maxProcessedRecords: 100,
+            estimatedProcessingTime: '30-60 segundos por 100 registros'
           },
           {
             type: 'hmq',
             name: 'Registros HMQ',
             description: 'Registros de actividades HMQ (TMP_REGISTROS_HMQ)',
-            maxRecords: 10000,
-            estimatedProcessingTime: '2-5 minutos por 1000 registros'
+            maxProcessedRecords: 100,
+            estimatedProcessingTime: '30-60 segundos por 100 registros'
           },
           {
             type: 'attentions',
             name: 'Atenciones Médicas',
             description: 'Atenciones médicas generales (backward compatibility)',
-            maxRecords: 10000,
-            estimatedProcessingTime: '1-3 minutos por 1000 registros'
+            maxProcessedRecords: 100,
+            estimatedProcessingTime: '15-30 segundos por 100 registros'
           }
         ],
         tips: [
-          'Para archivos grandes (>5,000 registros), divida en archivos más pequeños',
+          'Puede subir archivos CSV de cualquier tamaño - el sistema procesará automáticamente los primeros 100 registros',
+          'Para procesar más de 100 registros, divida su archivo y haga múltiples importaciones',
           'Asegúrese de que el archivo CSV incluya encabezados en la primera fila',
           'Los campos obligatorios son: RUT del paciente, nombre del paciente',
           'Se crearán automáticamente doctores y servicios no existentes',
           'Verifique que los datos estén en el formato correcto antes de importar',
-          'El sistema procesa aproximadamente 500-1000 registros por minuto'
+          'El sistema procesa automáticamente máximo 100 registros por importación para evitar bloqueos'
         ],
         lastUpdated: new Date().toISOString()
       };
