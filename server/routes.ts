@@ -439,7 +439,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Medical Attentions endpoints
   app.get('/api/medical-attentions', authMiddleware, async (req, res) => {
     try {
-      const { doctorId, dateFrom, dateTo, status, participationTypes } = req.query;
+      const { doctorId, dateFrom, dateTo, status, participationTypes, showOnlyPending } = req.query;
       const filters: any = {};
       
       if (doctorId) filters.doctorId = doctorId as string;
@@ -448,6 +448,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (status) filters.status = status as string;
       if (participationTypes) {
         filters.recordTypes = (participationTypes as string).split(',');
+      }
+      
+      // Default filter: show only pending unless explicitly requested otherwise
+      if (showOnlyPending !== 'false') {
+        filters.status = 'pending';
       }
       
       const attentions = await storage.getMedicalAttentions(filters);

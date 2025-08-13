@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Calendar, User, Stethoscope, CreditCard } from "lucide-react";
+import { Plus, Calendar, User, Stethoscope, CreditCard, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { CsvUploader } from "@/components/CsvUploader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -34,6 +36,9 @@ type AttentionForm = z.infer<typeof attentionSchema>;
 
 export default function MedicalAttentions() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [showOnlyPending, setShowOnlyPending] = useState(true);
   const queryClient = useQueryClient();
   
   const form = useForm<AttentionForm>({
@@ -53,10 +58,21 @@ export default function MedicalAttentions() {
     },
   });
 
-  // Queries
-  const { data: attentions = [], isLoading } = useQuery({
-    queryKey: ['/api/medical-attentions'],
+  // Queries - Filter pending by default, add pagination logic client-side
+  const { data: allAttentions = [], isLoading } = useQuery({
+    queryKey: ['/api/medical-attentions', { showOnlyPending }],
+    queryFn: async () => {
+      const response = await apiRequest(`/api/medical-attentions?showOnlyPending=${showOnlyPending}`, 'GET');
+      return await response.json();
+    }
   });
+
+  // Client-side pagination
+  const totalAttentions = allAttentions.length;
+  const totalPages = Math.ceil(totalAttentions / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedAttentions = allAttentions.slice(startIndex, endIndex);
 
   const { data: doctors = [] } = useQuery({
     queryKey: ['/api/doctors'],
@@ -378,16 +394,72 @@ export default function MedicalAttentions() {
         </div>
       </div>
 
+      {/* Controles de filtro y paginación */}
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Filter className="w-5 h-5" />
+                Filtros y Navegación
+              </CardTitle>
+              <CardDescription>
+                Mostrando {paginatedAttentions.length} de {totalAttentions} atenciones {showOnlyPending ? "pendientes" : "totales"}
+              </CardDescription>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="pending-filter">Solo pendientes</Label>
+                <Switch
+                  id="pending-filter"
+                  checked={showOnlyPending}
+                  onCheckedChange={(checked) => {
+                    setShowOnlyPending(checked);
+                    setCurrentPage(1); // Reset to first page when filter changes
+                  }}
+                />
+              </div>
+              {totalPages > 1 && (
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <span className="text-sm font-medium">
+                    Página {currentPage} de {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
       <div className="grid gap-6">
-        {Array.isArray(attentions) && attentions.length === 0 ? (
+        {Array.isArray(paginatedAttentions) && paginatedAttentions.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16">
               <Stethoscope className="w-12 h-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No hay atenciones médicas registradas
+                {showOnlyPending ? "No hay atenciones pendientes" : "No hay atenciones médicas registradas"}
               </h3>
               <p className="text-gray-500 text-center mb-4">
-                Comienza registrando las atenciones médicas realizadas
+                {showOnlyPending 
+                  ? "Todas las atenciones han sido calculadas o pagadas"
+                  : "Comienza registrando las atenciones médicas realizadas"
+                }
               </p>
               <Button onClick={() => setIsDialogOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
@@ -397,7 +469,7 @@ export default function MedicalAttentions() {
           </Card>
         ) : (
           <div className="grid gap-4">
-            {Array.isArray(attentions) && attentions.map((attention: any) => (
+            {Array.isArray(paginatedAttentions) && paginatedAttentions.map((attention: any) => (
               <Card key={attention.id}>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
