@@ -450,8 +450,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         filters.recordTypes = (participationTypes as string).split(',');
       }
       
-      // Default filter: show only pending unless explicitly requested otherwise
-      if (showOnlyPending !== 'false') {
+      // Apply pending filter when requested
+      if (showOnlyPending === 'true') {
         filters.status = 'pending';
       }
       

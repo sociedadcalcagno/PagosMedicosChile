@@ -39,6 +39,8 @@ export default function MedicalAttentions() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(20);
   const [showOnlyPending, setShowOnlyPending] = useState(true);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const queryClient = useQueryClient();
   
   const form = useForm<AttentionForm>({
@@ -58,11 +60,45 @@ export default function MedicalAttentions() {
     },
   });
 
-  // Queries - Filter pending by default, add pagination logic client-side
+  // Helper functions for date presets
+  const setDatePreset = (preset: string) => {
+    const today = new Date();
+    const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const previousMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const previousMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+    const last15Days = new Date(today.getTime() - (15 * 24 * 60 * 60 * 1000));
+    
+    switch (preset) {
+      case 'thisMonth':
+        setDateFrom(currentMonth.toISOString().split('T')[0]);
+        setDateTo(today.toISOString().split('T')[0]);
+        break;
+      case 'lastMonth':
+        setDateFrom(previousMonth.toISOString().split('T')[0]);
+        setDateTo(previousMonthEnd.toISOString().split('T')[0]);
+        break;
+      case 'last15Days':
+        setDateFrom(last15Days.toISOString().split('T')[0]);
+        setDateTo(today.toISOString().split('T')[0]);
+        break;
+      case 'clear':
+        setDateFrom("");
+        setDateTo("");
+        break;
+    }
+    setCurrentPage(1);
+  };
+
+  // Queries - Filter with date range and pending status
   const { data: allAttentions = [], isLoading } = useQuery({
-    queryKey: ['/api/medical-attentions', { showOnlyPending }],
+    queryKey: ['/api/medical-attentions', { showOnlyPending, dateFrom, dateTo }],
     queryFn: async () => {
-      const response = await apiRequest(`/api/medical-attentions?showOnlyPending=${showOnlyPending}`, 'GET');
+      const params = new URLSearchParams();
+      if (showOnlyPending) params.append('showOnlyPending', 'true');
+      if (dateFrom) params.append('dateFrom', dateFrom);
+      if (dateTo) params.append('dateTo', dateTo);
+      
+      const response = await apiRequest(`/api/medical-attentions?${params.toString()}`, 'GET');
       return await response.json();
     }
   });
@@ -397,17 +433,17 @@ export default function MedicalAttentions() {
       {/* Controles de filtro y paginación */}
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Filter className="w-5 h-5" />
-                Filtros y Navegación
-              </CardTitle>
-              <CardDescription>
-                Mostrando {paginatedAttentions.length} de {totalAttentions} atenciones {showOnlyPending ? "pendientes" : "totales"}
-              </CardDescription>
-            </div>
-            <div className="flex items-center space-x-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Filter className="w-5 h-5" />
+                  Filtros y Navegación - Producción de Profesionales
+                </CardTitle>
+                <CardDescription>
+                  Gestiona la trazabilidad de atenciones para procesamiento de pagos
+                </CardDescription>
+              </div>
               <div className="flex items-center space-x-2">
                 <Label htmlFor="pending-filter">Solo pendientes</Label>
                 <Switch
@@ -415,9 +451,71 @@ export default function MedicalAttentions() {
                   checked={showOnlyPending}
                   onCheckedChange={(checked) => {
                     setShowOnlyPending(checked);
-                    setCurrentPage(1); // Reset to first page when filter changes
+                    setCurrentPage(1);
                   }}
                 />
+              </div>
+            </div>
+
+            {/* Filtros de fecha */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <div className="space-y-2">
+                <Label htmlFor="date-from">Fecha Desde</Label>
+                <Input
+                  id="date-from"
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => {
+                    setDateFrom(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="date-to">Fecha Hasta</Label>
+                <Input
+                  id="date-to"
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => {
+                    setDateTo(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Períodos Rápidos</Label>
+                <Select onValueChange={setDatePreset}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar período" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="thisMonth">Este mes</SelectItem>
+                    <SelectItem value="lastMonth">Mes anterior</SelectItem>
+                    <SelectItem value="last15Days">Últimos 15 días</SelectItem>
+                    <SelectItem value="clear">Limpiar fechas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>&nbsp;</Label>
+                <div className="flex items-center space-x-2">
+                  <Badge variant={dateFrom || dateTo ? "default" : "secondary"}>
+                    {dateFrom || dateTo 
+                      ? `${dateFrom ? format(new Date(dateFrom), 'dd/MM/yyyy') : '...'} - ${dateTo ? format(new Date(dateTo), 'dd/MM/yyyy') : '...'}`
+                      : 'Sin filtro de fecha'
+                    }
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            {/* Información y paginación */}
+            <div className="flex items-center justify-between pt-2 border-t">
+              <div className="text-sm text-muted-foreground">
+                Mostrando {paginatedAttentions.length} de {totalAttentions} atenciones 
+                {showOnlyPending ? " pendientes" : " totales"}
+                {(dateFrom || dateTo) && " en el período seleccionado"}
               </div>
               {totalPages > 1 && (
                 <div className="flex items-center space-x-2">
