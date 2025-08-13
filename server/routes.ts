@@ -1041,8 +1041,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const attentionDate = values[14] || '';
           const patientName = values[15] || '';
           
-          // Validate critical fields
-          if (!attentionDate.match(/^\d{2}-[A-Z]{3}-\d{2}$/) || patientName.length < 3) {
+          // Validate critical fields - allow multiple date formats
+          const isValidDate = attentionDate.match(/^\d{2}-[A-Z]{3}-\d{2}$/) || 
+                             attentionDate.match(/^\d{2}-[A-Z][a-z]{2}-\d{2}$/) ||
+                             attentionDate.match(/^\d{4}-\d{2}-\d{2}$/);
+          
+          if (!isValidDate || patientName.length < 3) {
             console.log(`Skipping line ${i}: invalid date format (${attentionDate}) or patient name (${patientName})`);
             errors.push(`Fila ${i}: Error al procesar - formato de fecha inválido: "${attentionDate}"`);
             continue;
@@ -1078,6 +1082,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`Warning: Could not find/create service for line ${i + 1}, using default`);
           }
           
+          // Helper function to convert dates from DD-MMM-YY to YYYY-MM-DD
+          const formatDate = (dateStr: string): string => {
+            if (!dateStr) return '';
+            
+            // Handle DD-MMM-YY format (01-AUG-25, 04-Aug-25, etc.)
+            const monthMap: { [key: string]: string } = {
+              'JAN': '01', 'Jan': '01', 'ENERO': '01',
+              'FEB': '02', 'Feb': '02', 'FEBRERO': '02',
+              'MAR': '03', 'Mar': '03', 'MARZO': '03',
+              'APR': '04', 'Apr': '04', 'ABRIL': '04',
+              'MAY': '05', 'May': '05', 'MAYO': '05',
+              'JUN': '06', 'Jun': '06', 'JUNIO': '06',
+              'JUL': '07', 'Jul': '07', 'JULIO': '07',
+              'AUG': '08', 'Aug': '08', 'AGOSTO': '08',
+              'SEP': '09', 'Sep': '09', 'SEPTIEMBRE': '09',
+              'OCT': '10', 'Oct': '10', 'OCTUBRE': '10',
+              'NOV': '11', 'Nov': '11', 'NOVIEMBRE': '11',
+              'DEC': '12', 'Dec': '12', 'DICIEMBRE': '12'
+            };
+            
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+              const day = parts[0].padStart(2, '0');
+              const month = monthMap[parts[1]] || '01';
+              const year = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+              return `${year}-${month}-${day}`;
+            }
+            
+            return dateStr; // Return as-is if not in expected format
+          };
+
           // Helper function to safely format numbers with overflow protection
           const safeNumber = (value: string): string => {
             if (!value || value.trim() === '') return '0';
