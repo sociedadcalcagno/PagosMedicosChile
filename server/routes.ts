@@ -1030,6 +1030,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (let i = 1; i < linesToProcess.length; i++) {
         try {
           const values = lines[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
+          
+          // Validate line has minimum required columns and basic data integrity
+          if (values.length < 27) {
+            console.log(`Skipping line ${i}: insufficient columns (${values.length})`);
+            errors.push(`Fila ${i}: Error al procesar - columnas insuficientes`);
+            continue;
+          }
+          
+          const attentionDate = values[14] || '';
+          const patientName = values[15] || '';
+          
+          // Validate critical fields
+          if (!attentionDate.match(/^\d{2}-[A-Z]{3}-\d{2}$/) || patientName.length < 3) {
+            console.log(`Skipping line ${i}: invalid date format (${attentionDate}) or patient name (${patientName})`);
+            errors.push(`Fila ${i}: Error al procesar - formato de fecha inválido: "${attentionDate}"`);
+            continue;
+          }
+          
           console.log(`Line ${i + 1} amounts:`, {
             index6: values[6],
             index7: values[7],

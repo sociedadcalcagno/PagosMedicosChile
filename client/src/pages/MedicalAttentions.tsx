@@ -39,8 +39,8 @@ export default function MedicalAttentions() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(20);
   const [showOnlyPending, setShowOnlyPending] = useState(false);
-  const [dateFrom, setDateFrom] = useState("2025-07-01"); // Inicio del rango para mostrar datos importados
-  const [dateTo, setDateTo] = useState("2025-08-31"); // Fin del rango para mostrar datos importados
+  const [dateFrom, setDateFrom] = useState("2023-01-01"); // Rango amplio para mostrar todos los datos importados
+  const [dateTo, setDateTo] = useState("2025-12-31"); // Rango amplio para mostrar todos los datos importados
   const queryClient = useQueryClient();
   
   const form = useForm<AttentionForm>({
