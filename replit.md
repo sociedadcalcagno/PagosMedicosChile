@@ -74,6 +74,7 @@ The application is designed to handle complex medical payment scenarios includin
 - **LATEST**: Fixed critical infinite loop bug in CSV import process - improved duplicate doctor handling logic to prevent system from getting stuck during large imports
 - **LATEST**: Successfully processed 309 medical attentions from 9,000 record CSV before fixing infinite loop issue
 - **LATEST**: Enhanced findOrCreateDoctor function with multiple fallback strategies and circuit breaker pattern to prevent processing loops
+- **LATEST**: Improved medical attentions filter interface with clearer date labels, search button with lupa icon, and better UX flow - filters only apply when user clicks "Buscar" button
 
 ## User Preferences
 

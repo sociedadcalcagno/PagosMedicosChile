@@ -492,7 +492,7 @@ export default function MedicalAttentions() {
             </div>
 
             {/* Filtros de fecha de actividades médicas */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
               <div className="space-y-2">
                 <Label htmlFor="date-from" className="text-sm font-medium">
                   Fecha Actividad Desde
@@ -557,17 +557,7 @@ export default function MedicalAttentions() {
                   </Button>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>&nbsp;</Label>
-                <div className="flex items-center space-x-2">
-                  <Badge variant={dateFrom || dateTo ? "default" : "secondary"}>
-                    {dateFrom || dateTo 
-                      ? `${dateFrom ? format(new Date(dateFrom), 'dd/MM/yyyy') : '...'} - ${dateTo ? format(new Date(dateTo), 'dd/MM/yyyy') : '...'}`
-                      : 'Sin filtro de fecha'
-                    }
-                  </Badge>
-                </div>
-              </div>
+
             </div>
 
             {/* Información y paginación */}
