@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Calendar, User, Stethoscope, CreditCard, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { Plus, Calendar, User, Stethoscope, CreditCard, ChevronLeft, ChevronRight, Filter, Search } from "lucide-react";
 import { CsvUploader } from "@/components/CsvUploader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +41,8 @@ export default function MedicalAttentions() {
   const [showOnlyPending, setShowOnlyPending] = useState(false);
   const [dateFrom, setDateFrom] = useState(""); // Sin filtro de fecha por defecto
   const [dateTo, setDateTo] = useState(""); // Sin filtro de fecha por defecto
+  const [tempDateFrom, setTempDateFrom] = useState(""); // Fechas temporales para el filtro
+  const [tempDateTo, setTempDateTo] = useState(""); // Fechas temporales para el filtro
   const queryClient = useQueryClient();
   
   const form = useForm<AttentionForm>({
@@ -71,30 +73,46 @@ export default function MedicalAttentions() {
     
     switch (preset) {
       case 'today':
-        setDateFrom(today.toISOString().split('T')[0]);
-        setDateTo(today.toISOString().split('T')[0]);
+        setTempDateFrom(today.toISOString().split('T')[0]);
+        setTempDateTo(today.toISOString().split('T')[0]);
         break;
       case 'yesterday':
-        setDateFrom(yesterday.toISOString().split('T')[0]);
-        setDateTo(yesterday.toISOString().split('T')[0]);
+        setTempDateFrom(yesterday.toISOString().split('T')[0]);
+        setTempDateTo(yesterday.toISOString().split('T')[0]);
         break;
       case 'thisMonth':
-        setDateFrom(currentMonth.toISOString().split('T')[0]);
-        setDateTo(today.toISOString().split('T')[0]);
+        setTempDateFrom(currentMonth.toISOString().split('T')[0]);
+        setTempDateTo(today.toISOString().split('T')[0]);
         break;
       case 'lastMonth':
-        setDateFrom(previousMonth.toISOString().split('T')[0]);
-        setDateTo(previousMonthEnd.toISOString().split('T')[0]);
+        setTempDateFrom(previousMonth.toISOString().split('T')[0]);
+        setTempDateTo(previousMonthEnd.toISOString().split('T')[0]);
         break;
       case 'last15Days':
-        setDateFrom(last15Days.toISOString().split('T')[0]);
-        setDateTo(today.toISOString().split('T')[0]);
+        setTempDateFrom(last15Days.toISOString().split('T')[0]);
+        setTempDateTo(today.toISOString().split('T')[0]);
         break;
       case 'clear':
-        setDateFrom("");
-        setDateTo("");
-        break;
+        clearFilters();
+        return;
     }
+    // Auto-aplicar filtros para períodos rápidos
+    setTimeout(() => applyFilters(), 100);
+  };
+
+  // Aplicar filtros solo cuando se ejecute la búsqueda
+  const applyFilters = () => {
+    setDateFrom(tempDateFrom);
+    setDateTo(tempDateTo);
+    setCurrentPage(1);
+  };
+
+  // Limpiar filtros
+  const clearFilters = () => {
+    setTempDateFrom("");
+    setTempDateTo("");
+    setDateFrom("");
+    setDateTo("");
     setCurrentPage(1);
   };
 
@@ -473,30 +491,32 @@ export default function MedicalAttentions() {
               </div>
             </div>
 
-            {/* Filtros de fecha */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            {/* Filtros de fecha de actividades médicas */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
               <div className="space-y-2">
-                <Label htmlFor="date-from">Fecha Desde</Label>
+                <Label htmlFor="date-from" className="text-sm font-medium">
+                  Fecha Actividad Desde
+                  <span className="text-xs text-muted-foreground block">Fecha de la atención médica</span>
+                </Label>
                 <Input
                   id="date-from"
                   type="date"
-                  value={dateFrom}
-                  onChange={(e) => {
-                    setDateFrom(e.target.value);
-                    setCurrentPage(1);
-                  }}
+                  value={tempDateFrom}
+                  onChange={(e) => setTempDateFrom(e.target.value)}
+                  placeholder="dd/mm/aaaa"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="date-to">Fecha Hasta</Label>
+                <Label htmlFor="date-to" className="text-sm font-medium">
+                  Fecha Actividad Hasta  
+                  <span className="text-xs text-muted-foreground block">Fecha de la atención médica</span>
+                </Label>
                 <Input
                   id="date-to"
                   type="date"
-                  value={dateTo}
-                  onChange={(e) => {
-                    setDateTo(e.target.value);
-                    setCurrentPage(1);
-                  }}
+                  value={tempDateTo}
+                  onChange={(e) => setTempDateTo(e.target.value)}
+                  placeholder="dd/mm/aaaa"
                 />
               </div>
               <div className="space-y-2">
@@ -511,9 +531,31 @@ export default function MedicalAttentions() {
                     <SelectItem value="thisMonth">Este mes</SelectItem>
                     <SelectItem value="lastMonth">Mes anterior</SelectItem>
                     <SelectItem value="last15Days">Últimos 15 días</SelectItem>
-                    <SelectItem value="clear">Limpiar fechas</SelectItem>
+                    <SelectItem value="clear">Limpiar filtros</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>&nbsp;</Label>
+                <div className="flex items-center space-x-2">
+                  <Button 
+                    onClick={applyFilters}
+                    size="sm"
+                    className="flex items-center gap-2"
+                    data-testid="button-search-filter"
+                  >
+                    <Search className="w-4 h-4" />
+                    Buscar
+                  </Button>
+                  <Button 
+                    onClick={clearFilters}
+                    variant="outline"
+                    size="sm"
+                    data-testid="button-clear-filter"
+                  >
+                    Limpiar
+                  </Button>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>&nbsp;</Label>
