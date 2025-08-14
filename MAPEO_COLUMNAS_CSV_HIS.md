@@ -126,9 +126,35 @@ LIQUIDO: 9788
 }
 ```
 
+## Cambios Implementados (Agosto 2025)
+
+### ✅ **Nuevos Campos Agregados al Sistema:**
+
+1. **`payeeRut`** - RUT del beneficiario del pago (columna 4: RUT_PAGO)
+2. **`payeeName`** - Nombre del beneficiario del pago (columna 5: NOMBRE_PAGADOR)  
+3. **`professionalRut`** - RUT del profesional que atendió (columna 6: RUT_PROF)
+4. **`commission`** - Comisión aplicada (columna 25: COMISION)
+
+### ✅ **Flujo de Pagos Corregido:**
+
+- **Antes**: Los pagos se enviaban al `doctorId` registrado
+- **Ahora**: Los pagos se envían al `payeeRut` (quien realmente debe recibir el dinero)
+- **Diferenciación**: `RUT_PROF` ≠ `RUT_PAGO` (pueden ser diferentes entidades)
+
+### ✅ **Mapeo Completo de Campos de Pago:**
+
+| **Campo CSV** | **Posición** | **Campo BD** | **Descripción** |
+|---------------|-------------|--------------|-----------------|
+| `RUT_PAGO` | 4 | `payeeRut` | **Beneficiario real del pago** |
+| `NOMBRE_PAGADOR` | 5 | `payeeName` | **Nombre del beneficiario** |
+| `RUT_PROF` | 6 | `professionalRut` | **Profesional que atendió** |
+| `COMISION` | 25 | `commission` | **Comisión aplicada** |
+
 ## Notas Importantes
 
-- El sistema maneja automáticamente la creación de médicos y servicios faltantes
-- Las fechas se convierten del formato Oracle (DD-MMM-YY) al formato ISO (YYYY-MM-DD)
-- Los RUTs de pacientes se derivan del nombre cuando no están disponibles directamente
-- El mapeo de previsiones se hace mediante tabla de correspondencias predefinida
+- ✅ El sistema maneja automáticamente la creación de médicos y servicios faltantes
+- ✅ Las fechas se convierten del formato Oracle (DD-MMM-YY) al formato ISO (YYYY-MM-DD)
+- ✅ Los RUTs de pacientes se derivan del nombre cuando no están disponibles directamente
+- ✅ El mapeo de previsiones se hace mediante tabla de correspondencias predefinida
+- ✅ **NUEVO**: El sistema ahora diferencia entre el profesional que atendió y el beneficiario del pago
+- ✅ **NUEVO**: Los pagos se procesan correctamente al RUT_PAGO, no al doctor registrado

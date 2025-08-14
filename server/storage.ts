@@ -1067,7 +1067,12 @@ export class DatabaseStorage implements IStorage {
       sum + parseFloat(calc.baseAmount.toString()), 0
     );
 
-    // Create payment record
+    // Get first attention to determine payee information
+    const firstAttention = await db.query.medicalAttentions.findFirst({
+      where: eq(medicalAttentions.id, calculations[0].attentionId)
+    });
+
+    // Create payment record with correct payee information
     const payment = {
       doctorId,
       periodMonth: month,
@@ -1076,10 +1081,15 @@ export class DatabaseStorage implements IStorage {
       totalBrutAmount: totalBrutAmount.toString(),
       totalAttentions: calculations.length,
       paymentMethod: doctor.paymentType || 'transfer',
+      
+      // Use payee information from attention if available, otherwise fall back to doctor
+      payeeRut: firstAttention?.payeeRut || doctor.accountHolderRut || doctor.rut,
+      payeeName: firstAttention?.payeeName || doctor.accountHolderName || doctor.name,
+      
       bankAccount: doctor.bankAccount,
       bankName: doctor.bankName,
-      accountHolderName: doctor.accountHolderName,
-      accountHolderRut: doctor.accountHolderRut,
+      accountHolderName: firstAttention?.payeeName || doctor.accountHolderName || doctor.name,
+      accountHolderRut: firstAttention?.payeeRut || doctor.accountHolderRut || doctor.rut,
       status: 'pending' as const
     };
 

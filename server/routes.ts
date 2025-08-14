@@ -1165,6 +1165,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             medicalSocietyRut: values[4] || '', // RUT_PAGO (index 4)
             doctorInternalCode: values[6] || '', // RUT_PROF (index 6)
             specialtyId: values[8] || '', // ORIGEN (index 8)
+            
+            // Payment beneficiary information (NEW FIELDS)
+            payeeRut: values[4] || '', // RUT_PAGO - quien recibe el pago
+            payeeName: values[5] || '', // NOMBRE_PAGADOR - nombre del beneficiario  
+            professionalRut: values[6] || '', // RUT_PROF - RUT del profesional que atendió
+            commission: safeNumber(values[25]) // COMISION (index 25)
           };
 
           if (!attention.patientRut || !attention.patientName) {

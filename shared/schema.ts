@@ -268,6 +268,14 @@ export const medicalAttentions = pgTable("medical_attentions", {
   doctorInternalCode: varchar("doctor_internal_code"),
   specialtyId: varchar("specialty_id"),
   
+  // Payment beneficiary fields (who actually receives the payment)
+  payeeRut: varchar("payee_rut"), // RUT_PAGO - quien recibe el pago
+  payeeName: varchar("payee_name"), // NOMBRE_PAGADOR - nombre del beneficiario
+  professionalRut: varchar("professional_rut"), // RUT_PROF - RUT del profesional que atendió
+  
+  // Commission and additional payment details
+  commission: varchar("commission"), // COMISION
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -311,11 +319,15 @@ export const payments = pgTable("payments", {
   totalAttentions: integer("total_attentions").notNull(),
   paymentMethod: varchar("payment_method"), // 'transfer', 'check', 'deposit'
   
-  // Bank details (copied from doctor at payment time)
+  // Payment recipient details (may differ from doctor)
+  payeeRut: varchar("payee_rut"), // Actual recipient RUT (may be different from doctor RUT)
+  payeeName: varchar("payee_name"), // Actual recipient name
+  
+  // Bank details (copied from doctor at payment time, but should match payee)
   bankAccount: varchar("bank_account"),
   bankName: varchar("bank_name"),
   accountHolderName: varchar("account_holder_name"),
-  accountHolderRut: varchar("account_holder_rut"),
+  accountHolderRut: varchar("account_holder_rut"), // Should match payeeRut
   
   // Status and dates
   status: varchar("status").notNull().default('pending'), // 'pending', 'processed', 'paid', 'rejected'
