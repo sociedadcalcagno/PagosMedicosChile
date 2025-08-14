@@ -463,6 +463,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Borrar atenciones médicas no procesadas (estado: pendiente)
+  app.delete('/api/medical-attentions/delete-unprocessed', authMiddleware, async (req, res) => {
+    try {
+      const { recordType } = req.body;
+      
+      const result = await storage.deleteUnprocessedAttentions(recordType);
+      
+      res.json({
+        deletedCount: result.deletedCount,
+        message: `Se eliminaron ${result.deletedCount} atenciones no procesadas`
+      });
+    } catch (error) {
+      console.error('Error deleting unprocessed attentions:', error);
+      res.status(500).json({ 
+        error: 'Error al eliminar registros no procesados',
+        details: error instanceof Error ? error.message : 'Error desconocido'
+      });
+    }
+  });
+
   // Payment Calculations endpoints
   app.get('/api/payment-calculations', authMiddleware, async (req, res) => {
     try {
@@ -1201,7 +1221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           imported++;
         } catch (error) {
           console.error(`Error processing line ${i + 1}:`, error);
-          errors.push(`Fila ${i + 1}: Error al procesar - ${error.message || error}`);
+          errors.push(`Fila ${i + 1}: Error al procesar - ${error instanceof Error ? error.message : 'Error desconocido'}`);
         }
       }
 

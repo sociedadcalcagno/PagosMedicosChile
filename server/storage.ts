@@ -1111,6 +1111,41 @@ export class DatabaseStorage implements IStorage {
     // Return empty array for now - using mock data in routes
     return [];
   }
+
+  // Borrar atenciones médicas no procesadas (estado: pendiente)
+  async deleteUnprocessedAttentions(recordType: 'participacion' | 'hmq' | 'all'): Promise<{ deletedCount: number }> {
+    try {
+      let whereCondition;
+      
+      if (recordType === 'all') {
+        // Borrar todos los registros con status 'pending'
+        whereCondition = eq(medicalAttentions.status, 'pending');
+      } else {
+        // Borrar solo registros específicos con status 'pending'
+        whereCondition = and(
+          eq(medicalAttentions.status, 'pending'),
+          eq(medicalAttentions.recordType, recordType)
+        );
+      }
+
+      // Primero obtener cuántos registros se van a eliminar
+      const toDelete = await db.select({ id: medicalAttentions.id })
+        .from(medicalAttentions)
+        .where(whereCondition);
+
+      const deletedCount = toDelete.length;
+
+      // Realizar la eliminación
+      if (deletedCount > 0) {
+        await db.delete(medicalAttentions).where(whereCondition);
+      }
+
+      return { deletedCount };
+    } catch (error) {
+      console.error('Error deleting unprocessed attentions:', error);
+      throw new Error(`Error al eliminar registros: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

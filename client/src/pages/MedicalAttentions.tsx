@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Calendar, User, Stethoscope, CreditCard, ChevronLeft, ChevronRight, Filter, Search } from "lucide-react";
+import { Plus, Calendar, User, Stethoscope, CreditCard, ChevronLeft, ChevronRight, Filter, Search, Trash2, AlertTriangle } from "lucide-react";
 import { CsvUploader } from "@/components/CsvUploader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +43,8 @@ export default function MedicalAttentions() {
   const [dateTo, setDateTo] = useState(""); // Sin filtro de fecha por defecto
   const [tempDateFrom, setTempDateFrom] = useState(""); // Fechas temporales para el filtro
   const [tempDateTo, setTempDateTo] = useState(""); // Fechas temporales para el filtro
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteRecordType, setDeleteRecordType] = useState<'participacion' | 'hmq' | 'all'>('all');
   const queryClient = useQueryClient();
   
   const form = useForm<AttentionForm>({
@@ -115,6 +117,29 @@ export default function MedicalAttentions() {
     setDateTo("");
     setCurrentPage(1);
   };
+
+  // Mutación para borrar registros no procesados
+  const deleteUnprocessedMutation = useMutation({
+    mutationFn: async (recordType: 'participacion' | 'hmq' | 'all') => {
+      const response = await apiRequest('/api/medical-attentions/delete-unprocessed', 'DELETE', { recordType });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Registros eliminados",
+        description: `Se eliminaron ${data.deletedCount} atenciones no procesadas.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/medical-attentions'] });
+      setShowDeleteModal(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error al eliminar registros",
+        description: error.message || "No se pudieron eliminar los registros",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Queries - Show all data by default, apply filters only when requested
   const { data: allAttentions = [], isLoading } = useQuery({
@@ -215,6 +240,15 @@ export default function MedicalAttentions() {
         </div>
         
         <div className="flex space-x-2">
+          <Button
+            onClick={() => setShowDeleteModal(true)}
+            variant="outline"
+            className="border-red-200 text-red-600 hover:bg-red-50"
+            data-testid="button-delete-unprocessed"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Limpiar No Procesados
+          </Button>
           <CsvUploader onDataImported={handleDataImported} />
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
@@ -678,6 +712,96 @@ export default function MedicalAttentions() {
           </div>
         )}
       </div>
+
+      {/* Modal de confirmación para borrar registros no procesados */}
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center text-red-600">
+              <AlertTriangle className="w-5 h-5 mr-2" />
+              Confirmar Eliminación
+            </DialogTitle>
+            <DialogDescription>
+              Esta acción eliminará permanentemente las atenciones médicas no procesadas (status: pendiente).
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Tipo de registros a eliminar:</label>
+              <div className="mt-2 space-y-2">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    name="deleteType"
+                    value="all"
+                    checked={deleteRecordType === 'all'}
+                    onChange={(e) => setDeleteRecordType(e.target.value as 'participacion' | 'hmq' | 'all')}
+                    className="text-red-600"
+                  />
+                  <span>Todos los registros no procesados</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    name="deleteType"
+                    value="participacion"
+                    checked={deleteRecordType === 'participacion'}
+                    onChange={(e) => setDeleteRecordType(e.target.value as 'participacion' | 'hmq' | 'all')}
+                    className="text-red-600"
+                  />
+                  <span>Solo Registros Participaciones</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    name="deleteType"
+                    value="hmq"
+                    checked={deleteRecordType === 'hmq'}
+                    onChange={(e) => setDeleteRecordType(e.target.value as 'participacion' | 'hmq' | 'all')}
+                    className="text-red-600"
+                  />
+                  <span>Solo Registros HMQ</span>
+                </label>
+              </div>
+            </div>
+            
+            <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-md">
+              <p className="text-sm text-yellow-800">
+                <strong>Nota:</strong> Esta acción no se puede deshacer. Solo se eliminarán registros con estado "pendiente".
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteModal(false)}
+              disabled={deleteUnprocessedMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteUnprocessedMutation.mutate(deleteRecordType)}
+              disabled={deleteUnprocessedMutation.isPending}
+              data-testid="button-confirm-delete"
+            >
+              {deleteUnprocessedMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Eliminando...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Eliminar Registros
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
