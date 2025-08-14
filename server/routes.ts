@@ -905,23 +905,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Helper function to find or create doctor from CSV data
-  async function findOrCreateDoctor(medId: string, doctorInternalCode: string, specialtyId: string) {
+  async function findOrCreateDoctor(professionalRut: string, professionalName: string, specialtyId: string) {
     try {
-      // First try to find existing doctor by internal code or RUT patterns
+      // First try to find existing doctor by RUT (most reliable)
       const existingDoctors = await storage.getDoctors();
       
-      // Check by internal code first (most reliable)
-      let doctor = existingDoctors.find((d: any) => d.internalCode === doctorInternalCode);
+      // Check by RUT first (exact match)
+      let doctor = existingDoctors.find((d: any) => d.rut === professionalRut);
       if (doctor) {
         return doctor.id;
       }
 
-      // Check by various RUT patterns that might exist
-      const baseRut = medId.replace('MED', '');
+      // Check by RUT with different formatting (add/remove dash, digit)
+      const cleanRut = professionalRut.replace(/[^0-9]/g, '');
       const rutPatterns = [
-        `${baseRut}-K`,
-        `${baseRut}-1-K`,
-        `${doctorInternalCode}-K`
+        `${cleanRut}-K`,
+        `${cleanRut}-1`,
+        `${cleanRut}`,
+        professionalRut
       ];
       
       for (const rutPattern of rutPatterns) {
@@ -932,29 +933,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check by name similarity to avoid creating duplicates
-      doctor = existingDoctors.find((d: any) => 
-        d.name.toLowerCase().includes(doctorInternalCode.toLowerCase()) ||
-        doctorInternalCode.toLowerCase().includes(d.name.toLowerCase().replace('dr./dra. ', ''))
-      );
+      const cleanName = professionalName.toLowerCase().replace(/^(dr\.?|dra\.?)\s*/i, '');
+      doctor = existingDoctors.find((d: any) => {
+        const existingCleanName = d.name.toLowerCase().replace(/^(dr\.?|dra\.?)\s*/i, '');
+        return existingCleanName.includes(cleanName) || cleanName.includes(existingCleanName);
+      });
       if (doctor) {
         return doctor.id;
       }
 
-      // If not found anywhere, create a new doctor with properly formatted RUT
-      // Extract numeric part from medId or doctorInternalCode to create valid RUT
-      const numericPart = medId.replace(/[^\d]/g, '') || doctorInternalCode.replace(/[^\d]/g, '') || '12345678';
-      const uniqueRut = `${numericPart}-K`;
+      // If not found anywhere, create a new doctor with the actual RUT and name from CSV
+      const formattedRut = professionalRut.includes('-') ? professionalRut : `${professionalRut}-K`;
       
       const newDoctor = {
-        rut: uniqueRut,
-        name: `Dr./Dra. ${doctorInternalCode}`,
-        email: `${doctorInternalCode.toLowerCase().replace(/[^a-z0-9]/g, '')}@hospital.cl`,
+        rut: formattedRut,
+        name: professionalName,
+        email: `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '')}@hospital.cl`,
         phone: '',
-        specialties: specialtyId ? [specialtyId] : [],
+        specialtyId: specialtyId || null,
         participationType: 'individual' as const,
-        medicalSocietyId: null,
-        internalCode: doctorInternalCode,
+        societyType: 'individual' as const,
+        societyRut: null,
+        societyName: null,
+        paymentType: 'transfer',
         bankAccount: '',
+        bankName: '',
+        accountHolderName: professionalName,
+        accountHolderRut: formattedRut,
         isActive: true,
       };
 
@@ -967,8 +972,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const existingDoctors = await storage.getDoctors();
         const fallbackMatch = existingDoctors.find((d: any) => 
-          d.internalCode === doctorInternalCode ||
-          d.name.toLowerCase().includes(doctorInternalCode.toLowerCase())
+          d.rut === professionalRut ||
+          d.name.toLowerCase().includes(professionalName.toLowerCase())
         );
         
         if (fallbackMatch) {
@@ -1068,10 +1073,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let serviceId = 'srv001'; // Servicio por defecto
           
           try {
-            const medId = values[12] || '';
-            const doctorInternalCode = values[16] || '';
+            const professionalRut = values[6] || ''; // RUT_PROF (position 6)
+            const professionalName = values[7] || ''; // NOMBRE_PROF (position 7)
             const specialtyId = values[10] || '';
-            doctorId = await findOrCreateDoctor(medId, doctorInternalCode, specialtyId);
+            doctorId = await findOrCreateDoctor(professionalRut, professionalName, specialtyId);
           } catch (error) {
             console.log(`Warning: Could not find/create doctor for line ${i + 1}, using default`);
           }
