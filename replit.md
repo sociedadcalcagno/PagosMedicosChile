@@ -87,3 +87,4 @@ Preferred communication style: Simple, everyday language.
 - **LATEST**: Implemented intelligent error interpretation system that converts technical database and import errors into clear operational messages with specific solutions for non-technical users
 - **LATEST**: Fixed specialty creation issue during CSV import by adding automatic specialty detection and creation system that properly maps specialty names to database IDs
 - **LATEST**: Enhanced import result display with professional error categorization, detailed solutions, and collapsible technical details for debugging
+- **LATEST**: Added specific row number indicators for each import error with prominent visual badges, enabling users to easily locate and fix problematic lines in their CSV files

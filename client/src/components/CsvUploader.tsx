@@ -46,15 +46,20 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
   };
 
   // Function to interpret technical errors into operational messages
-  const interpretError = (error: string): { type: string; message: string; solution: string } => {
+  const interpretError = (error: string): { type: string; message: string; solution: string; row?: string } => {
     const errorLower = error.toLowerCase();
+    
+    // Extract row number if present
+    const rowMatch = error.match(/fila\s+(\d+)/i);
+    const rowNumber = rowMatch ? rowMatch[1] : null;
     
     // Database constraint errors
     if (errorLower.includes('foreign key constraint') && errorLower.includes('specialties')) {
       return {
         type: "Especialidad no registrada",
         message: "El archivo contiene especialidades médicas que no están registradas en el sistema",
-        solution: "El sistema agregará automáticamente las especialidades faltantes en la próxima importación"
+        solution: "El sistema agregará automáticamente las especialidades faltantes en la próxima importación",
+        row: rowNumber
       };
     }
     
@@ -62,7 +67,8 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
       return {
         type: "Doctor no encontrado", 
         message: "Algunos doctores del archivo no están registrados en el sistema",
-        solution: "Revisa que los RUTs y nombres de los doctores estén correctos"
+        solution: "Revisa que los RUTs y nombres de los doctores estén correctos",
+        row: rowNumber
       };
     }
     
@@ -73,7 +79,8 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
       return {
         type: "Formato de fecha incorrecto",
         message: `La fecha "${invalidDate}" no tiene el formato esperado`,
-        solution: "Las fechas deben estar en formato DD-MMM-YY (ejemplo: 15-AGO-25) o DD-MM-YYYY"
+        solution: "Las fechas deben estar en formato DD-MMM-YY (ejemplo: 15-AGO-25) o DD-MM-YYYY",
+        row: rowNumber
       };
     }
     
@@ -81,17 +88,19 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
     if (errorLower.includes('columnas insuficientes') || errorLower.includes('insufficient columns')) {
       return {
         type: "Estructura del archivo incorrecta",
-        message: "Algunas filas del archivo no tienen todas las columnas necesarias",
-        solution: "Verifica que el archivo CSV tenga el formato correcto con todas las columnas requeridas"
+        message: "Esta fila del archivo no tiene todas las columnas necesarias",
+        solution: "Verifica que esta fila tenga el formato CSV correcto con todas las columnas requeridas",
+        row: rowNumber
       };
     }
     
     // Patient name validation
-    if (errorLower.includes('nombre del paciente') || errorLower.includes('patient name')) {
+    if (errorLower.includes('nombre del paciente incompleto') || errorLower.includes('patient name')) {
       return {
         type: "Datos del paciente incompletos",
-        message: "Faltan nombres de pacientes o están demasiado cortos",
-        solution: "Asegúrate de que todos los pacientes tengan nombres completos (mínimo 3 caracteres)"
+        message: "El nombre del paciente falta o es demasiado corto",
+        solution: "Asegúrate de que el paciente tenga un nombre completo (mínimo 3 caracteres)",
+        row: rowNumber
       };
     }
     
@@ -100,7 +109,8 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
       return {
         type: "Error de procesamiento",
         message: "No se pudo procesar correctamente esta línea del archivo",
-        solution: "Revisa que los datos estén completos y en el formato correcto"
+        solution: "Revisa que los datos estén completos y en el formato correcto",
+        row: rowNumber
       };
     }
     
@@ -108,7 +118,8 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
     return {
       type: "Error en los datos",
       message: error,
-      solution: "Revisa el formato y contenido de esta línea en el archivo"
+      solution: "Revisa el formato y contenido de esta línea en el archivo",
+      row: rowNumber
     };
   };
 
@@ -632,7 +643,12 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
                       const interpreted = interpretError(error);
                       return (
                         <div key={index} className="bg-red-50 border border-red-200 p-3 rounded-lg">
-                          <div className="flex items-start space-x-2">
+                          <div className="flex items-start space-x-3">
+                            {interpreted.row && (
+                              <div className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded flex-shrink-0">
+                                Fila {interpreted.row}
+                              </div>
+                            )}
                             <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
                             <div className="flex-1 space-y-2">
                               <div className="font-medium text-red-800">{interpreted.type}</div>

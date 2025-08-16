@@ -1110,7 +1110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Validate line has minimum required columns and basic data integrity
           if (values.length < 27) {
             console.log(`Skipping line ${i}: insufficient columns (${values.length})`);
-            errors.push(`Fila ${i}: Error al procesar - columnas insuficientes`);
+            errors.push(`Fila ${i + 1}: Error al procesar - columnas insuficientes (encontradas: ${values.length}, requeridas: 27)`);
             continue;
           }
           
@@ -1126,7 +1126,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (!isValidDate || patientName.length < 3) {
             console.log(`Skipping line ${i}: invalid date format (${attentionDate}) or patient name (${patientName})`);
-            errors.push(`Fila ${i}: Error al procesar - formato de fecha inválido: "${attentionDate}"`);
+            if (!isValidDate) {
+              errors.push(`Fila ${i + 1}: Error al procesar - formato de fecha inválido: "${attentionDate}"`);
+            } else {
+              errors.push(`Fila ${i + 1}: Error al procesar - nombre del paciente incompleto: "${patientName}"`);
+            }
             continue;
           }
           
