@@ -472,7 +472,7 @@ export default function CalculatePayments() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Paciente</TableHead>
+                        <TableHead>Doctor/Profesional</TableHead>
                         <TableHead>Fecha</TableHead>
                         <TableHead>Servicio</TableHead>
                         <TableHead>Tipo</TableHead>
@@ -480,26 +480,29 @@ export default function CalculatePayments() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {attentions.slice(0, 10).map((attention) => (
-                        <TableRow key={attention.id}>
-                          <TableCell>
-                            <div className="font-medium">{attention.patientName}</div>
-                            <div className="text-sm text-gray-500">{attention.patientRut}</div>
-                          </TableCell>
-                          <TableCell>
-                            {format(new Date(attention.attentionDate), 'dd/MM/yyyy', { locale: es })}
-                          </TableCell>
-                          <TableCell>{(attention as any).serviceName || 'N/A'}</TableCell>
-                          <TableCell>
-                            <Badge variant={(attention as any).recordType === 'participacion' ? 'default' : 'secondary'}>
-                              {(attention as any).recordType === 'participacion' ? 'Participación' : 'HMQ'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatCurrency(parseFloat(attention.participatedAmount))}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {attentions.slice(0, 10).map((attention) => {
+                        const doctor = doctors.find(d => d.id === attention.doctorId);
+                        return (
+                          <TableRow key={attention.id}>
+                            <TableCell>
+                              <div className="font-medium">{doctor?.name || 'Doctor no encontrado'}</div>
+                              <div className="text-sm text-gray-500">RUT: {doctor?.rut || 'N/A'}</div>
+                            </TableCell>
+                            <TableCell>
+                              {format(new Date(attention.attentionDate), 'dd/MM/yyyy', { locale: es })}
+                            </TableCell>
+                            <TableCell>{(attention as any).serviceName || 'N/A'}</TableCell>
+                            <TableCell>
+                              <Badge variant={(attention as any).recordType === 'participacion' ? 'default' : 'secondary'}>
+                                {(attention as any).recordType === 'participacion' ? 'Participación' : 'HMQ'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatCurrency(parseFloat(attention.participatedAmount))}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                   {attentions.length > 10 && (
