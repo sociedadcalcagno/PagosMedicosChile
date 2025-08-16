@@ -45,6 +45,73 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
     console.log('Toast:', options.title, options.description);
   };
 
+  // Function to interpret technical errors into operational messages
+  const interpretError = (error: string): { type: string; message: string; solution: string } => {
+    const errorLower = error.toLowerCase();
+    
+    // Database constraint errors
+    if (errorLower.includes('foreign key constraint') && errorLower.includes('specialties')) {
+      return {
+        type: "Especialidad no registrada",
+        message: "El archivo contiene especialidades médicas que no están registradas en el sistema",
+        solution: "El sistema agregará automáticamente las especialidades faltantes en la próxima importación"
+      };
+    }
+    
+    if (errorLower.includes('foreign key constraint') && errorLower.includes('doctors')) {
+      return {
+        type: "Doctor no encontrado", 
+        message: "Algunos doctores del archivo no están registrados en el sistema",
+        solution: "Revisa que los RUTs y nombres de los doctores estén correctos"
+      };
+    }
+    
+    // Date format errors
+    if (errorLower.includes('formato de fecha') || errorLower.includes('invalid date')) {
+      const dateMatch = error.match(/"([^"]+)"/);
+      const invalidDate = dateMatch ? dateMatch[1] : 'fecha';
+      return {
+        type: "Formato de fecha incorrecto",
+        message: `La fecha "${invalidDate}" no tiene el formato esperado`,
+        solution: "Las fechas deben estar en formato DD-MMM-YY (ejemplo: 15-AGO-25) o DD-MM-YYYY"
+      };
+    }
+    
+    // Missing or insufficient data
+    if (errorLower.includes('columnas insuficientes') || errorLower.includes('insufficient columns')) {
+      return {
+        type: "Estructura del archivo incorrecta",
+        message: "Algunas filas del archivo no tienen todas las columnas necesarias",
+        solution: "Verifica que el archivo CSV tenga el formato correcto con todas las columnas requeridas"
+      };
+    }
+    
+    // Patient name validation
+    if (errorLower.includes('nombre del paciente') || errorLower.includes('patient name')) {
+      return {
+        type: "Datos del paciente incompletos",
+        message: "Faltan nombres de pacientes o están demasiado cortos",
+        solution: "Asegúrate de que todos los pacientes tengan nombres completos (mínimo 3 caracteres)"
+      };
+    }
+    
+    // Generic processing error
+    if (errorLower.includes('error al procesar')) {
+      return {
+        type: "Error de procesamiento",
+        message: "No se pudo procesar correctamente esta línea del archivo",
+        solution: "Revisa que los datos estén completos y en el formato correcto"
+      };
+    }
+    
+    // Default case
+    return {
+      type: "Error en los datos",
+      message: error,
+      solution: "Revisa el formato y contenido de esta línea en el archivo"
+    };
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -519,28 +586,83 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <Badge variant="outline">
-                    Total: {importResult.total}
-                  </Badge>
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Badge variant="outline">
+                      Total procesados: {importResult.total}
+                    </Badge>
+                  </div>
+                  <div>
+                    <Badge variant="default" className="bg-green-100 text-green-800">
+                      ✓ Importados: {importResult.imported}
+                    </Badge>
+                  </div>
+                  {importResult.errors.length > 0 && (
+                    <div>
+                      <Badge variant="destructive">
+                        Con problemas: {importResult.errors.length}
+                      </Badge>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <Badge variant={importResult.success ? "default" : "destructive"}>
-                    Importados: {importResult.imported}
-                  </Badge>
-                </div>
+                
+                {importResult.imported > 0 && (
+                  <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <div className="text-sm text-green-800">
+                        <strong>¡Importación exitosa!</strong> Se procesaron correctamente {importResult.imported} de {importResult.total} registros.
+                        {importResult.imported === importResult.total ? (
+                          " Todos los datos se importaron sin problemas."
+                        ) : (
+                          " Los registros válidos ya están disponibles en el sistema."
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {importResult.errors.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="font-medium text-red-600">Errores encontrados:</h4>
-                  <div className="max-h-32 overflow-y-auto">
-                    {importResult.errors.map((error, index) => (
-                      <p key={index} className="text-sm text-red-600 bg-red-50 p-2 rounded">
-                        {error}
-                      </p>
-                    ))}
+                <div className="space-y-3">
+                  <h4 className="font-medium text-red-600">Problemas encontrados durante la importación:</h4>
+                  <div className="max-h-64 overflow-y-auto space-y-3">
+                    {importResult.errors.map((error, index) => {
+                      const interpreted = interpretError(error);
+                      return (
+                        <div key={index} className="bg-red-50 border border-red-200 p-3 rounded-lg">
+                          <div className="flex items-start space-x-2">
+                            <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 space-y-2">
+                              <div className="font-medium text-red-800">{interpreted.type}</div>
+                              <div className="text-sm text-red-700">{interpreted.message}</div>
+                              <div className="text-xs text-red-600 bg-white p-2 rounded border">
+                                <strong>Solución:</strong> {interpreted.solution}
+                              </div>
+                              {/* Show original error only if needed for debugging */}
+                              <details className="text-xs">
+                                <summary className="text-red-500 cursor-pointer hover:text-red-700">
+                                  Ver detalles técnicos
+                                </summary>
+                                <div className="mt-1 text-red-500 font-mono bg-gray-100 p-1 rounded">
+                                  {error}
+                                </div>
+                              </details>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-blue-600" />
+                      <div className="text-sm text-blue-800">
+                        <strong>Nota:</strong> Los registros que se pudieron procesar correctamente ya fueron guardados en el sistema. 
+                        Solo las filas con problemas fueron rechazadas.
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

@@ -924,8 +924,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Helper function to find or create specialty from CSV data
+  async function findOrCreateSpecialty(specialtyName: string) {
+    try {
+      if (!specialtyName || specialtyName.trim() === '') {
+        return 'esp001'; // Default specialty
+      }
+      
+      const specialties = await storage.getSpecialties();
+      
+      // Look for exact name match
+      let specialty = specialties.find((s: any) => 
+        s.name.toLowerCase() === specialtyName.toLowerCase()
+      );
+      
+      if (specialty) {
+        return specialty.id;
+      }
+      
+      // Look for partial matches
+      specialty = specialties.find((s: any) => 
+        s.name.toLowerCase().includes(specialtyName.toLowerCase()) ||
+        specialtyName.toLowerCase().includes(s.name.toLowerCase())
+      );
+      
+      if (specialty) {
+        return specialty.id;
+      }
+      
+      // Create new specialty if not found
+      const newSpecialtyId = `esp_${Date.now()}`;
+      const code = specialtyName.substring(0, 3).toUpperCase();
+      
+      const newSpecialty = {
+        id: newSpecialtyId,
+        code: code,
+        name: specialtyName,
+        description: `Especialidad: ${specialtyName}`,
+        participationType: null,
+      };
+      
+      const createdSpecialty = await storage.createSpecialty(newSpecialty);
+      return createdSpecialty.id;
+    } catch (error) {
+      console.error('Error finding/creating specialty:', error);
+      return 'esp001'; // Return default specialty on error
+    }
+  }
+
   // Helper function to find or create doctor from CSV data
-  async function findOrCreateDoctor(professionalRut: string, professionalName: string, specialtyId: string) {
+  async function findOrCreateDoctor(professionalRut: string, professionalName: string, specialtyName: string) {
     try {
       // First try to find existing doctor by RUT (most reliable)
       const existingDoctors = await storage.getDoctors();
@@ -965,12 +1013,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If not found anywhere, create a new doctor with the actual RUT and name from CSV
       const formattedRut = professionalRut.includes('-') ? professionalRut : `${professionalRut}-K`;
       
+      // Find or create the specialty
+      const actualSpecialtyId = await findOrCreateSpecialty(specialtyName);
+      
       const newDoctor = {
         rut: formattedRut,
         name: professionalName,
         email: `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '')}@hospital.cl`,
         phone: '',
-        specialtyId: specialtyId || null,
+        specialtyId: actualSpecialtyId,
         participationType: 'individual' as const,
         societyType: 'individual' as const,
         societyRut: null,
@@ -1095,8 +1146,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             const professionalRut = values[6] || ''; // RUT_PROF (position 6)
             const professionalName = values[7] || ''; // NOMBRE_PROF (position 7)
-            const specialtyId = values[10] || '';
-            doctorId = await findOrCreateDoctor(professionalRut, professionalName, specialtyId);
+            const specialtyName = values[8] || ''; // ESPECIALIDAD (position 8)
+            doctorId = await findOrCreateDoctor(professionalRut, professionalName, specialtyName);
           } catch (error) {
             console.log(`Warning: Could not find/create doctor for line ${i + 1}, using default`);
           }
