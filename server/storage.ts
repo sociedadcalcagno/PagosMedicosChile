@@ -193,26 +193,23 @@ export class DatabaseStorage implements IStorage {
 
   // Doctor operations
   async getDoctors(filters?: { rut?: string; name?: string; specialtyId?: string }): Promise<Doctor[]> {
-    let query = db.select().from(doctors);
+    let conditions = [];
     
-    if (filters) {
-      const conditions = [];
-      if (filters.rut) {
-        conditions.push(ilike(doctors.rut, `%${filters.rut}%`));
-      }
-      if (filters.name) {
-        conditions.push(ilike(doctors.name, `%${filters.name}%`));
-      }
-      if (filters.specialtyId) {
-        conditions.push(eq(doctors.specialtyId, filters.specialtyId));
-      }
-      
-      if (conditions.length > 0) {
-        query = query.where(and(...conditions));
-      }
+    if (filters?.rut) {
+      conditions.push(ilike(doctors.rut, `%${filters.rut}%`));
+    }
+    if (filters?.name) {
+      conditions.push(ilike(doctors.name, `%${filters.name}%`));
+    }
+    if (filters?.specialtyId) {
+      conditions.push(eq(doctors.specialtyId, filters.specialtyId));
     }
     
-    return await query.orderBy(asc(doctors.name)).execute();
+    if (conditions.length > 0) {
+      return await db.select().from(doctors).where(and(...conditions)).orderBy(asc(doctors.name));
+    }
+    
+    return await db.select().from(doctors).orderBy(asc(doctors.name));
   }
 
   async getDoctorById(id: string): Promise<Doctor | undefined> {
@@ -294,30 +291,27 @@ export class DatabaseStorage implements IStorage {
     await db.delete(specialties).where(eq(specialties.id, id));
   }
 
-  // Medical Society operations
-  async getMedicalSocieties(): Promise<any[]> {
+  // Get medical societies (for dropdown lists)
+  async getMedicalSocietiesForDropdown(): Promise<any[]> {
     return await db.select().from(medicalSocieties).orderBy(asc(medicalSocieties.name));
   }
 
   // Service operations
   async getServices(filters?: { specialtyId?: string; participationType?: string }): Promise<Service[]> {
-    let query = db.select().from(services);
+    let conditions = [];
     
-    if (filters) {
-      const conditions = [];
-      if (filters.specialtyId) {
-        conditions.push(eq(services.specialtyId, filters.specialtyId));
-      }
-      if (filters.participationType) {
-        conditions.push(eq(services.participationType, filters.participationType));
-      }
-      
-      if (conditions.length > 0) {
-        query = query.where(and(...conditions));
-      }
+    if (filters?.specialtyId) {
+      conditions.push(eq(services.specialtyId, filters.specialtyId));
+    }
+    if (filters?.participationType) {
+      conditions.push(eq(services.participationType, filters.participationType));
     }
     
-    return await query.orderBy(asc(services.name)).execute();
+    if (conditions.length > 0) {
+      return await db.select().from(services).where(and(...conditions)).orderBy(asc(services.name));
+    }
+    
+    return await db.select().from(services).orderBy(asc(services.name));
   }
 
   async getServiceById(id: string): Promise<Service | undefined> {
@@ -350,29 +344,26 @@ export class DatabaseStorage implements IStorage {
     specialtyId?: string;
     isActive?: boolean;
   }): Promise<CalculationRule[]> {
-    let query = db.select().from(calculationRules);
+    let conditions = [];
     
-    if (filters) {
-      const conditions = [];
-      if (filters.code) {
-        conditions.push(ilike(calculationRules.code, `%${filters.code}%`));
-      }
-      if (filters.participationType) {
-        conditions.push(eq(calculationRules.participationType, filters.participationType));
-      }
-      if (filters.specialtyId) {
-        conditions.push(eq(calculationRules.specialtyId, filters.specialtyId));
-      }
-      if (filters.isActive !== undefined) {
-        conditions.push(eq(calculationRules.isActive, filters.isActive));
-      }
-      
-      if (conditions.length > 0) {
-        query = query.where(and(...conditions));
-      }
+    if (filters?.code) {
+      conditions.push(ilike(calculationRules.code, `%${filters.code}%`));
+    }
+    if (filters?.participationType) {
+      conditions.push(eq(calculationRules.participationType, filters.participationType));
+    }
+    if (filters?.specialtyId) {
+      conditions.push(eq(calculationRules.specialtyId, filters.specialtyId));
+    }
+    if (filters?.isActive !== undefined) {
+      conditions.push(eq(calculationRules.isActive, filters.isActive));
     }
     
-    return await query.orderBy(desc(calculationRules.createdAt)).execute();
+    if (conditions.length > 0) {
+      return await db.select().from(calculationRules).where(and(...conditions)).orderBy(desc(calculationRules.createdAt));
+    }
+    
+    return await db.select().from(calculationRules).orderBy(desc(calculationRules.createdAt));
   }
 
   async getCalculationRuleById(id: string): Promise<CalculationRule | undefined> {
@@ -406,6 +397,7 @@ export class DatabaseStorage implements IStorage {
   async deleteCalculationRule(id: string): Promise<void> {
     await db.delete(calculationRules).where(eq(calculationRules.id, id));
   }
+
 
   // Medical society operations
   async getMedicalSocieties(): Promise<MedicalSociety[]> {
@@ -546,8 +538,7 @@ export class DatabaseStorage implements IStorage {
     status?: string;
     recordTypes?: string[];
   }): Promise<MedicalAttention[]> {
-    let query = db.select().from(medicalAttentions);
-    const conditions = [];
+    let conditions = [];
 
     if (filters?.doctorId && filters.doctorId !== 'all') {
       conditions.push(eq(medicalAttentions.doctorId, filters.doctorId));
@@ -566,10 +557,10 @@ export class DatabaseStorage implements IStorage {
     }
 
     if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+      return await db.select().from(medicalAttentions).where(and(...conditions)).orderBy(desc(medicalAttentions.attentionDate));
     }
 
-    return await query.orderBy(desc(medicalAttentions.attentionDate)).execute();
+    return await db.select().from(medicalAttentions).orderBy(desc(medicalAttentions.attentionDate));
   }
 
   async createMedicalAttention(attention: any): Promise<MedicalAttention> {
@@ -777,12 +768,7 @@ export class DatabaseStorage implements IStorage {
         patientName: medicalAttentions.patientName,
         attentionDate: medicalAttentions.attentionDate,
         serviceName: medicalAttentions.serviceName,
-        participatedAmount: medicalAttentions.participatedAmount,
-        service: {
-          id: services.id,
-          name: services.name,
-          code: services.code,
-        }
+        participatedAmount: medicalAttentions.participatedAmount
       },
       // Include rule data
       rule: {
@@ -813,7 +799,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+      return await query.where(and(...conditions)).orderBy(desc(paymentCalculations.calculationDate));
     }
 
     return await query.orderBy(desc(paymentCalculations.calculationDate));
@@ -911,7 +897,6 @@ export class DatabaseStorage implements IStorage {
         
         // Create payment record
         await db.insert(payments).values({
-          id: crypto.randomUUID(),
           doctorId,
           periodMonth: data.month,
           periodYear: data.year,
@@ -919,7 +904,7 @@ export class DatabaseStorage implements IStorage {
           totalAttentions: attentions.length,
           paymentMethod: data.paymentMethod,
           status: 'processed',
-          paymentDate: new Date(),
+          paymentDate: new Date().toISOString().split('T')[0], // fecha como string
           processedAt: new Date(),
         });
 
@@ -998,8 +983,7 @@ export class DatabaseStorage implements IStorage {
     // Mark all calculations for this period as processed
     await db.update(paymentCalculations)
       .set({ 
-        status: 'processed',
-        updatedAt: new Date()
+        status: 'processed'
       })
       .where(
         and(
@@ -1016,8 +1000,7 @@ export class DatabaseStorage implements IStorage {
     year?: number;
     status?: string;
   }): Promise<Payment[]> {
-    let query = db.select().from(payments);
-    const conditions = [];
+    let conditions = [];
 
     if (filters?.doctorId) {
       conditions.push(eq(payments.doctorId, filters.doctorId));
@@ -1033,10 +1016,10 @@ export class DatabaseStorage implements IStorage {
     }
 
     if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+      return await db.select().from(payments).where(and(...conditions)).orderBy(desc(payments.createdAt));
     }
 
-    return await query.orderBy(desc(payments.createdAt));
+    return await db.select().from(payments).orderBy(desc(payments.createdAt));
   }
 
   async processPayment(doctorId: string, month: number, year: number): Promise<Payment> {
