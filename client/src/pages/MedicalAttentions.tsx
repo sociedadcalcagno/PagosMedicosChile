@@ -17,6 +17,7 @@ import { z } from "zod";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 const attentionSchema = z.object({
   patientRut: z.string().min(1, "RUT del paciente es requerido"),
@@ -46,6 +47,7 @@ export default function MedicalAttentions() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteRecordType, setDeleteRecordType] = useState<'participacion' | 'hmq' | 'all'>('all');
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   const form = useForm<AttentionForm>({
     resolver: zodResolver(attentionSchema),
@@ -125,9 +127,14 @@ export default function MedicalAttentions() {
       return response.json();
     },
     onSuccess: (data) => {
+      const recordTypeLabel = deleteRecordType === 'all' ? 'registros' : 
+                             deleteRecordType === 'participacion' ? 'registros de participaciones' : 
+                             'registros HMQ';
+      
       toast({
-        title: "Registros eliminados",
-        description: `Se eliminaron ${data.deletedCount} atenciones no procesadas.`,
+        title: "✅ Eliminación exitosa",
+        description: `Se eliminaron correctamente ${data.deletedCount} ${recordTypeLabel} no procesados del sistema.`,
+        duration: 5000,
       });
       queryClient.invalidateQueries({ queryKey: ['/api/medical-attentions'] });
       setShowDeleteModal(false);
