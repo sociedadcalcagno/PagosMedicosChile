@@ -46,6 +46,8 @@ export default function CalculatePayments() {
   const [productionData, setProductionData] = useState<ProductionSummary | null>(null);
   const [doctorSearch, setDoctorSearch] = useState("");
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
+  const [doctorPage, setDoctorPage] = useState(1);
+  const DOCTORS_PER_PAGE = 15;
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -65,16 +67,34 @@ export default function CalculatePayments() {
     queryKey: ['/api/doctors'],
   });
 
-  // Filtered doctors based on search
-  const filteredDoctors = useMemo(() => {
-    if (!doctorSearch.trim()) return doctors.slice(0, 10); // Show first 10 if no search
+  // Filtered doctors based on search with pagination
+  const { filteredDoctors, totalDoctors, hasMoreDoctors } = useMemo(() => {
+    let filtered;
     
-    const searchTerm = doctorSearch.toLowerCase();
-    return doctors.filter(doctor => 
-      doctor.name.toLowerCase().includes(searchTerm) ||
-      doctor.rut.toLowerCase().includes(searchTerm)
-    ).slice(0, 20); // Limit to 20 results
-  }, [doctors, doctorSearch]);
+    if (!doctorSearch.trim()) {
+      // Show all doctors if no search term
+      filtered = doctors;
+    } else {
+      // Filter by search term
+      const searchTerm = doctorSearch.toLowerCase();
+      filtered = doctors.filter(doctor => 
+        doctor.name.toLowerCase().includes(searchTerm) ||
+        doctor.rut.toLowerCase().includes(searchTerm)
+      );
+    }
+    
+    const totalDoctors = filtered.length;
+    const startIndex = 0;
+    const endIndex = doctorPage * DOCTORS_PER_PAGE;
+    const paginatedDoctors = filtered.slice(startIndex, endIndex);
+    const hasMoreDoctors = endIndex < totalDoctors;
+    
+    return {
+      filteredDoctors: paginatedDoctors,
+      totalDoctors,
+      hasMoreDoctors
+    };
+  }, [doctors, doctorSearch, doctorPage]);
 
   // Get selected doctor info
   const selectedDoctor = useMemo(() => {
@@ -82,6 +102,11 @@ export default function CalculatePayments() {
     if (!doctorId || doctorId === 'all') return null;
     return doctors.find(d => d.id === doctorId);
   }, [doctors, form.watch('doctorId')]);
+
+  // Reset pagination when search changes
+  useEffect(() => {
+    setDoctorPage(1);
+  }, [doctorSearch]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -279,44 +304,75 @@ export default function CalculatePayments() {
                           )}
                           
                           {/* Dropdown Results */}
-                          {showDoctorDropdown && doctorSearch.trim() && (
-                            <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                          {showDoctorDropdown && (
+                            <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-80 overflow-hidden">
                               {filteredDoctors.length > 0 ? (
                                 <>
-                                  <button
-                                    type="button"
-                                    className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b text-sm font-medium text-gray-700"
-                                    onClick={() => {
-                                      field.onChange("all");
-                                      setDoctorSearch("");
-                                      setShowDoctorDropdown(false);
-                                    }}
-                                    data-testid="option-all-doctors"
-                                  >
-                                    Todos los médicos
-                                  </button>
-                                  {filteredDoctors.map((doctor) => (
+                                  {/* Header with total count */}
+                                  <div className="px-3 py-2 bg-gray-50 border-b text-xs text-gray-600 font-medium">
+                                    {doctorSearch.trim() 
+                                      ? `${totalDoctors} profesionales encontrados`
+                                      : `${totalDoctors} profesionales disponibles`
+                                    }
+                                  </div>
+                                  
+                                  {/* Scrollable results */}
+                                  <div className="max-h-56 overflow-auto">
                                     <button
-                                      key={doctor.id}
                                       type="button"
-                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b last:border-b-0"
+                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b text-sm font-medium text-gray-700"
                                       onClick={() => {
-                                        field.onChange(doctor.id);
-                                        setDoctorSearch(doctor.name);
+                                        field.onChange("all");
+                                        setDoctorSearch("");
                                         setShowDoctorDropdown(false);
                                       }}
-                                      data-testid={`option-doctor-${doctor.id}`}
+                                      data-testid="option-all-doctors"
                                     >
-                                      <div className="text-sm">
-                                        <div className="font-medium text-gray-900">{doctor.name}</div>
-                                        <div className="text-gray-500">RUT: {doctor.rut}</div>
-                                      </div>
+                                      Todos los médicos
                                     </button>
-                                  ))}
+                                    
+                                    {filteredDoctors.map((doctor) => (
+                                      <button
+                                        key={doctor.id}
+                                        type="button"
+                                        className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b last:border-b-0"
+                                        onClick={() => {
+                                          field.onChange(doctor.id);
+                                          setDoctorSearch(doctor.name);
+                                          setShowDoctorDropdown(false);
+                                          setDoctorPage(1); // Reset pagination
+                                        }}
+                                        data-testid={`option-doctor-${doctor.id}`}
+                                      >
+                                        <div className="text-sm">
+                                          <div className="font-medium text-gray-900">{doctor.name}</div>
+                                          <div className="text-gray-500">RUT: {doctor.rut}</div>
+                                        </div>
+                                      </button>
+                                    ))}
+                                  </div>
+                                  
+                                  {/* Load more button */}
+                                  {hasMoreDoctors && (
+                                    <div className="border-t">
+                                      <button
+                                        type="button"
+                                        className="w-full px-3 py-2 text-center text-sm text-blue-600 hover:bg-blue-50 font-medium"
+                                        onClick={() => setDoctorPage(prev => prev + 1)}
+                                        data-testid="button-load-more-doctors"
+                                      >
+                                        Ver más profesionales ({totalDoctors - filteredDoctors.length} restantes)
+                                      </button>
+                                    </div>
+                                  )}
                                 </>
-                              ) : (
+                              ) : doctorSearch.trim() ? (
                                 <div className="px-3 py-2 text-sm text-gray-500">
                                   No se encontraron profesionales con "{doctorSearch}"
+                                </div>
+                              ) : (
+                                <div className="px-3 py-2 text-sm text-gray-500">
+                                  Escribe para buscar profesionales...
                                 </div>
                               )}
                             </div>

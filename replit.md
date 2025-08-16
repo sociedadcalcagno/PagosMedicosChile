@@ -76,6 +76,7 @@ The application is designed to handle complex medical payment scenarios includin
 - **LATEST**: Enhanced findOrCreateDoctor function with multiple fallback strategies and circuit breaker pattern to prevent processing loops
 - **LATEST**: Improved medical attentions filter interface with clearer date labels, search button with lupa icon, and better UX flow - filters only apply when user clicks "Buscar" button
 - **LATEST**: Enhanced Calculate Payments interface with intelligent doctor search filter - replaced simple dropdown with search input that filters by RUT or name in real-time, showing up to 20 results with dropdown selection for improved user experience
+- **LATEST**: Added pagination to doctor search filter with "Ver más" functionality - shows 15 doctors per page with total count display, load more button shows remaining count, and improved dropdown navigation for large doctor databases
 
 ## User Preferences
 
