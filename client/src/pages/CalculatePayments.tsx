@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Calculator, Calendar, User, Play, CheckCircle, AlertCircle, Filter, TrendingUp } from "lucide-react";
+import { Calculator, Calendar, User, Play, CheckCircle, AlertCircle, Filter, TrendingUp, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -44,6 +44,8 @@ interface ProductionSummary {
 export default function CalculatePayments() {
   const [selectedFilters, setSelectedFilters] = useState<CalculationForm | null>(null);
   const [productionData, setProductionData] = useState<ProductionSummary | null>(null);
+  const [doctorSearch, setDoctorSearch] = useState("");
+  const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -62,6 +64,37 @@ export default function CalculatePayments() {
   const { data: doctors = [] } = useQuery<Doctor[]>({
     queryKey: ['/api/doctors'],
   });
+
+  // Filtered doctors based on search
+  const filteredDoctors = useMemo(() => {
+    if (!doctorSearch.trim()) return doctors.slice(0, 10); // Show first 10 if no search
+    
+    const searchTerm = doctorSearch.toLowerCase();
+    return doctors.filter(doctor => 
+      doctor.name.toLowerCase().includes(searchTerm) ||
+      doctor.rut.toLowerCase().includes(searchTerm)
+    ).slice(0, 20); // Limit to 20 results
+  }, [doctors, doctorSearch]);
+
+  // Get selected doctor info
+  const selectedDoctor = useMemo(() => {
+    const doctorId = form.watch('doctorId');
+    if (!doctorId || doctorId === 'all') return null;
+    return doctors.find(d => d.id === doctorId);
+  }, [doctors, form.watch('doctorId')]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('[data-testid^="input-doctor"]') && !target.closest('[data-testid^="option-"]')) {
+        setShowDoctorDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const { data: attentions = [] } = useQuery<MedicalAttention[]>({
     queryKey: ['/api/medical-attentions', selectedFilters],
@@ -196,7 +229,7 @@ export default function CalculatePayments() {
             <CardContent>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(handlePreview)} className="space-y-4">
-                  {/* Doctor Selection */}
+                  {/* Doctor Search */}
                   <FormField
                     control={form.control}
                     name="doctorId"
@@ -206,25 +239,89 @@ export default function CalculatePayments() {
                           <User className="h-4 w-4" />
                           Doctor/Profesional
                         </FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || "all"}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue>
-                                {field.value && field.value !== "all" 
-                                  ? doctors.find(d => d.id === field.value)?.name 
-                                  : "Todos los médicos"}
-                              </SelectValue>
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="all">Todos los médicos</SelectItem>
-                            {doctors.map((doctor) => (
-                              <SelectItem key={doctor.id} value={doctor.id}>
-                                {doctor.name} - {doctor.rut}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="space-y-2">
+                          {/* Search Input */}
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                              placeholder="Buscar por RUT o nombre (ej: 12345678-9 o Juan Pérez)"
+                              value={doctorSearch}
+                              onChange={(e) => {
+                                setDoctorSearch(e.target.value);
+                                setShowDoctorDropdown(true);
+                              }}
+                              onFocus={() => setShowDoctorDropdown(true)}
+                              className="pl-10"
+                              data-testid="input-doctor-search"
+                            />
+                          </div>
+                          
+                          {/* Selected Doctor Display */}
+                          {selectedDoctor && (
+                            <div className="flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded">
+                              <div className="text-sm">
+                                <span className="font-medium">{selectedDoctor.name}</span>
+                                <span className="text-gray-600 ml-2">RUT: {selectedDoctor.rut}</span>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  field.onChange("all");
+                                  setDoctorSearch("");
+                                }}
+                                data-testid="button-clear-doctor"
+                              >
+                                ✕
+                              </Button>
+                            </div>
+                          )}
+                          
+                          {/* Dropdown Results */}
+                          {showDoctorDropdown && doctorSearch.trim() && (
+                            <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                              {filteredDoctors.length > 0 ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b text-sm font-medium text-gray-700"
+                                    onClick={() => {
+                                      field.onChange("all");
+                                      setDoctorSearch("");
+                                      setShowDoctorDropdown(false);
+                                    }}
+                                    data-testid="option-all-doctors"
+                                  >
+                                    Todos los médicos
+                                  </button>
+                                  {filteredDoctors.map((doctor) => (
+                                    <button
+                                      key={doctor.id}
+                                      type="button"
+                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b last:border-b-0"
+                                      onClick={() => {
+                                        field.onChange(doctor.id);
+                                        setDoctorSearch(doctor.name);
+                                        setShowDoctorDropdown(false);
+                                      }}
+                                      data-testid={`option-doctor-${doctor.id}`}
+                                    >
+                                      <div className="text-sm">
+                                        <div className="font-medium text-gray-900">{doctor.name}</div>
+                                        <div className="text-gray-500">RUT: {doctor.rut}</div>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </>
+                              ) : (
+                                <div className="px-3 py-2 text-sm text-gray-500">
+                                  No se encontraron profesionales con "{doctorSearch}"
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}

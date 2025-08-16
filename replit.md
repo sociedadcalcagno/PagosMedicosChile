@@ -75,6 +75,7 @@ The application is designed to handle complex medical payment scenarios includin
 - **LATEST**: Successfully processed 309 medical attentions from 9,000 record CSV before fixing infinite loop issue
 - **LATEST**: Enhanced findOrCreateDoctor function with multiple fallback strategies and circuit breaker pattern to prevent processing loops
 - **LATEST**: Improved medical attentions filter interface with clearer date labels, search button with lupa icon, and better UX flow - filters only apply when user clicks "Buscar" button
+- **LATEST**: Enhanced Calculate Payments interface with intelligent doctor search filter - replaced simple dropdown with search input that filters by RUT or name in real-time, showing up to 20 results with dropdown selection for improved user experience
 
 ## User Preferences
 
