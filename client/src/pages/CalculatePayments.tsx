@@ -47,7 +47,9 @@ export default function CalculatePayments() {
   const [doctorSearch, setDoctorSearch] = useState("");
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
   const [doctorPage, setDoctorPage] = useState(1);
+  const [attentionPage, setAttentionPage] = useState(1);
   const DOCTORS_PER_PAGE = 15;
+  const ATTENTIONS_PER_PAGE = 20;
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -108,6 +110,11 @@ export default function CalculatePayments() {
     setDoctorPage(1);
   }, [doctorSearch]);
 
+  // Reset attention pagination when filters change
+  useEffect(() => {
+    setAttentionPage(1);
+  }, [selectedFilters]);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -142,6 +149,16 @@ export default function CalculatePayments() {
       return await response.json();
     },
   });
+
+  // Calculate paginated attentions
+  const paginatedAttentions = useMemo(() => {
+    const startIndex = (attentionPage - 1) * ATTENTIONS_PER_PAGE;
+    const endIndex = startIndex + ATTENTIONS_PER_PAGE;
+    return attentions.slice(startIndex, endIndex);
+  }, [attentions, attentionPage]);
+
+  const totalAttentionPages = Math.ceil(attentions.length / ATTENTIONS_PER_PAGE);
+  const hasMoreAttentions = attentionPage < totalAttentionPages;
 
   const { data: calculations = [] } = useQuery({
     queryKey: ['/api/payment-calculations', selectedFilters],
@@ -543,7 +560,7 @@ export default function CalculatePayments() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {attentions.slice(0, 10).map((attention) => {
+                      {paginatedAttentions.map((attention) => {
                         const doctor = doctors.find(d => d.id === attention.doctorId);
                         return (
                           <TableRow key={attention.id}>
@@ -568,9 +585,62 @@ export default function CalculatePayments() {
                       })}
                     </TableBody>
                   </Table>
-                  {attentions.length > 10 && (
-                    <div className="p-4 text-center text-sm text-gray-500">
-                      Y {attentions.length - 10} atenciones más...
+                  
+                  {/* Pagination Controls */}
+                  {attentions.length > ATTENTIONS_PER_PAGE && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+                      <div className="flex items-center text-sm text-gray-700">
+                        <span>
+                          Mostrando {((attentionPage - 1) * ATTENTIONS_PER_PAGE) + 1} a {Math.min(attentionPage * ATTENTIONS_PER_PAGE, attentions.length)} de {attentions.length} atenciones
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAttentionPage(prev => Math.max(1, prev - 1))}
+                          disabled={attentionPage === 1}
+                          data-testid="button-prev-page"
+                        >
+                          Anterior
+                        </Button>
+                        <div className="flex items-center space-x-1">
+                          {Array.from({ length: Math.min(5, totalAttentionPages) }, (_, i) => {
+                            let pageNum;
+                            if (totalAttentionPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (attentionPage <= 3) {
+                              pageNum = i + 1;
+                            } else if (attentionPage >= totalAttentionPages - 2) {
+                              pageNum = totalAttentionPages - 4 + i;
+                            } else {
+                              pageNum = attentionPage - 2 + i;
+                            }
+                            
+                            return (
+                              <Button
+                                key={pageNum}
+                                variant={attentionPage === pageNum ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setAttentionPage(pageNum)}
+                                className="w-8 h-8 p-0"
+                                data-testid={`button-page-${pageNum}`}
+                              >
+                                {pageNum}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAttentionPage(prev => Math.min(totalAttentionPages, prev + 1))}
+                          disabled={!hasMoreAttentions}
+                          data-testid="button-next-page"
+                        >
+                          Siguiente
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
