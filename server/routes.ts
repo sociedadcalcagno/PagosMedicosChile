@@ -1103,9 +1103,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'HORARIO', 'ESP_ID', 'RPAR_ESTADO', 'MED_ID', 'SOC_ID', 'NOMBRE_SOCIEDAD', 'RUT_SOCIEDAD', 'CODIGO_INTERNO_MEDICO'
       ];
 
+      // Auto-detect CSV separator by analyzing the first few lines
+      const detectSeparator = (lines: string[]): string => {
+        if (lines.length < 2) return ',';
+        
+        const separators = [';', '|', ',', '\t'];
+        const testLine = lines[1]; // Use first data line (skip header)
+        
+        let bestSeparator = ',';
+        let maxColumns = 0;
+        
+        for (const sep of separators) {
+          const columns = testLine.split(sep).length;
+          console.log(`Testing separator '${sep}': ${columns} columns`);
+          if (columns > maxColumns && columns >= 15) { // Should have at least 15 columns for medical data
+            maxColumns = columns;
+            bestSeparator = sep;
+          }
+        }
+        
+        console.log(`Auto-detected separator: '${bestSeparator}' with ${maxColumns} columns`);
+        return bestSeparator;
+      };
+      
+      const separator = detectSeparator(linesToProcess);
+
       for (let i = 1; i < linesToProcess.length; i++) {
         try {
-          const values = lines[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
+          const values = lines[i].split(separator).map((v: string) => v.trim().replace(/"/g, ''));
           
           // Validate line has minimum required columns and basic data integrity
           if (values.length < 27) {
@@ -1348,9 +1373,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'MED_ID', 'SOC_ID', 'NOMBRE_SOCIEDAD', 'RUT_SOCIEDAD', 'CODIGO_INTERNO_MEDICO', 'RHMQ_PARTICIPANTE'
       ];
 
+      // Auto-detect CSV separator by analyzing the first few lines
+      const detectSeparatorHMQ = (lines: string[]): string => {
+        if (lines.length < 2) return ',';
+        
+        const separators = [';', '|', ',', '\t'];
+        const testLine = lines[1]; // Use first data line (skip header)
+        
+        let bestSeparator = ',';
+        let maxColumns = 0;
+        
+        for (const sep of separators) {
+          const columns = testLine.split(sep).length;
+          console.log(`Testing HMQ separator '${sep}': ${columns} columns`);
+          if (columns > maxColumns && columns >= 10) { // Should have at least 10 columns for HMQ data
+            maxColumns = columns;
+            bestSeparator = sep;
+          }
+        }
+        
+        console.log(`Auto-detected HMQ separator: '${bestSeparator}' with ${maxColumns} columns`);
+        return bestSeparator;
+      };
+      
+      const separatorHMQ = detectSeparatorHMQ(linesToProcess);
+
       for (let i = 1; i < linesToProcess.length; i++) {
         try {
-          const values = lines[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
+          const values = lines[i].split(separatorHMQ).map((v: string) => v.trim().replace(/"/g, ''));
           
           // Find or create doctor and service based on CSV data
           const medId = values[14] || '';
