@@ -276,6 +276,11 @@ export default function CalculatePayments() {
                                 setShowDoctorDropdown(true);
                               }}
                               onFocus={() => setShowDoctorDropdown(true)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                }
+                              }}
                               className="pl-10"
                               data-testid="input-doctor-search"
                             />
@@ -367,12 +372,14 @@ export default function CalculatePayments() {
                                   )}
                                 </>
                               ) : doctorSearch.trim() ? (
-                                <div className="px-3 py-2 text-sm text-gray-500">
-                                  No se encontraron profesionales con "{doctorSearch}"
+                                <div className="px-3 py-4 text-center text-sm text-gray-500">
+                                  <div className="font-medium">No se encontraron profesionales</div>
+                                  <div>con el término "{doctorSearch}"</div>
                                 </div>
                               ) : (
-                                <div className="px-3 py-2 text-sm text-gray-500">
-                                  Escribe para buscar profesionales...
+                                <div className="px-3 py-4 text-center text-sm text-gray-500">
+                                  <div className="font-medium">Haz clic para ver todos los profesionales</div>
+                                  <div>o escribe para buscar específicamente</div>
                                 </div>
                               )}
                             </div>
