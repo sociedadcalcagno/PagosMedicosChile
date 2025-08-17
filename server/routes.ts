@@ -2595,13 +2595,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'RUT y contraseña son requeridos' });
       }
       
-      // Find doctor by RUT
+      console.log(`Professional login attempt: RUT=${rut}, Password=${password ? '[HIDDEN]' : 'empty'}`);
+      
+      // Find doctor by RUT (case insensitive, trim whitespace)
       const doctors = await storage.getDoctors();
-      const doctor = doctors.find((d: any) => d.rut === rut);
+      console.log(`Total doctors in database: ${doctors.length}`);
+      
+      // Normalize RUT for comparison
+      const normalizedInputRut = rut.trim().toUpperCase();
+      const doctor = doctors.find((d: any) => {
+        const normalizedDbRut = d.rut?.trim().toUpperCase();
+        console.log(`Comparing: "${normalizedInputRut}" === "${normalizedDbRut}"`);
+        return normalizedDbRut === normalizedInputRut;
+      });
       
       if (!doctor) {
+        console.log(`Doctor not found for RUT: ${rut}`);
+        // Show first few doctors for debugging
+        console.log('Available doctors:', doctors.slice(0, 5).map(d => ({ rut: d.rut, name: d.name })));
         return res.status(401).json({ message: 'RUT no encontrado en el sistema' });
       }
+      
+      console.log(`Doctor found: ${doctor.name} (${doctor.rut})`);
+      
       
       // For development, accept any password for existing doctors
       // In production, this would validate against a proper password hash
