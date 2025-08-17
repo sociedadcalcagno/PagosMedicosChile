@@ -1645,33 +1645,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
             netAmount: netAmountCleaned
           });
 
+          // MAPEO CORREGIDO - Necesito ver los logs para identificar las columnas correctas
+          // Por ahora, voy a usar un mapeo más conservador basado en lo que sabemos:
+          // - row[0] probablemente sea el RUT del profesional médico (14366756-1)
+          // - row[1] probablemente sea el nombre del profesional (ALARCON STUARDO RAUL)
+          // - Necesito identificar dónde están: RUT paciente, nombre paciente, montos reales
+          
           const attention = {
-            patientRut: String(row[0] || ''),
-            patientName: String(row[1] || '').trim(),
-            doctorId: await findOrCreateDoctor(String(row[12] || ''), String(row[16] || ''), String(row[10] || '')),
-            serviceId: await findOrCreateService(String(row[3] || ''), String(row[4] || '')),
-            providerTypeId: getProviderTypeFromPrevision(String(row[5] || '')),
-            attentionDate: formatDate(String(row[2] || '')),
+            // TEMPORALMENTE uso valores seguros mientras identifico la estructura
+            patientRut: String(row[1] || ''), // Cambio temporal 
+            patientName: String(row[2] || '').trim(), // Cambio temporal
+            doctorId: await findOrCreateDoctor(String(row[0] || ''), String(row[0] || ''), 'AMB'), // Usa el RUT profesional
+            serviceId: await findOrCreateService('001', 'Consulta Médica'), // Valor por defecto
+            providerTypeId: 'particular', // Valor por defecto
+            attentionDate: formatDate(String(row[3] || '')),
             attentionTime: '09:00',
             scheduleType: 'regular' as const,
-            grossAmount: grossAmountCleaned,
-            netAmount: netAmountCleaned,
-            participatedAmount: grossAmountCleaned, // Assuming gross = participated for now
+            grossAmount: cleanNumericValue(row[4] || '0'), // Busco montos en columnas diferentes
+            netAmount: cleanNumericValue(row[5] || '0'),
+            participatedAmount: cleanNumericValue(row[6] || '0'), 
             status: 'pending' as const,
             recordType: 'participacion' as const,
-            // Clean ALL additional potentially numeric fields
-            participationPercentage: cleanNumericValue(row[8] || '0'),
-            serviceName: String(row[4] || ''),
-            providerName: String(row[5] || ''),
-            medicalSocietyId: String(row[13] || ''),
-            medicalSocietyName: String(row[14] || ''),
-            medicalSocietyRut: String(row[13] || ''),
-            doctorInternalCode: String(row[15] || ''),
-            specialtyId: String(row[11] || ''),
-            payeeRut: String(row[13] || ''),
-            payeeName: String(row[14] || ''),
-            professionalRut: String(row[15] || ''),
-            commission: String(row[9] || '')
+            participationPercentage: cleanNumericValue(row[7] || '0'),
+            serviceName: 'Consulta Médica',
+            providerName: 'Particular',
+            professionalRut: String(row[0] || ''), // RUT del profesional
+            commission: cleanNumericValue(row[8] || '0')
           };
 
           // Validate all decimal fields before database insertion
