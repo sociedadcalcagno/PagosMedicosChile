@@ -84,6 +84,8 @@ Preferred communication style: Simple, everyday language.
 - `memoizee`
 
 ## Recent Technical Improvements
+- **LATEST**: Increased import processing capacity from 100 to 500 records per batch for improved efficiency in handling large medical datasets
+- **LATEST**: Enhanced Excel date conversion system to properly handle serial number dates (45877 format) commonly exported from Oracle/PL-SQL Developer
 - **LATEST**: Completed comprehensive system cleanup by removing Oracle direct connection complexity and streamlining data transfer processes for better maintainability and cost efficiency
 - **LATEST**: Simplified import interface to focus on reliable file-based transfers (Excel/CSV) eliminating network connectivity challenges with private Oracle databases
 - **LATEST**: Fixed all TypeScript errors and code inconsistencies, resulting in a clean, stable codebase optimized for medical data import workflows
