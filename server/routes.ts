@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./replitAuth";
-import { setupMockAuth } from "./mockAuth";
+import { setupUnifiedAuth } from "./unifiedAuth";
 import { authMiddleware } from "./authMiddleware";
 import { honorariosAgent, type AIMessage } from "./openai";
 import { generateManualPDF } from "./pdfGenerator";
@@ -27,14 +27,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const sessionModule = await import("./session");
   await sessionModule.setupSession(app);
   
-  // Use mock auth for now (OAuth not configured yet)
-  // TODO: Setup real auth when OAuth is configured
-  // if (process.env.NODE_ENV === "production" && process.env.REPLIT_DOMAINS) {
-  //   await setupAuth(app);
-  // } else {
-    // Setup mock auth for development and deployment (multiple user testing)
-    setupMockAuth(app);
-  // }
+  // Setup unified authentication (username/password for all users)
+  setupUnifiedAuth(app);
 
   // Auth routes - support both real and mock auth
   app.get('/api/auth/user', async (req: any, res) => {

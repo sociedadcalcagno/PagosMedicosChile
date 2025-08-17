@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 export function useAuth() {
   const { data: user, isLoading, refetch } = useQuery({
-    queryKey: ["/api/auth/user"],
+    queryKey: ["/api/current-user"],
     retry: false,
     refetchOnWindowFocus: true,
     staleTime: 0, // Always refetch when component mounts

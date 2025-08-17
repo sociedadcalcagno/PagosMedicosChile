@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
-import Login from "@/pages/Login";
+import UnifiedLogin from "@/pages/UnifiedLogin";
 import Layout from "@/components/Layout";
 import Home from "@/pages/Home";
 import Users from "@/pages/Users";
@@ -43,7 +43,7 @@ function Router() {
     return (
       <Switch>
         <Route path="/professional-login" component={ProfessionalLogin} />
-        <Route component={Login} />
+        <Route component={UnifiedLogin} />
       </Switch>
     );
   }
