@@ -1697,16 +1697,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             attentionDate: formatDate(String(row[2] || '')), // 45876 - Fecha en formato Excel serial
             attentionTime: '09:00',
             scheduleType: 'regular' as const,
-            // MAPEO CORREGIDO para sistemas médicos chilenos típicos:
-            // row[0] parece ser ID único (51270341) - usar como referencia externa
-            // row[1] podría ser valor bruto o total
-            // row[9] valores pequeños (27, 195) - posible participación o porcentaje
-            // row[17] valores grandes (3295849) - posible valor bruto en centavos
-            grossAmount: cleanNumericValue(row[1] || '0'), // row[1]: 2343852 - valor considerable para bruto
-            netAmount: cleanNumericValue(row[9] || '0'), // row[9]: 27, 195 - valor neto o participación
-            participatedAmount: cleanNumericValue(row[16] || '0'), // row[16]: 3 - porcentaje o valor participado
-            // Agregar el ID del Excel como referencia
-            externalId: String(row[0] || ''), // ID del sistema externo para trazabilidad
+            // MAPEO FINAL CORRECTO basado en análisis de logs:
+            // Los valores grandes están en row[17]: 3295849 - ESTOS son los montos reales
+            // row[1]: 2343852 parece ser otro ID, NO monto bruto
+            // row[9]: 27 y row[16]: 3 son muy pequeños para montos médicos chilenos
+            grossAmount: cleanNumericValue(row[17] || '0'), // row[17]: 3295849 - VALOR REAL BRUTO
+            netAmount: cleanNumericValue(row[18] || '0'), // row[18]: 0 - VALOR NETO 
+            participatedAmount: cleanNumericValue(row[19] || '0'), // row[19]: 0 - VALOR PARTICIPADO
+            externalId: String(row[0] || ''), // row[0]: 51270341 - ID del Excel
             status: 'pending' as const,
             recordType: 'participacion' as const,
             participationPercentage: cleanNumericValue(row[16] || '0'), // 3 - Porcentaje

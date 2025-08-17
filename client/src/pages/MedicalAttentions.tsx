@@ -777,14 +777,16 @@ export default function MedicalAttentions() {
                     <div className="flex items-center space-x-2">
                       <CreditCard className="w-4 h-4 text-gray-500" />
                       <div>
-                        <p className="text-sm font-medium">Montos (Bruto/Neto/Participado)</p>
+                        <p className="text-sm font-medium">ID Excel: {attention.externalId}</p>
                         <p className="text-sm text-gray-600">
-                          ${parseFloat(attention.grossAmount).toLocaleString('es-CL')} / 
-                          ${parseFloat(attention.netAmount).toLocaleString('es-CL')} / 
-                          ${parseFloat(attention.participatedAmount).toLocaleString('es-CL')}
+                          Bruto: ${parseFloat(attention.grossAmount).toLocaleString('es-CL')}
                         </p>
                         <p className="text-xs text-gray-500">
-                          ID Excel: {attention.externalId || 'N/A'} | Servicio: {attention.serviceName}
+                          Neto: ${parseFloat(attention.netAmount).toLocaleString('es-CL')} | 
+                          Participado: ${parseFloat(attention.participatedAmount).toLocaleString('es-CL')}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {attention.serviceName}
                         </p>
                       </div>
                     </div>
