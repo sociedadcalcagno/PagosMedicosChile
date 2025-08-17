@@ -2622,7 +2622,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Doctor found: ${doctor.name} (${doctor.rut})`);
       
-      
       // For development, accept any password for existing doctors
       // In production, this would validate against a proper password hash
       if (password.length < 1) {
@@ -2643,6 +2642,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           firstName: doctor.name.split(' ')[0],
           lastName: doctor.name.split(' ').slice(1).join(' '),
           profileImageUrl: null,
+          profile: 'doctor', // Set doctor profile
         });
         
         // Link to doctor profile
@@ -2651,6 +2651,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Set session
       (req.session as any).mockUser = userId;
+      console.log(`Session set for doctor: ${userId}`);
       
       res.json({
         success: true,
@@ -2661,6 +2662,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
     } catch (error) {
       console.error('Professional login error:', error);
+      res.status(500).json({ message: 'Error interno del servidor' });
+    }
+  });
+
+  // Get current doctor information (for authenticated professionals)
+  app.get('/api/user-doctor', async (req: any, res) => {
+    try {
+      // Check if user is authenticated as a doctor
+      const mockUserId = (req.session as any)?.mockUser;
+      if (!mockUserId || !mockUserId.startsWith('doctor_')) {
+        return res.status(401).json({ message: "No doctor session found" });
+      }
+
+      // Extract doctor ID from user ID format: doctor_{doctorId}
+      const doctorId = mockUserId.replace('doctor_', '');
+      const doctor = await storage.getDoctorById(doctorId);
+      
+      if (!doctor) {
+        return res.status(404).json({ message: "Doctor not found" });
+      }
+
+      // Return doctor information
+      res.json({
+        id: doctor.id,
+        rut: doctor.rut,
+        name: doctor.name,
+        email: doctor.email,
+        phone: doctor.phone,
+        specialtyId: doctor.specialtyId,
+        societyType: doctor.societyType,
+        societyName: doctor.societyName,
+        paymentType: doctor.paymentType,
+        isActive: doctor.isActive
+      });
+    } catch (error) {
+      console.error('Error getting doctor info:', error);
       res.status(500).json({ message: 'Error interno del servidor' });
     }
   });

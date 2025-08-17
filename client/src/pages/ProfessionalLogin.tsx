@@ -54,7 +54,8 @@ export default function ProfessionalLogin() {
         title: "Acceso exitoso",
         description: `Bienvenido Dr./Dra. ${data.doctorName}`,
       });
-      setLocation('/dashboard');
+      // Force page reload to trigger proper routing
+      window.location.href = '/';
     },
     onError: (error: any) => {
       toast({
