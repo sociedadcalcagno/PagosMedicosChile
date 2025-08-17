@@ -29,10 +29,12 @@ export async function setupSession(app: Express) {
     store: store,
     resave: false,
     saveUninitialized: false,
+    name: 'medical.sid', // Custom session name to avoid conflicts
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: false, // Always false for development 
       maxAge: sessionTtl,
+      sameSite: 'lax', // Better for cross-origin requests
     },
   }));
 }
