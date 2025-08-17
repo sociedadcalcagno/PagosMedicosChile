@@ -225,9 +225,9 @@ export const serviceTariffs = pgTable("service_tariffs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   serviceId: varchar("service_id").notNull().references(() => services.id),
   providerTypeId: varchar("provider_type_id").notNull().references(() => providerTypes.id),
-  grossAmount: decimal("gross_amount", { precision: 10, scale: 2 }).notNull(), // Monto bruto
-  netAmount: decimal("net_amount", { precision: 10, scale: 2 }).notNull(), // Monto líquido
-  participatedAmount: decimal("participated_amount", { precision: 10, scale: 2 }).notNull(), // Monto participado
+  grossAmount: decimal("gross_amount", { precision: 15, scale: 2 }).notNull(), // Monto bruto
+  netAmount: decimal("net_amount", { precision: 15, scale: 2 }).notNull(), // Monto líquido
+  participatedAmount: decimal("participated_amount", { precision: 15, scale: 2 }).notNull(), // Monto participado
   validFrom: date("valid_from").notNull(),
   validTo: date("valid_to"),
   isActive: boolean("is_active").default(true),
@@ -249,10 +249,10 @@ export const medicalAttentions = pgTable("medical_attentions", {
   attentionTime: varchar("attention_time"), // HH:MM format
   scheduleType: varchar("schedule_type"), // 'regular', 'irregular', 'night'
   
-  // Amounts
-  grossAmount: decimal("gross_amount", { precision: 10, scale: 2 }).notNull(),
-  netAmount: decimal("net_amount", { precision: 10, scale: 2 }).notNull(),
-  participatedAmount: decimal("participated_amount", { precision: 10, scale: 2 }).notNull(),
+  // Amounts - increased precision to handle large Chilean peso amounts
+  grossAmount: decimal("gross_amount", { precision: 15, scale: 2 }).notNull(),
+  netAmount: decimal("net_amount", { precision: 15, scale: 2 }).notNull(),
+  participatedAmount: decimal("participated_amount", { precision: 15, scale: 2 }).notNull(),
   
   // Status
   status: varchar("status").notNull().default('pending'), // 'pending', 'calculated', 'paid'
@@ -288,10 +288,10 @@ export const paymentCalculations = pgTable("payment_calculations", {
   doctorId: varchar("doctor_id").notNull().references(() => doctors.id),
   
   // Calculation details
-  baseAmount: decimal("base_amount", { precision: 10, scale: 2 }).notNull(), // Amount used for calculation
+  baseAmount: decimal("base_amount", { precision: 15, scale: 2 }).notNull(), // Amount used for calculation
   ruleType: varchar("rule_type").notNull(), // 'percentage', 'fixed_amount'
-  ruleValue: decimal("rule_value", { precision: 10, scale: 2 }).notNull(), // Rule percentage or fixed amount
-  calculatedAmount: decimal("calculated_amount", { precision: 10, scale: 2 }).notNull(), // Final calculated payment
+  ruleValue: decimal("rule_value", { precision: 15, scale: 2 }).notNull(), // Rule percentage or fixed amount
+  calculatedAmount: decimal("calculated_amount", { precision: 15, scale: 2 }).notNull(), // Final calculated payment
   
   // Dates
   calculationDate: timestamp("calculation_date").defaultNow(),
@@ -314,8 +314,8 @@ export const payments = pgTable("payments", {
   periodYear: integer("period_year").notNull(),
   
   // Payment details
-  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  totalBrutAmount: decimal("total_brut_amount", { precision: 10, scale: 2 }),
+  totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).notNull(),
+  totalBrutAmount: decimal("total_brut_amount", { precision: 15, scale: 2 }),
   totalAttentions: integer("total_attentions").notNull(),
   paymentMethod: varchar("payment_method"), // 'transfer', 'check', 'deposit'
   
