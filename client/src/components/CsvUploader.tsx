@@ -156,7 +156,15 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
           // For Excel files, send as base64
           const arrayBuffer = e.target?.result as ArrayBuffer;
           const uint8Array = new Uint8Array(arrayBuffer);
-          const base64 = btoa(String.fromCharCode(...uint8Array));
+          
+          // Convert to base64 in chunks to avoid call stack overflow
+          let binaryString = '';
+          const chunkSize = 1024; // Process 1KB chunks
+          for (let i = 0; i < uint8Array.length; i += chunkSize) {
+            const chunk = uint8Array.slice(i, i + chunkSize);
+            binaryString += String.fromCharCode.apply(null, Array.from(chunk));
+          }
+          const base64 = btoa(binaryString);
           
           requestData = { excelData: base64, fileName: file.name };
           endpoint = recordType === 'participacion' 
@@ -222,9 +230,10 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
         reader.readAsText(file);
       }
     } catch (error) {
+      const fileType = file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls') ? 'Excel' : 'CSV';
       toast({
         title: "Error",
-        description: `Error al leer el archivo ${isExcel ? 'Excel' : 'CSV'}`,
+        description: `Error al leer el archivo ${fileType}`,
         variant: "destructive",
       });
       setIsProcessing(false);
