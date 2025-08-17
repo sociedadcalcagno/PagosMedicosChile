@@ -1655,7 +1655,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Necesito encontrar dónde están los valores reales: BRUTO=36252, PARTICIPADO=9788
           // Los logs muestran que row[17]=3295849 está mal
           
-          console.log(`Excel row ${index} MONTOS detallados:`, {
+          console.log(`Excel row ${rowIndex} MONTOS detallados:`, {
             row0: row[0], row1: row[1], row2: row[2], row3: row[3], row4: row[4],
             row5: row[5], row6: row[6], row7: row[7], row8: row[8], row9: row[9],
             row10: row[10], row11: row[11], row12: row[12], row13: row[13], row14: row[14],
