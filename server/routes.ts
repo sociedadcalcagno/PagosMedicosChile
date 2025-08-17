@@ -1588,14 +1588,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Parse Excel file
       const workbook = XLSX.read(buffer, { type: 'buffer' });
+      
+      console.log('Excel file analysis:', {
+        fileName: fileName,
+        sheetNames: workbook.SheetNames,
+        totalSheets: workbook.SheetNames.length
+      });
+      
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       
       // Convert to JSON (header row included)
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
       
-      console.log(`Excel file "${fileName}" loaded. Sheets: ${workbook.SheetNames.join(', ')}`);
-      console.log(`Data rows found: ${jsonData.length}`);
+      console.log(`Excel structure info:`, {
+        sheetUsed: sheetName,
+        dataRowsFound: jsonData.length,
+        headerRow: jsonData[0],
+        firstDataRow: jsonData[1],
+        sampleFromMiddle: jsonData[Math.floor(jsonData.length/2)]
+      });
       
       if (jsonData.length < 2) {
         return res.json({
