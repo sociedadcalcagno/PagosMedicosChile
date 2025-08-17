@@ -1673,6 +1673,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             row10: row[10], row11: row[11], row12: row[12], row13: row[13], row14: row[14],
             row15: row[15], row16: row[16], row17: row[17], row18: row[18], row19: row[19]
           });
+          
+          // BUSCAR VALORES ESPECÍFICOS: ID=51263438, BRUTO=162620, LIQUIDO=21141
+          console.log(`🔍 Buscando valores específicos en fila ${rowIndex}:`);
+          if (String(row[0]).includes('51263438') || String(row[1]).includes('162620') || String(row[2]).includes('21141')) {
+            console.log(`⭐ ENCONTRADO en fila ${rowIndex}:`, row);
+          }
 
           const attention = {
             patientRut: String(row[4] || ''), // '76375293-3' - RUT del paciente  
