@@ -1628,12 +1628,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
 
-          // Log raw values for debugging
-          console.log(`Excel row ${rowIndex} raw values:`, {
-            row6: row[6],
-            row7: row[7],
-            cleanedRow6: cleanNumericValue(row[6]),
-            cleanedRow7: cleanNumericValue(row[7])
+          // Log ALL raw values for debugging to understand the structure
+          console.log(`Excel row ${rowIndex} ALL columns:`, {
+            row0: row[0], row1: row[1], row2: row[2], row3: row[3], row4: row[4],
+            row5: row[5], row6: row[6], row7: row[7], row8: row[8], row9: row[9],
+            row10: row[10], row11: row[11], row12: row[12], row13: row[13], row14: row[14],
+            row15: row[15], row16: row[16], row17: row[17], row18: row[18], row19: row[19]
           });
 
           // Map Excel columns to attention object with proper data cleaning
