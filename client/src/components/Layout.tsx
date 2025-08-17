@@ -272,7 +272,18 @@ export default function Layout({ children }: LayoutProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => (window.location.href = "/api/logout")}
+                  onClick={async () => {
+                    try {
+                      await fetch('/api/unified-logout', { 
+                        method: 'GET',
+                        credentials: 'include'
+                      });
+                      window.location.href = '/';
+                    } catch (error) {
+                      console.error('Logout error:', error);
+                      window.location.href = '/';
+                    }
+                  }}
                   title="Cerrar sesión"
                 >
                   <LogOut className="w-4 h-4" />

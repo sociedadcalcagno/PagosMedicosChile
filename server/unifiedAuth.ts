@@ -67,7 +67,20 @@ export function setupUnifiedAuth(app: Express) {
         console.error('Logout error:', err);
       }
       res.clearCookie('medical.sid');
-      res.json({ message: 'Sesión cerrada' });
+      res.clearCookie('connect.sid');
+      res.json({ message: 'Sesión cerrada exitosamente' });
+    });
+  });
+
+  // También manejar logout legacy
+  app.get('/api/logout', (req, res) => {
+    req.session.destroy((err: any) => {
+      if (err) {
+        console.error('Logout error:', err);
+      }
+      res.clearCookie('medical.sid');
+      res.clearCookie('connect.sid');
+      res.json({ message: 'Sesión cerrada exitosamente' });
     });
   });
   

@@ -30,6 +30,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup unified authentication (username/password for all users)
   setupUnifiedAuth(app);
 
+  // Middleware to check unified auth for API routes
+  app.use('/api', (req, res, next) => {
+    // Skip auth check for login, logout, and current-user endpoints
+    const skipAuth = [
+      '/api/unified-login',
+      '/api/unified-logout', 
+      '/api/logout',
+      '/api/current-user',
+      '/api/auth/user'
+    ];
+    
+    if (skipAuth.includes(req.path)) {
+      return next();
+    }
+    
+    const userId = (req.session as any)?.unifiedUser;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    next();
+  });
+
   // Auth routes - support both real and mock auth
   app.get('/api/auth/user', async (req: any, res) => {
     // Try mock auth first (for development)
