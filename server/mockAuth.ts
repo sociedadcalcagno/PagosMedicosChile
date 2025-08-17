@@ -35,6 +35,15 @@ const mockUsers = [
     profileImageUrl: null,
     role: "user",
     linkedDoctorId: "doc003" // Vinculado al perfil del doctor
+  },
+  {
+    id: "mock_doctor_51263437",
+    email: "51263437@hospital.cl",
+    firstName: "Dr.",
+    lastName: "51263437-K",
+    profileImageUrl: null,
+    role: "user",
+    linkedDoctorId: "e406b03e-db40-456b-9c23-88b1ac48f669" // ID real del doctor
   }
 ];
 
