@@ -459,25 +459,40 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
                           <div className="w-3 h-3 bg-blue-600 rounded-full animate-pulse"></div>
                         </div>
                       </div>
-                      <span className="text-sm font-medium text-blue-700">Procesando datos médicos...</span>
+                      <div className="text-center">
+                        <span className="text-sm font-medium text-blue-700">Procesando datos médicos...</span>
+                        <div className="text-xs text-blue-500 mt-1">
+                          Estimado: ~{Math.round((uploadProgress * 100) / 1.1)} registros procesados
+                        </div>
+                      </div>
                     </div>
                     
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-blue-600">Importando registros</span>
+                        <span className="text-sm text-blue-600">Progreso de importación</span>
                         <span className="text-sm font-bold text-blue-700">{uploadProgress}%</span>
                       </div>
                       <div className="w-full bg-blue-200 rounded-full h-3 shadow-inner">
                         <div 
-                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500 shadow-sm" 
+                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500 shadow-sm relative" 
                           style={{ width: `${uploadProgress}%` }}
-                        ></div>
+                        >
+                          <div className="absolute inset-0 bg-white bg-opacity-20 animate-pulse rounded-full"></div>
+                        </div>
                       </div>
-                      <p className="text-xs text-blue-500 text-center">
-                        {uploadProgress < 50 ? "Validando estructura de datos..." : 
-                         uploadProgress < 90 ? "Procesando registros médicos..." : 
-                         "Finalizando importación..."}
-                      </p>
+                      <div className="flex justify-between text-xs text-blue-500">
+                        <span>
+                          {uploadProgress < 50 ? "🔍 Validando estructura..." : 
+                           uploadProgress < 90 ? "⚡ Procesando registros..." : 
+                           "✅ Finalizando..."}
+                        </span>
+                        <span className="font-mono">
+                          {uploadProgress < 30 ? "~0-2000 filas" :
+                           uploadProgress < 60 ? "~2000-5000 filas" :
+                           uploadProgress < 90 ? "~5000-8000 filas" :
+                           "~8000+ filas"}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
