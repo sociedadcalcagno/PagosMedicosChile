@@ -1647,7 +1647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           const attention = {
             patientRut: String(row[0] || ''),
-            patientName: String(row[1] || ''),
+            patientName: String(row[1] || '').trim(),
             doctorId: await findOrCreateDoctor(String(row[12] || ''), String(row[16] || ''), String(row[10] || '')),
             serviceId: await findOrCreateService(String(row[3] || ''), String(row[4] || '')),
             providerTypeId: getProviderTypeFromPrevision(String(row[5] || '')),
