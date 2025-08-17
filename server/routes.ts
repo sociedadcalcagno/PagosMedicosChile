@@ -2315,7 +2315,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   function formatDate(dateStr: string): string {
     if (!dateStr) return new Date().toISOString().split('T')[0];
     
-    const cleanDate = dateStr.trim();
+    const cleanDate = String(dateStr).trim();
+    
+    // Check if it's an Excel serial number (number > 1 and < 2958466 which is year 9999)
+    const numericValue = Number(cleanDate);
+    if (!isNaN(numericValue) && numericValue > 1 && numericValue < 2958466) {
+      console.log(`Converting Excel serial date: ${numericValue}`);
+      // Excel dates start from January 1, 1900 (but Excel incorrectly treats 1900 as a leap year)
+      // So we need to subtract 2 from the serial number to account for this bug
+      const excelEpoch = new Date(1899, 11, 30); // December 30, 1899 (adjusted for Excel bug)
+      const date = new Date(excelEpoch.getTime() + numericValue * 24 * 60 * 60 * 1000);
+      const result = date.toISOString().split('T')[0];
+      console.log(`Excel date ${numericValue} converted to ${result}`);
+      return result;
+    }
     
     // Handle DD-MMM-YY format (like "01-AUG-25")
     if (cleanDate.match(/^\d{2}-[A-Z]{3}-\d{2}$/)) {
@@ -2336,12 +2349,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Handle Oracle date format DD/MM/YYYY or YYYY-MM-DD
-    if (dateStr.includes('/')) {
-      const [day, month, year] = dateStr.split('/');
+    if (cleanDate.includes('/')) {
+      const [day, month, year] = cleanDate.split('/');
       return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
     
-    return dateStr.split('T')[0]; // Remove time part if exists
+    return cleanDate.split('T')[0]; // Remove time part if exists
   }
 
   function mapParticipacionStatus(status: string): string {
