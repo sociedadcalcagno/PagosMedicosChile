@@ -1532,7 +1532,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
 
+          // Log raw values for debugging
+          console.log(`Excel row ${rowIndex} raw values:`, {
+            row6: row[6],
+            row7: row[7],
+            cleanedRow6: cleanNumericValue(row[6]),
+            cleanedRow7: cleanNumericValue(row[7])
+          });
+
           // Map Excel columns to attention object with proper data cleaning
+          const grossAmountCleaned = cleanNumericValue(row[6]);
+          const netAmountCleaned = cleanNumericValue(row[7]);
+          
+          console.log(`Excel row ${rowIndex} cleaned amounts:`, {
+            grossAmount: grossAmountCleaned,
+            netAmount: netAmountCleaned
+          });
+
           const attention = {
             patientRut: String(row[0] || ''),
             patientName: String(row[1] || ''),
@@ -1542,15 +1558,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
             attentionDate: formatDate(String(row[2] || '')),
             attentionTime: '09:00',
             scheduleType: 'regular' as const,
-            grossAmount: cleanNumericValue(row[6]),
-            netAmount: cleanNumericValue(row[7]),
-            participatedAmount: cleanNumericValue(row[6]), // Assuming gross = participated for now
+            grossAmount: grossAmountCleaned,
+            netAmount: netAmountCleaned,
+            participatedAmount: grossAmountCleaned, // Assuming gross = participated for now
             status: 'pending' as const,
             recordType: 'participacion' as const,
+            // Clean ALL additional potentially numeric fields
+            participationPercentage: cleanNumericValue(row[8] || '0'),
+            serviceName: String(row[4] || ''),
+            providerName: String(row[5] || ''),
+            medicalSocietyId: String(row[13] || ''),
+            medicalSocietyName: String(row[14] || ''),
+            medicalSocietyRut: String(row[13] || ''),
+            doctorInternalCode: String(row[15] || ''),
+            specialtyId: String(row[11] || ''),
+            payeeRut: String(row[13] || ''),
+            payeeName: String(row[14] || ''),
+            professionalRut: String(row[15] || ''),
+            commission: String(row[9] || '')
           };
+
+          // Validate all decimal fields before database insertion
+          console.log(`Final validation for row ${rowIndex}:`, {
+            grossAmount: attention.grossAmount,
+            netAmount: attention.netAmount,
+            participatedAmount: attention.participatedAmount,
+            participationPercentage: attention.participationPercentage
+          });
 
           if (!attention.patientRut || !attention.patientName) {
             errors.push(`Fila ${rowIndex}: RUT y nombre del paciente son requeridos`);
+            continue;
+          }
+
+          // Double-check that decimal fields are valid before insertion
+          if (isNaN(parseFloat(attention.grossAmount)) || 
+              isNaN(parseFloat(attention.netAmount)) || 
+              isNaN(parseFloat(attention.participatedAmount))) {
+            errors.push(`Fila ${rowIndex}: Montos inválidos después de limpieza - bruto: ${attention.grossAmount}, neto: ${attention.netAmount}, participado: ${attention.participatedAmount}`);
             continue;
           }
 
@@ -2296,32 +2341,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Helper function to clean and validate numeric values
   function cleanNumericValue(value: any): string {
-    if (!value) return '0';
+    if (!value || value === null || value === undefined) return '0';
     
     const str = String(value).trim();
+    console.log(`Cleaning numeric value: "${str}"`);
     
-    // If it contains non-numeric characters except decimal point, extract only numbers
-    if (!/^[\d.,\-]+$/.test(str)) {
-      // Extract only digits and decimal points, remove everything else
-      const cleaned = str.replace(/[^\d.,]/g, '');
-      if (!cleaned || cleaned === '') return '0';
-      
-      // If multiple decimal points, keep only the first one
-      const parts = cleaned.split('.');
-      if (parts.length > 2) {
-        return parts[0] + '.' + parts.slice(1).join('');
-      }
-      
-      return cleaned || '0';
+    // If empty or just whitespace
+    if (!str || str === '') return '0';
+    
+    // Extract only digits, decimal points, and commas
+    const cleaned = str.replace(/[^\d.,]/g, '');
+    console.log(`After removing non-numeric: "${cleaned}"`);
+    
+    if (!cleaned || cleaned === '') return '0';
+    
+    // Replace comma with dot for decimal separator (handle European format)
+    let normalized = cleaned.replace(/,/g, '.');
+    
+    // If multiple decimal points, keep only the first one
+    const parts = normalized.split('.');
+    if (parts.length > 2) {
+      normalized = parts[0] + '.' + parts.slice(1).join('');
     }
-    
-    // Replace comma with dot for decimal separator
-    const normalized = str.replace(',', '.');
     
     // Validate it's a proper number
     const num = parseFloat(normalized);
-    if (isNaN(num)) return '0';
+    if (isNaN(num)) {
+      console.log(`Still not a valid number after cleaning: "${normalized}", returning 0`);
+      return '0';
+    }
     
+    console.log(`Final cleaned value: "${normalized}"`);
     return normalized;
   }
 
