@@ -15,7 +15,11 @@ import {
   insertMedicalCenterSchema,
   insertInsuranceTypeSchema,
   insertAgreementTypeSchema,
+  medicalAttentions,
+  paymentCalculations,
 } from "@shared/schema";
+import { db } from "./db";
+import { and, eq, gte, lte, desc, asc, inArray, sql, like, ilike } from "drizzle-orm";
 import * as XLSX from 'xlsx';
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -480,6 +484,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         error: 'Error al eliminar registros no procesados',
         details: error instanceof Error ? error.message : 'Error desconocido'
+      });
+    }
+  });
+
+  // Delete medical attentions by patient filter
+  app.delete('/api/medical-attentions/delete-by-patient', authMiddleware, async (req, res) => {
+    try {
+      const { patientName, patientRut } = req.body;
+      
+      if (!patientName && !patientRut) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Se requiere nombre o RUT del paciente' 
+        });
+      }
+
+      let deletedCount = 0;
+      
+      // Delete payment calculations first
+      if (patientName) {
+        const attentionsToDelete = await db.select({ id: medicalAttentions.id })
+          .from(medicalAttentions)
+          .where(ilike(medicalAttentions.patientName, `%${patientName}%`));
+        
+        if (attentionsToDelete.length > 0) {
+          const attentionIds = attentionsToDelete.map(a => a.id);
+          await db.delete(paymentCalculations)
+            .where(inArray(paymentCalculations.attentionId, attentionIds));
+        }
+        
+        const result = await db.delete(medicalAttentions)
+          .where(ilike(medicalAttentions.patientName, `%${patientName}%`));
+        deletedCount += result.rowCount || 0;
+      }
+      
+      if (patientRut) {
+        const attentionsToDelete = await db.select({ id: medicalAttentions.id })
+          .from(medicalAttentions)
+          .where(like(medicalAttentions.patientRut, `%${patientRut}%`));
+        
+        if (attentionsToDelete.length > 0) {
+          const attentionIds = attentionsToDelete.map(a => a.id);
+          await db.delete(paymentCalculations)
+            .where(inArray(paymentCalculations.attentionId, attentionIds));
+        }
+        
+        const result = await db.delete(medicalAttentions)
+          .where(like(medicalAttentions.patientRut, `%${patientRut}%`));
+        deletedCount += result.rowCount || 0;
+      }
+
+      res.json({ 
+        success: true, 
+        deletedCount,
+        message: `Se eliminaron ${deletedCount} registros del paciente` 
+      });
+    } catch (error) {
+      console.error('Error deleting attentions by patient:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Error al eliminar atenciones del paciente' 
+      });
+    }
+  });
+
+  // Delete all medical attentions (for complete cleanup)
+  app.delete('/api/medical-attentions/delete-all', authMiddleware, async (req, res) => {
+    try {
+      const { confirmText } = req.body;
+      
+      if (confirmText !== 'CONFIRMAR BORRADO TOTAL') {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Texto de confirmación incorrecto' 
+        });
+      }
+
+      // Delete payment calculations first (due to foreign key constraints)
+      const calcResult = await db.delete(paymentCalculations);
+      const attentionResult = await db.delete(medicalAttentions);
+      
+      res.json({ 
+        success: true, 
+        deletedAttentions: attentionResult.rowCount || 0,
+        deletedCalculations: calcResult.rowCount || 0,
+        message: 'Se eliminaron todos los registros correctamente'
+      });
+    } catch (error) {
+      console.error('Error deleting all attentions:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Error al eliminar todas las atenciones' 
       });
     }
   });

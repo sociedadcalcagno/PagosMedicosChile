@@ -84,6 +84,10 @@ Preferred communication style: Simple, everyday language.
 - `memoizee`
 
 ## Recent Technical Improvements
+- **LATEST**: Created comprehensive data cleanup system with patient-specific deletion and total system reset capabilities for efficient data management and reprocessing workflows
+- **LATEST**: Successfully resolved numeric overflow errors by expanding decimal precision from 10,2 to 15,2 to handle large Chilean peso amounts (millions)
+- **LATEST**: Implemented robust data cleaning function that converts problematic values like "14366756-1" to valid numbers "143667561" during Excel/CSV imports
+- **LATEST**: Added three-tier cleanup interface: delete unprocessed records, delete specific patient records, and complete system reset with confirmation
 - **LATEST**: Increased import processing capacity from 100 to 500 records per batch for improved efficiency in handling large medical datasets
 - **LATEST**: Enhanced Excel date conversion system to properly handle serial number dates (45877 format) commonly exported from Oracle/PL-SQL Developer
 - **LATEST**: Completed comprehensive system cleanup by removing Oracle direct connection complexity and streamlining data transfer processes for better maintainability and cost efficiency

@@ -46,6 +46,11 @@ export default function MedicalAttentions() {
   const [tempDateTo, setTempDateTo] = useState(""); // Fechas temporales para el filtro
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteRecordType, setDeleteRecordType] = useState<'participacion' | 'hmq' | 'all'>('all');
+  const [showCleanupModal, setShowCleanupModal] = useState(false);
+  const [cleanupPatientName, setCleanupPatientName] = useState('');
+  const [cleanupPatientRut, setCleanupPatientRut] = useState('');
+  const [showFullCleanupModal, setShowFullCleanupModal] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -143,6 +148,61 @@ export default function MedicalAttentions() {
       toast({
         title: "Error al eliminar registros",
         description: error.message || "No se pudieron eliminar los registros",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // New cleanup mutations
+  const deleteByPatientMutation = useMutation({
+    mutationFn: async ({ patientName, patientRut }: { patientName?: string; patientRut?: string }) => {
+      const response = await apiRequest('/api/medical-attentions/delete-by-patient', 'DELETE', { 
+        patientName, 
+        patientRut 
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "✅ Eliminación exitosa",
+        description: `Se eliminaron ${data.deletedCount} registros del paciente.`,
+        duration: 5000,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/medical-attentions'] });
+      setShowCleanupModal(false);
+      setCleanupPatientName('');
+      setCleanupPatientRut('');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error al eliminar registros",
+        description: error.message || "No se pudieron eliminar los registros del paciente",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteAllMutation = useMutation({
+    mutationFn: async (confirmText: string) => {
+      const response = await apiRequest('/api/medical-attentions/delete-all', 'DELETE', { 
+        confirmText 
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "✅ Borrado total completado",
+        description: `Se eliminaron ${data.deletedAttentions} atenciones y ${data.deletedCalculations} cálculos.`,
+        duration: 5000,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/medical-attentions'] });
+      setShowFullCleanupModal(false);
+      setConfirmText('');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error en borrado total",
+        description: error.message || "No se pudo realizar el borrado total",
         variant: "destructive",
       });
     },
@@ -255,6 +315,24 @@ export default function MedicalAttentions() {
           >
             <Trash2 className="w-4 h-4 mr-2" />
             Limpiar No Procesados
+          </Button>
+          <Button
+            onClick={() => setShowCleanupModal(true)}
+            variant="outline"
+            className="border-orange-200 text-orange-600 hover:bg-orange-50"
+            data-testid="button-cleanup-patient"
+          >
+            <User className="w-4 h-4 mr-2" />
+            Limpiar Paciente
+          </Button>
+          <Button
+            onClick={() => setShowFullCleanupModal(true)}
+            variant="outline"
+            className="border-red-300 text-red-700 hover:bg-red-100"
+            data-testid="button-cleanup-all"
+          >
+            <AlertTriangle className="w-4 h-4 mr-2" />
+            Borrado Total
           </Button>
           <CsvUploader onDataImported={handleDataImported} />
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -809,6 +887,136 @@ export default function MedicalAttentions() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal para limpiar registros de un paciente específico */}
+      <Dialog open={showCleanupModal} onOpenChange={setShowCleanupModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center text-orange-600">
+              <User className="w-5 h-5 mr-2" />
+              Limpiar Registros de Paciente
+            </DialogTitle>
+            <DialogDescription>
+              Elimina todos los registros de un paciente específico. Usa nombre o RUT para buscar.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="cleanup-patient-name">Nombre del Paciente</Label>
+              <Input
+                id="cleanup-patient-name"
+                placeholder="Ej: ALARCON STUARDO RAUL"
+                value={cleanupPatientName}
+                onChange={(e) => setCleanupPatientName(e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="cleanup-patient-rut">RUT del Paciente</Label>
+              <Input
+                id="cleanup-patient-rut"
+                placeholder="Ej: 14366756-1"
+                value={cleanupPatientRut}
+                onChange={(e) => setCleanupPatientRut(e.target.value)}
+              />
+            </div>
+            
+            <div className="bg-orange-50 border border-orange-200 p-3 rounded-md">
+              <p className="text-sm text-orange-800">
+                ⚠️ Se buscarán coincidencias parciales. Por ejemplo, "ALARCON" encontrará todos los pacientes con ese apellido.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setShowCleanupModal(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => deleteByPatientMutation.mutate({ 
+                patientName: cleanupPatientName || undefined, 
+                patientRut: cleanupPatientRut || undefined 
+              })}
+              disabled={(!cleanupPatientName && !cleanupPatientRut) || deleteByPatientMutation.isPending}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {deleteByPatientMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Eliminando...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Eliminar Registros
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para borrado total */}
+      <Dialog open={showFullCleanupModal} onOpenChange={setShowFullCleanupModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center text-red-700">
+              <AlertTriangle className="w-5 h-5 mr-2" />
+              Borrado Total del Sistema
+            </DialogTitle>
+            <DialogDescription>
+              Esta acción eliminará TODOS los registros de atenciones médicas y cálculos de pago.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-red-50 border border-red-200 p-3 rounded-md">
+              <p className="text-sm text-red-800 font-medium">
+                🚨 PELIGRO: Esta acción es IRREVERSIBLE
+              </p>
+              <p className="text-sm text-red-700 mt-1">
+                Se eliminarán permanentemente todas las atenciones médicas, cálculos de pago y datos relacionados.
+              </p>
+            </div>
+            
+            <div>
+              <Label htmlFor="confirm-text">Para confirmar, escribe: <strong>CONFIRMAR BORRADO TOTAL</strong></Label>
+              <Input
+                id="confirm-text"
+                placeholder="CONFIRMAR BORRADO TOTAL"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setShowFullCleanupModal(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => deleteAllMutation.mutate(confirmText)}
+              disabled={confirmText !== 'CONFIRMAR BORRADO TOTAL' || deleteAllMutation.isPending}
+              className="bg-red-700 hover:bg-red-800"
+            >
+              {deleteAllMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Eliminando Todo...
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  Borrar Todo
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
