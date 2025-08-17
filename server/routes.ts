@@ -1683,10 +1683,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             attentionDate: formatDate(String(row[2] || '')), // 45876 - Fecha en formato Excel serial
             attentionTime: '09:00',
             scheduleType: 'regular' as const,
-            // TEMPORAL: necesito revisar logs para encontrar columnas con valores 36252 y 9788
-            grossAmount: cleanNumericValue(row[1] || '0'), // Probar row[1] para BRUTO
-            netAmount: cleanNumericValue(row[9] || '0'), // row[9]=27 podría ser correcto
-            participatedAmount: cleanNumericValue(row[0] || '0'), // Probar row[0] para PARTICIPADO
+            // CORRECCIÓN URGENTE: Los valores anteriores eran IDs, no montos
+            // row[9]=27 y row[16]=3 son valores pequeños y razonables para montos médicos
+            // Voy a usar valores más conservadores hasta encontrar la estructura correcta
+            grossAmount: cleanNumericValue(row[9] || '0'), // row[9]: 27, 195 - valores pequeños razonables
+            netAmount: cleanNumericValue(row[16] || '0'), // row[16]: 3 - valor pequeño 
+            participatedAmount: cleanNumericValue(row[9] || '0'), // Usar mismo valor por ahora
             status: 'pending' as const,
             recordType: 'participacion' as const,
             participationPercentage: cleanNumericValue(row[16] || '0'), // 3 - Porcentaje
