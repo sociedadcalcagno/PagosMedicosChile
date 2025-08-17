@@ -1676,8 +1676,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // BUSCAR VALORES ESPECÍFICOS: ID=51263438, BRUTO=162620, LIQUIDO=21141
           console.log(`🔍 Buscando valores específicos en fila ${rowIndex}:`);
-          if (String(row[0]).includes('51263438') || String(row[1]).includes('162620') || String(row[2]).includes('21141')) {
-            console.log(`⭐ ENCONTRADO en fila ${rowIndex}:`, row);
+          let encontrado = false;
+          for (let i = 0; i < row.length; i++) {
+            const valor = String(row[i]);
+            if (valor.includes('51263438') || valor.includes('162620') || valor.includes('21141')) {
+              console.log(`⭐ VALOR ENCONTRADO en fila ${rowIndex}, columna ${i}: ${valor}`);
+              encontrado = true;
+            }
+          }
+          if (encontrado) {
+            console.log(`📋 FILA COMPLETA ${rowIndex}:`, row);
           }
 
           const attention = {
