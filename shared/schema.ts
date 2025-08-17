@@ -275,6 +275,7 @@ export const medicalAttentions = pgTable("medical_attentions", {
   
   // Commission and additional payment details
   commission: varchar("commission"), // COMISION
+  externalId: varchar("external_id"), // ID del sistema externo (Excel/Oracle)
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

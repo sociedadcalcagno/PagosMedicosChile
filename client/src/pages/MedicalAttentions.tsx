@@ -784,7 +784,7 @@ export default function MedicalAttentions() {
                           ${parseFloat(attention.participatedAmount).toLocaleString('es-CL')}
                         </p>
                         <p className="text-xs text-gray-500">
-                          ID Sistema: {attention.id.substring(0, 8)}... | Servicio: {attention.serviceName}
+                          ID Excel: {attention.externalId || 'N/A'} | Servicio: {attention.serviceName}
                         </p>
                       </div>
                     </div>
