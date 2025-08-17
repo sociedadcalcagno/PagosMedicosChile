@@ -1651,9 +1651,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // - row[1] probablemente sea el nombre del profesional (ALARCON STUARDO RAUL)
           // - Necesito identificar dónde están: RUT paciente, nombre paciente, montos reales
           
+          // Analizando la imagen del Excel vs los logs:
+          // Necesito encontrar dónde están los valores reales: BRUTO=36252, PARTICIPADO=9788
+          // Los logs muestran que row[17]=3295849 está mal
+          
+          console.log(`Excel row ${index} MONTOS detallados:`, {
+            row0: row[0], row1: row[1], row2: row[2], row3: row[3], row4: row[4],
+            row5: row[5], row6: row[6], row7: row[7], row8: row[8], row9: row[9],
+            row10: row[10], row11: row[11], row12: row[12], row13: row[13], row14: row[14],
+            row15: row[15], row16: row[16], row17: row[17], row18: row[18], row19: row[19]
+          });
+
           const attention = {
-            // MAPEO CORRECTO basado en la estructura real vista en logs
-            patientRut: String(row[4] || ''), // '76375293-3' - RUT del paciente
+            patientRut: String(row[4] || ''), // '76375293-3' - RUT del paciente  
             patientName: String(row[5] || '').trim(), // 'ALARCON VASQUEZ IMAGENOLOGIA MEDICA LTDA' - Nombre del paciente
             doctorId: await findOrCreateDoctor(String(row[6] || ''), String(row[7] || ''), String(row[8] || '')), // RUT, nombre y especialidad del profesional
             serviceId: await findOrCreateService(String(row[11] || ''), String(row[10] || '')), // Código y nombre del servicio
@@ -1661,9 +1671,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             attentionDate: formatDate(String(row[2] || '')), // 45876 - Fecha en formato Excel serial
             attentionTime: '09:00',
             scheduleType: 'regular' as const,
-            grossAmount: cleanNumericValue(row[17] || '0'), // 3295849 - Monto principal
-            netAmount: cleanNumericValue(row[9] || '0'), // 27 - Monto neto (probablemente en miles)
-            participatedAmount: cleanNumericValue(row[17] || '0'), // Usar el monto principal como participado
+            // TEMPORAL: necesito revisar logs para encontrar columnas con valores 36252 y 9788
+            grossAmount: cleanNumericValue(row[1] || '0'), // Probar row[1] para BRUTO
+            netAmount: cleanNumericValue(row[9] || '0'), // row[9]=27 podría ser correcto
+            participatedAmount: cleanNumericValue(row[0] || '0'), // Probar row[0] para PARTICIPADO
             status: 'pending' as const,
             recordType: 'participacion' as const,
             participationPercentage: cleanNumericValue(row[16] || '0'), // 3 - Porcentaje
