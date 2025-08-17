@@ -17,6 +17,7 @@ import {
   insertAgreementTypeSchema,
 } from "@shared/schema";
 import * as XLSX from 'xlsx';
+import oracledb from 'oracledb';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Always setup session middleware
@@ -893,6 +894,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // CSV Import endpoint for Participacion records
+  // Helper function to format Oracle dates
+  function formatOracleDate(oracleDate: any): string {
+    try {
+      if (!oracleDate) return new Date().toISOString().split('T')[0];
+      
+      // Oracle dates come as Date objects, convert to YYYY-MM-DD format
+      if (oracleDate instanceof Date) {
+        return oracleDate.toISOString().split('T')[0];
+      }
+      
+      // If it's a string, try to parse it
+      const parsed = new Date(oracleDate);
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toISOString().split('T')[0];
+      }
+      
+      // Fallback to current date
+      return new Date().toISOString().split('T')[0];
+    } catch (error) {
+      console.error('Error formatting Oracle date:', error);
+      return new Date().toISOString().split('T')[0];
+    }
+  }
+
   // Helper function to find or create service from CSV data
   async function findOrCreateService(serviceCode: string, serviceName: string) {
     try {
@@ -1718,6 +1743,261 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false,
         data: [],
         errors: [`Error interno del servidor: ${error}`],
+        total: 0,
+        imported: 0,
+      });
+    }
+  });
+
+  // Oracle Direct Connection endpoint for Participacion records
+  app.post('/api/import/oracle-participacion', authMiddleware, async (req, res) => {
+    try {
+      console.log('Oracle Participacion import started');
+      const { connectionString, username, password, tableName = 'TMP_REGISTROS_PARTICIPACION' } = req.body;
+      
+      if (!connectionString || !username || !password) {
+        return res.json({
+          success: false,
+          data: [],
+          errors: ['Se requieren las credenciales de Oracle: connectionString, username, password'],
+          total: 0,
+          imported: 0,
+        });
+      }
+
+      let connection;
+      try {
+        // Connect to Oracle database
+        connection = await oracledb.getConnection({
+          user: username,
+          password: password,
+          connectString: connectionString
+        });
+
+        console.log('Connected to Oracle database');
+
+        // Query the Oracle table - adjust column names based on your actual table structure
+        const result = await connection.execute(
+          `SELECT 
+            PAC_RUT as patient_rut,
+            PAC_NOMBRE as patient_name,
+            ATN_FECHA as attention_date,
+            PRES_CODIGO as service_code,
+            PRES_NOMBRE as service_name,
+            PRE_PREVISION as provider_name,
+            VAL_PARTICIPADO as participated_amount,
+            VAL_LIQUIDO as net_amount,
+            PORC_PARTICIPACION as participation_percentage,
+            ATN_HORARIO as attention_time,
+            ESP_ID as specialty_id,
+            ATN_ESTADO as status,
+            MED_ID as doctor_id,
+            SOC_ID as society_id,
+            NOMBRE_SOCIEDAD as society_name,
+            RUT_SOCIEDAD as society_rut,
+            CODIGO_INTERNO_MEDICO as doctor_internal_code
+          FROM ${tableName}
+          WHERE ROWNUM <= 100
+          ORDER BY ATN_FECHA DESC`
+        );
+
+        console.log(`Found ${result.rows.length} records in Oracle table ${tableName}`);
+
+        const errors: string[] = [];
+        const importedData: any[] = [];
+        let imported = 0;
+
+        for (let i = 0; i < result.rows.length; i++) {
+          try {
+            const row = result.rows[i] as any[];
+            const rowIndex = i + 1;
+            
+            // Map Oracle data to attention object
+            const attention = {
+              patientRut: String(row[0] || ''),
+              patientName: String(row[1] || ''),
+              doctorId: await findOrCreateDoctor(String(row[12] || ''), String(row[16] || ''), String(row[10] || '')),
+              serviceId: await findOrCreateService(String(row[3] || ''), String(row[4] || '')),
+              providerTypeId: getProviderTypeFromPrevision(String(row[5] || '')),
+              attentionDate: formatOracleDate(row[2]),
+              attentionTime: String(row[9] || '09:00'),
+              scheduleType: 'regular' as const,
+              grossAmount: String(row[6] || '0'),
+              netAmount: String(row[7] || '0'),
+              participatedAmount: String(row[6] || '0'),
+              status: 'pending' as const,
+              recordType: 'participacion' as const,
+            };
+
+            if (!attention.patientRut || !attention.patientName) {
+              errors.push(`Registro ${rowIndex}: RUT y nombre del paciente son requeridos`);
+              continue;
+            }
+
+            await storage.createMedicalAttention(attention);
+            importedData.push(attention);
+            imported++;
+          } catch (error) {
+            console.error(`Error processing Oracle row ${i + 1}:`, error);
+            errors.push(`Registro ${i + 1}: Error al procesar - ${error instanceof Error ? error.message : 'Error desconocido'}`);
+          }
+        }
+
+        console.log(`Oracle Participacion import complete. Found: ${result.rows.length}, Imported: ${imported}, Errors: ${errors.length}`);
+        res.json({
+          success: imported > 0,
+          data: importedData,
+          errors,
+          total: result.rows.length,
+          processed: result.rows.length,
+          imported,
+          recordType: 'participacion'
+        });
+
+      } finally {
+        if (connection) {
+          try {
+            await connection.close();
+            console.log('Oracle connection closed');
+          } catch (err) {
+            console.error('Error closing Oracle connection:', err);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error connecting to Oracle:', error);
+      res.status(500).json({
+        success: false,
+        data: [],
+        errors: [`Error de conexión a Oracle: ${error instanceof Error ? error.message : 'Error desconocido'}`],
+        total: 0,
+        imported: 0,
+      });
+    }
+  });
+
+  // Oracle Direct Connection endpoint for HMQ records
+  app.post('/api/import/oracle-hmq', authMiddleware, async (req, res) => {
+    try {
+      console.log('Oracle HMQ import started');
+      const { connectionString, username, password, tableName = 'TMP_REGISTROS_HMQ' } = req.body;
+      
+      if (!connectionString || !username || !password) {
+        return res.json({
+          success: false,
+          data: [],
+          errors: ['Se requieren las credenciales de Oracle: connectionString, username, password'],
+          total: 0,
+          imported: 0,
+        });
+      }
+
+      let connection;
+      try {
+        connection = await oracledb.getConnection({
+          user: username,
+          password: password,
+          connectString: connectionString
+        });
+
+        console.log('Connected to Oracle database for HMQ');
+
+        // Query the Oracle HMQ table
+        const result = await connection.execute(
+          `SELECT 
+            PAC_RUT as patient_rut,
+            PAC_NOMBRE as patient_name,
+            FECHA_CONSUMO as consumption_date,
+            PRES_CODIGO as service_code,
+            PRES_NOMBRE as service_name,
+            PREVISION_PACIENTE as provider_name,
+            VAL_BRUTO as gross_amount,
+            VAL_LIQUIDO as net_amount,
+            COMISION as commission,
+            VAL_RECAUDADO as collected_amount,
+            ESP_ID as specialty_id,
+            ESTADO as status,
+            BANCO_PARA_PAGO as bank_for_payment,
+            CUENTA_PARA_PAGO as account_for_payment,
+            MED_ID as doctor_id,
+            SOC_ID as society_id,
+            NOMBRE_SOCIEDAD as society_name,
+            RUT_SOCIEDAD as society_rut,
+            CODIGO_INTERNO_MEDICO as doctor_internal_code,
+            PARTICIPANTE as participant_name
+          FROM ${tableName}
+          WHERE ROWNUM <= 100
+          ORDER BY FECHA_CONSUMO DESC`
+        );
+
+        console.log(`Found ${result.rows.length} HMQ records in Oracle table ${tableName}`);
+
+        const errors: string[] = [];
+        const importedData: any[] = [];
+        let imported = 0;
+
+        for (let i = 0; i < result.rows.length; i++) {
+          try {
+            const row = result.rows[i] as any[];
+            const rowIndex = i + 1;
+            
+            const attention = {
+              patientRut: String(row[0] || ''),
+              patientName: String(row[1] || ''),
+              doctorId: await findOrCreateDoctor(String(row[14] || ''), String(row[18] || ''), String(row[10] || '')),
+              serviceId: await findOrCreateService(String(row[3] || ''), String(row[4] || '')),
+              providerTypeId: getProviderTypeFromPrevision(String(row[5] || '')),
+              attentionDate: formatOracleDate(row[2]),
+              attentionTime: '09:00',
+              scheduleType: 'regular' as const,
+              grossAmount: String(row[6] || '0'),
+              netAmount: String(row[7] || '0'),
+              participatedAmount: String(row[9] || '0'),
+              status: mapHmqStatus(String(row[11] || 'pending')),
+              recordType: 'hmq' as const,
+            };
+
+            if (!attention.patientRut || !attention.patientName) {
+              errors.push(`Registro ${rowIndex}: RUT y nombre del paciente son requeridos`);
+              continue;
+            }
+
+            await storage.createMedicalAttention(attention);
+            importedData.push(attention);
+            imported++;
+          } catch (error) {
+            console.error(`Error processing Oracle HMQ row ${i + 1}:`, error);
+            errors.push(`Registro ${i + 1}: Error al procesar - ${error instanceof Error ? error.message : 'Error desconocido'}`);
+          }
+        }
+
+        console.log(`Oracle HMQ import complete. Found: ${result.rows.length}, Imported: ${imported}, Errors: ${errors.length}`);
+        res.json({
+          success: imported > 0,
+          data: importedData,
+          errors,
+          total: result.rows.length,
+          processed: result.rows.length,
+          imported,
+          recordType: 'hmq'
+        });
+
+      } finally {
+        if (connection) {
+          try {
+            await connection.close();
+            console.log('Oracle HMQ connection closed');
+          } catch (err) {
+            console.error('Error closing Oracle HMQ connection:', err);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error connecting to Oracle for HMQ:', error);
+      res.status(500).json({
+        success: false,
+        data: [],
+        errors: [`Error de conexión a Oracle: ${error instanceof Error ? error.message : 'Error desconocido'}`],
         total: 0,
         imported: 0,
       });

@@ -90,4 +90,5 @@ Preferred communication style: Simple, everyday language.
 - **LATEST**: Added specific row number indicators for each import error with prominent visual badges, enabling users to easily locate and fix problematic lines in their CSV files
 - **LATEST**: Implemented intelligent CSV separator auto-detection system that automatically identifies the correct delimiter (comma, semicolon, pipe, or tab) by analyzing file structure, solving import issues caused by incorrect separators
 - **LATEST**: Added comprehensive Excel (.xlsx/.xls) file import support alongside CSV, eliminating data corruption issues from commas in medical descriptions and providing more reliable data integrity for Oracle exports
-- **Data Import**: Advanced system with CSV upload, API integration, and HIS connectivity, intelligent data mapping, and robust error handling.
+- **LATEST**: Implemented direct Oracle database connectivity for real-time data import from TMP_REGISTROS_PARTICIPACION and TMP_REGISTROS_HMQ tables, eliminating file export/import workflows and ensuring data accuracy
+- **Data Import**: Advanced system with CSV upload, Excel support, Oracle direct connection, API integration, and HIS connectivity, intelligent data mapping, and robust error handling.

@@ -40,6 +40,12 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
     dateFrom: "",
     dateTo: "",
   });
+  const [oracleConfig, setOracleConfig] = useState({
+    connectionString: "",
+    username: "",
+    password: "",
+    tableName: "",
+  });
   // Mock toast for now
   const toast = (options: any) => {
     console.log('Toast:', options.title, options.description);
@@ -231,6 +237,81 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
     }
   };
 
+  const handleOracleImport = async () => {
+    if (!oracleConfig.connectionString || !oracleConfig.username || !oracleConfig.password) {
+      toast({
+        title: "Error",
+        description: "Cadena de conexión, usuario y contraseña son requeridos",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    setUploadProgress(0);
+    setImportResult(null);
+
+    // Simular progreso de conexión
+    const progressInterval = setInterval(() => {
+      setUploadProgress(prev => Math.min(prev + 15, 90));
+    }, 500);
+
+    try {
+      const endpoint = recordType === 'participacion' 
+        ? '/api/import/oracle-participacion' 
+        : '/api/import/oracle-hmq';
+
+      const requestData = {
+        connectionString: oracleConfig.connectionString,
+        username: oracleConfig.username,
+        password: oracleConfig.password,
+        tableName: oracleConfig.tableName || undefined,
+      };
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+        credentials: 'include',
+      });
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
+      if (!response.ok) {
+        throw new Error('Error al conectar con Oracle');
+      }
+
+      const result = await response.json();
+      setImportResult(result);
+
+      if (result.success && result.data.length > 0) {
+        onDataImported(result.data);
+        toast({
+          title: "Importación exitosa desde Oracle",
+          description: `Se importaron ${result.imported} de ${result.total} registros desde Oracle`,
+        });
+      } else {
+        toast({
+          title: "Sin datos",
+          description: result.errors?.[0] || "No se encontraron datos para importar",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      clearInterval(progressInterval);
+      toast({
+        title: "Error de conexión",
+        description: "No se pudo conectar a la base de datos Oracle. Verifica las credenciales.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleApiImport = async () => {
     if (!apiConfig.url) {
       toast({
@@ -406,8 +487,9 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
         </Card>
 
         <Tabs defaultValue="csv" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="csv">Archivo</TabsTrigger>
+            <TabsTrigger value="oracle">Oracle</TabsTrigger>
             <TabsTrigger value="api">API Externa</TabsTrigger>
             <TabsTrigger value="his">Sistema HIS</TabsTrigger>
           </TabsList>
@@ -449,6 +531,94 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
                         className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="oracle" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Upload className="w-5 h-5 mr-2" />
+                  Conectar con Oracle
+                </CardTitle>
+                <CardDescription>
+                  {recordType === 'participacion' 
+                    ? 'Conecta directamente con Oracle para importar desde TMP_REGISTROS_PARTICIPACION'
+                    : 'Conecta directamente con Oracle para importar desde TMP_REGISTROS_HMQ'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="oracle-connection">Cadena de Conexión</Label>
+                  <Input
+                    id="oracle-connection"
+                    placeholder="hostname:port/service_name"
+                    value={oracleConfig.connectionString}
+                    onChange={(e) => setOracleConfig(prev => ({ ...prev, connectionString: e.target.value }))}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Ejemplo: localhost:1521/XE o database.empresa.com:1521/PROD
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="oracle-username">Usuario</Label>
+                    <Input
+                      id="oracle-username"
+                      placeholder="usuario_oracle"
+                      value={oracleConfig.username}
+                      onChange={(e) => setOracleConfig(prev => ({ ...prev, username: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="oracle-password">Contraseña</Label>
+                    <Input
+                      id="oracle-password"
+                      type="password"
+                      placeholder="contraseña"
+                      value={oracleConfig.password}
+                      onChange={(e) => setOracleConfig(prev => ({ ...prev, password: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="oracle-table">Nombre de Tabla (Opcional)</Label>
+                  <Input
+                    id="oracle-table"
+                    placeholder={recordType === 'participacion' ? 'TMP_REGISTROS_PARTICIPACION' : 'TMP_REGISTROS_HMQ'}
+                    value={oracleConfig.tableName}
+                    onChange={(e) => setOracleConfig(prev => ({ ...prev, tableName: e.target.value }))}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Deja vacío para usar la tabla por defecto
+                  </p>
+                </div>
+
+                <Button 
+                  onClick={handleOracleImport}
+                  disabled={isProcessing || !oracleConfig.connectionString || !oracleConfig.username || !oracleConfig.password}
+                  className="w-full"
+                >
+                  {isProcessing ? "Conectando..." : "Importar desde Oracle"}
+                </Button>
+
+                {isProcessing && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Conectando a Oracle...</span>
+                      <span className="text-sm">{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-green-600 h-2 rounded-full transition-all duration-300" 
                         style={{ width: `${uploadProgress}%` }}
                       ></div>
                     </div>
