@@ -1652,25 +1652,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // - Necesito identificar dónde están: RUT paciente, nombre paciente, montos reales
           
           const attention = {
-            // TEMPORALMENTE uso valores seguros mientras identifico la estructura
-            patientRut: String(row[1] || ''), // Cambio temporal 
-            patientName: String(row[2] || '').trim(), // Cambio temporal
-            doctorId: await findOrCreateDoctor(String(row[0] || ''), String(row[0] || ''), 'AMB'), // Usa el RUT profesional
-            serviceId: await findOrCreateService('001', 'Consulta Médica'), // Valor por defecto
-            providerTypeId: 'particular', // Valor por defecto
-            attentionDate: formatDate(String(row[3] || '')),
+            // MAPEO CORRECTO basado en la estructura real vista en logs
+            patientRut: String(row[4] || ''), // '76375293-3' - RUT del paciente
+            patientName: String(row[5] || '').trim(), // 'ALARCON VASQUEZ IMAGENOLOGIA MEDICA LTDA' - Nombre del paciente
+            doctorId: await findOrCreateDoctor(String(row[6] || ''), String(row[7] || ''), String(row[8] || '')), // RUT, nombre y especialidad del profesional
+            serviceId: await findOrCreateService(String(row[11] || ''), String(row[10] || '')), // Código y nombre del servicio
+            providerTypeId: getProviderTypeFromPrevision(String(row[13] || '')), // 'CONSALUD' - Tipo de prestador
+            attentionDate: formatDate(String(row[2] || '')), // 45876 - Fecha en formato Excel serial
             attentionTime: '09:00',
             scheduleType: 'regular' as const,
-            grossAmount: cleanNumericValue(row[4] || '0'), // Busco montos en columnas diferentes
-            netAmount: cleanNumericValue(row[5] || '0'),
-            participatedAmount: cleanNumericValue(row[6] || '0'), 
+            grossAmount: cleanNumericValue(row[17] || '0'), // 3295849 - Monto principal
+            netAmount: cleanNumericValue(row[9] || '0'), // 27 - Monto neto (probablemente en miles)
+            participatedAmount: cleanNumericValue(row[17] || '0'), // Usar el monto principal como participado
             status: 'pending' as const,
             recordType: 'participacion' as const,
-            participationPercentage: cleanNumericValue(row[7] || '0'),
-            serviceName: 'Consulta Médica',
-            providerName: 'Particular',
-            professionalRut: String(row[0] || ''), // RUT del profesional
-            commission: cleanNumericValue(row[8] || '0')
+            participationPercentage: cleanNumericValue(row[16] || '0'), // 3 - Porcentaje
+            serviceName: String(row[10] || ''), // Nombre del servicio
+            providerName: String(row[13] || ''), // Tipo de prestador
+            professionalRut: String(row[6] || ''), // RUT del profesional
+            professionalName: String(row[7] || ''), // Nombre del profesional
+            commission: cleanNumericValue(row[18] || '0') // 0 - Comisión
           };
 
           // Validate all decimal fields before database insertion
@@ -2429,7 +2430,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (previsionLower.includes('fonasa b')) return '9645c305-9ed3-4e5e-b9e9-28fbde66aa7a';
     if (previsionLower.includes('fonasa c')) return '96fb4a7a-7040-401f-8e84-c1fcff2fa9df';
     if (previsionLower.includes('fonasa d')) return '5ed37495-fe3e-4df6-a13c-445e1ee4e013';
-    if (previsionLower.includes('isapre')) return '62166e16-1766-42fe-b02a-cfb8b3082a14';
+    if (previsionLower.includes('consalud')) return '2f2fb1fa-eb6a-443e-aaaa-ad70cb1568e7'; // ISAPRE_CONSALUD
+    if (previsionLower.includes('banmedica')) return '16f71b19-ec30-49a7-8bec-0266664de412'; // ISAPRE_BANMEDICA
+    if (previsionLower.includes('colmena')) return '62166e16-1766-42fe-b02a-cfb8b3082a14'; // ISAPRE_COLMENA
+    if (previsionLower.includes('cruz blanca')) return 'ce1da615-24c1-49de-90dd-b6060ca069e8'; // ISAPRE_CRUZBLANC
+    if (previsionLower.includes('vida tres')) return 'f81b0b1f-5b06-4e7c-8e8b-212c445e7344'; // ISAPRE_VIDATRES
+    if (previsionLower.includes('isapre')) return '62166e16-1766-42fe-b02a-cfb8b3082a14'; // Generic ISAPRE
     if (previsionLower.includes('particular')) return 'c381abd7-3ba9-4623-928a-afa2dcb43dcb';
     return 'c381abd7-3ba9-4623-928a-afa2dcb43dcb'; // Default to particular
   }
