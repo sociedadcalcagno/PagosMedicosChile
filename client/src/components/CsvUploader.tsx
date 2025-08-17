@@ -198,6 +198,9 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
           setUploadProgress(100);
 
           if (!response.ok) {
+            if (response.status === 401) {
+              throw new Error('Sesión expirada. Inicia sesión nuevamente y vuelve a intentar.');
+            }
             throw new Error('Error al procesar el archivo CSV');
           }
 
@@ -214,8 +217,8 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
         } catch (error) {
           clearInterval(progressInterval);
           toast({
-            title: "Error",
-            description: `Error al procesar el archivo ${isExcel ? 'Excel' : 'CSV'}`,
+            title: "Error", 
+            description: error instanceof Error ? error.message : `Error al procesar el archivo ${isExcel ? 'Excel' : 'CSV'}`,
             variant: "destructive",
           });
         } finally {
