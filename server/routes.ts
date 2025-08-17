@@ -2601,12 +2601,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const doctors = await storage.getDoctors();
       console.log(`Total doctors in database: ${doctors.length}`);
       
-      // Normalize RUT for comparison
-      const normalizedInputRut = rut.trim().toUpperCase();
+      // Normalize RUT for comparison (remove dots and dashes, then add dash before digit verificator)
+      const cleanInputRut = rut.trim().replace(/\./g, '').toUpperCase();
       const doctor = doctors.find((d: any) => {
-        const normalizedDbRut = d.rut?.trim().toUpperCase();
-        console.log(`Comparing: "${normalizedInputRut}" === "${normalizedDbRut}"`);
-        return normalizedDbRut === normalizedInputRut;
+        const cleanDbRut = d.rut?.trim().replace(/\./g, '').toUpperCase();
+        console.log(`Comparing: "${cleanInputRut}" === "${cleanDbRut}"`);
+        return cleanDbRut === cleanInputRut;
       });
       
       if (!doctor) {
