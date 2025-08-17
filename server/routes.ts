@@ -40,9 +40,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auth/user', async (req: any, res) => {
     // Try mock auth first (for development)
     const mockUserId = (req.session as any)?.mockUser;
+    console.log(`Auth check - Session mockUser: ${mockUserId}`);
+    
     if (mockUserId) {
       try {
         const user = await storage.getUser(mockUserId);
+        console.log(`Auth check - User found: ${user ? user.id : 'not found'}`);
         if (user) {
           return res.json(user);
         }
@@ -2633,10 +2636,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         // Try to get existing user
-        await storage.getUser(userId);
+        const existingUser = await storage.getUser(userId);
+        console.log(`Existing user found: ${existingUser ? existingUser.id : 'none'}`);
       } catch (error) {
+        console.log(`Creating new user: ${userId}`);
         // User doesn't exist, create it
-        await storage.upsertUser({
+        const newUser = await storage.upsertUser({
           id: userId,
           email: doctor.email,
           firstName: doctor.name.split(' ')[0],
@@ -2644,9 +2649,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           profileImageUrl: null,
           profile: 'doctor', // Set doctor profile
         });
+        console.log(`User created: ${newUser.id}`);
         
         // Link to doctor profile
         await storage.linkUserToDoctor(userId, doctor.id);
+        console.log(`User linked to doctor: ${doctor.id}`);
       }
       
       // Set session
