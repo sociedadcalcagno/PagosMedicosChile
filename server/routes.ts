@@ -1178,8 +1178,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Procesar hasta 500 registros por motivos de rendimiento optimizado
-      const maxProcessedRecords = 500;
+      // Procesar hasta 2000 registros por motivos de rendimiento optimizado
+      const maxProcessedRecords = 2000;
       const totalRecords = lines.length - 1;
       let recordsToProcess = Math.min(totalRecords, maxProcessedRecords);
       const linesToProcess = lines.slice(0, recordsToProcess + 1); // +1 para incluir header
@@ -1429,8 +1429,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Procesar hasta 500 registros por motivos de rendimiento optimizado
-      const maxProcessedRecords = 500;
+      // Procesar hasta 2000 registros por motivos de rendimiento optimizado
+      const maxProcessedRecords = 2000;
       const totalRecords = lines.length - 1;
       let recordsToProcess = Math.min(totalRecords, maxProcessedRecords);
       const linesToProcess = lines.slice(0, recordsToProcess + 1); // +1 para incluir header
@@ -1620,7 +1620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Process data (skip header row)
-      const maxProcessedRecords = 500;
+      const maxProcessedRecords = 2000;
       const totalRecords = jsonData.length - 1;
       const recordsToProcess = Math.min(totalRecords, maxProcessedRecords);
       const dataToProcess = jsonData.slice(1, recordsToProcess + 1); // Skip header, process up to max
@@ -1821,7 +1821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Process data similar to HMQ CSV but with cleaner Excel data
-      const maxProcessedRecords = 500;
+      const maxProcessedRecords = 2000;
       const totalRecords = jsonData.length - 1;
       const recordsToProcess = Math.min(totalRecords, maxProcessedRecords);
       const dataToProcess = jsonData.slice(1, recordsToProcess + 1);
@@ -1913,8 +1913,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Procesar hasta 500 registros por motivos de rendimiento optimizado
-      const maxProcessedRecords = 500;
+      // Procesar hasta 2000 registros por motivos de rendimiento optimizado
+      const maxProcessedRecords = 2000;
       const totalRecords = lines.length - 1;
       let recordsToProcess = Math.min(totalRecords, maxProcessedRecords);
       const linesToProcess = lines.slice(0, recordsToProcess + 1); // +1 para incluir header
