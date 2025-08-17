@@ -1671,7 +1671,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             row0: row[0], row1: row[1], row2: row[2], row3: row[3], row4: row[4],
             row5: row[5], row6: row[6], row7: row[7], row8: row[8], row9: row[9],
             row10: row[10], row11: row[11], row12: row[12], row13: row[13], row14: row[14],
-            row15: row[15], row16: row[16], row17: row[17], row18: row[18], row19: row[19]
+            row15: row[15], row16: row[16], row17: row[17], row18: row[18], row19: row[19],
+            row20: row[20], row21: row[21], row22: row[22], row23: row[23], row24: row[24],
+            row25: row[25], row26: row[26], row27: row[27], row28: row[28], row29: row[29]
+          });
+          
+          console.log(`🎯 VALORES CORRECTOS fila ${rowIndex}:`, {
+            'ID (row[0])': row[0],
+            'BRUTO W (row[22])': row[22],
+            'NETO Y (row[24])': row[24], 
+            'PARTICIPADO AA (row[26])': row[26]
           });
           
           // BUSCAR VALORES ESPECÍFICOS: ID=51263438, BRUTO=162620, LIQUIDO=21141
@@ -1697,13 +1706,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             attentionDate: formatDate(String(row[2] || '')), // 45876 - Fecha en formato Excel serial
             attentionTime: '09:00',
             scheduleType: 'regular' as const,
-            // MAPEO FINAL CORRECTO basado en análisis de logs:
-            // Los valores grandes están en row[17]: 3295849 - ESTOS son los montos reales
-            // row[1]: 2343852 parece ser otro ID, NO monto bruto
-            // row[9]: 27 y row[16]: 3 son muy pequeños para montos médicos chilenos
-            grossAmount: cleanNumericValue(row[17] || '0'), // row[17]: 3295849 - VALOR REAL BRUTO
-            netAmount: cleanNumericValue(row[18] || '0'), // row[18]: 0 - VALOR NETO 
-            participatedAmount: cleanNumericValue(row[19] || '0'), // row[19]: 0 - VALOR PARTICIPADO
+            // MAPEO DEFINITIVO CORRECTO según columnas Excel especificadas:
+            // BRUTO: Columna W = row[22]
+            // NETO: Columna Y = row[24]
+            // PARTICIPADO: Columna AA = row[26]
+            grossAmount: cleanNumericValue(row[22] || '0'), // Columna W - BRUTO
+            netAmount: cleanNumericValue(row[24] || '0'), // Columna Y - NETO
+            participatedAmount: cleanNumericValue(row[26] || '0'), // Columna AA - PARTICIPADO
             externalId: String(row[0] || ''), // row[0]: 51270341 - ID del Excel
             status: 'pending' as const,
             recordType: 'participacion' as const,
