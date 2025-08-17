@@ -1222,25 +1222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
 
           // Helper function to safely format numbers with overflow protection
-          const safeNumber = (value: string): string => {
-            if (!value || value.trim() === '') return '0';
-            // Remove any non-numeric characters except dots and commas
-            const cleanValue = value.replace(/[^0-9.,]/g, '');
-            if (!cleanValue || cleanValue === '') return '0';
-            // Replace comma with dot for decimal separator
-            let numericValue = cleanValue.replace(',', '.');
-            
-            // Parse and validate the number
-            const parsedNumber = parseFloat(numericValue);
-            if (isNaN(parsedNumber)) return '0';
-            
-            // Limit to maximum value that fits in decimal(10,2) = 99999999.99
-            const maxValue = 99999999.99;
-            const limitedNumber = Math.min(Math.abs(parsedNumber), maxValue);
-            
-            // Return with 2 decimal places maximum
-            return limitedNumber.toFixed(2);
-          };
+          // Use the improved cleanNumericValue function;
 
           // Correct CSV mapping based on actual CSV structure:
           // 0:ID, 1:NUMERO_PAGO, 2:FECHA_SOLICITUD, 3:FECHA_PARTICIPACION, 4:RUT_PAGO, 5:NOMBRE_PAGADOR, 
@@ -1256,13 +1238,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             attentionDate: formatDate(values[14] || ''), // FECHA_ATENCION (01-AUG-25 format)
             attentionTime: '09:00', // Default time
             scheduleType: 'regular', // Default schedule
-            grossAmount: safeNumber(values[22]), // BRUTO (index 22)
-            netAmount: safeNumber(values[26]), // LIQUIDO (index 26) 
-            participatedAmount: safeNumber(values[24]), // PARTICIPADO (index 24)
+            grossAmount: cleanNumericValue(values[22]), // BRUTO (index 22)
+            netAmount: cleanNumericValue(values[26]), // LIQUIDO (index 26) 
+            participatedAmount: cleanNumericValue(values[24]), // PARTICIPADO (index 24)
             status: 'pending', // Default status
             recordType: 'participacion',
             // Additional fields
-            participationPercentage: safeNumber(values[23]), // PORCENTAGE_PARTICIPACION (index 23)
+            participationPercentage: cleanNumericValue(values[23]), // PORCENTAGE_PARTICIPACION (index 23)
             serviceName: values[12] || '', // NOMBRE_PRESTACION (index 12)
             providerName: values[13] || '', // PREVISION (index 13)
             // Medical society and doctor information
@@ -1276,7 +1258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             payeeRut: values[4] || '', // RUT_PAGO - quien recibe el pago
             payeeName: values[5] || '', // NOMBRE_PAGADOR - nombre del beneficiario  
             professionalRut: values[6] || '', // RUT_PROF - RUT del profesional que atendió
-            commission: safeNumber(values[25]) // COMISION (index 25)
+            commission: cleanNumericValue(values[25]) // COMISION (index 25)
           };
 
           if (!attention.patientRut || !attention.patientName) {
@@ -1550,7 +1532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
 
-          // Map Excel columns to attention object (same logic as CSV but cleaner data)
+          // Map Excel columns to attention object with proper data cleaning
           const attention = {
             patientRut: String(row[0] || ''),
             patientName: String(row[1] || ''),
@@ -1560,9 +1542,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             attentionDate: formatDate(String(row[2] || '')),
             attentionTime: '09:00',
             scheduleType: 'regular' as const,
-            grossAmount: String(row[6] || '0'),
-            netAmount: String(row[7] || '0'),
-            participatedAmount: String(row[6] || '0'), // Assuming gross = participated for now
+            grossAmount: cleanNumericValue(row[6]),
+            netAmount: cleanNumericValue(row[7]),
+            participatedAmount: cleanNumericValue(row[6]), // Assuming gross = participated for now
             status: 'pending' as const,
             recordType: 'participacion' as const,
           };
@@ -2310,6 +2292,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (previsionLower.includes('isapre')) return '62166e16-1766-42fe-b02a-cfb8b3082a14';
     if (previsionLower.includes('particular')) return 'c381abd7-3ba9-4623-928a-afa2dcb43dcb';
     return 'c381abd7-3ba9-4623-928a-afa2dcb43dcb'; // Default to particular
+  }
+
+  // Helper function to clean and validate numeric values
+  function cleanNumericValue(value: any): string {
+    if (!value) return '0';
+    
+    const str = String(value).trim();
+    
+    // If it contains non-numeric characters except decimal point, extract only numbers
+    if (!/^[\d.,\-]+$/.test(str)) {
+      // Extract only digits and decimal points, remove everything else
+      const cleaned = str.replace(/[^\d.,]/g, '');
+      if (!cleaned || cleaned === '') return '0';
+      
+      // If multiple decimal points, keep only the first one
+      const parts = cleaned.split('.');
+      if (parts.length > 2) {
+        return parts[0] + '.' + parts.slice(1).join('');
+      }
+      
+      return cleaned || '0';
+    }
+    
+    // Replace comma with dot for decimal separator
+    const normalized = str.replace(',', '.');
+    
+    // Validate it's a proper number
+    const num = parseFloat(normalized);
+    if (isNaN(num)) return '0';
+    
+    return normalized;
   }
 
   function formatDate(dateStr: string): string {
