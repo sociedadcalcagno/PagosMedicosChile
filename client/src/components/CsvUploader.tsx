@@ -565,6 +565,13 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
                   <p className="text-xs text-muted-foreground mt-1">
                     Ejemplo: localhost:1521/XE o database.empresa.com:1521/PROD
                   </p>
+                  <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-xs text-yellow-800 font-medium">⚠️ Conectividad de Red</p>
+                    <p className="text-xs text-yellow-700 mt-1">
+                      Replit no puede conectarse a IPs privadas (192.168.x.x, 10.x.x.x). 
+                      Necesitas una IP pública o configurar un túnel seguro.
+                    </p>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
