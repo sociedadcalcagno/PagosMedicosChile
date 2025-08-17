@@ -16,6 +16,7 @@ import {
   insertInsuranceTypeSchema,
   insertAgreementTypeSchema,
 } from "@shared/schema";
+import * as XLSX from 'xlsx';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Always setup session middleware
@@ -1478,6 +1479,241 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Error importing HMQ CSV:', error);
+      res.status(500).json({
+        success: false,
+        data: [],
+        errors: [`Error interno del servidor: ${error}`],
+        total: 0,
+        imported: 0,
+      });
+    }
+  });
+
+  // Excel Import endpoint for Participacion records
+  app.post('/api/import/excel-participacion', authMiddleware, async (req, res) => {
+    try {
+      console.log('Excel Participacion import started');
+      const { excelData, fileName } = req.body;
+      
+      if (!excelData) {
+        return res.json({
+          success: false,
+          data: [],
+          errors: ['Datos de Excel requeridos'],
+          total: 0,
+          imported: 0,
+        });
+      }
+
+      // Decode base64 to buffer
+      const buffer = Buffer.from(excelData, 'base64');
+      
+      // Parse Excel file
+      const workbook = XLSX.read(buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      
+      // Convert to JSON (header row included)
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      
+      console.log(`Excel file "${fileName}" loaded. Sheets: ${workbook.SheetNames.join(', ')}`);
+      console.log(`Data rows found: ${jsonData.length}`);
+      
+      if (jsonData.length < 2) {
+        return res.json({
+          success: false,
+          data: [],
+          errors: ['El archivo Excel debe contener al menos una fila de datos'],
+          total: 0,
+          imported: 0,
+        });
+      }
+
+      // Process data (skip header row)
+      const maxProcessedRecords = 100;
+      const totalRecords = jsonData.length - 1;
+      const recordsToProcess = Math.min(totalRecords, maxProcessedRecords);
+      const dataToProcess = jsonData.slice(1, recordsToProcess + 1); // Skip header, process up to max
+      
+      const errors: string[] = [];
+      const importedData: any[] = [];
+      let imported = 0;
+
+      for (let i = 0; i < dataToProcess.length; i++) {
+        try {
+          const row = dataToProcess[i] as any[];
+          const rowIndex = i + 2; // +2 because we skip header and array is 0-indexed
+          
+          // Validate minimum columns
+          if (!row || row.length < 15) {
+            errors.push(`Fila ${rowIndex}: Error al procesar - columnas insuficientes (encontradas: ${row?.length || 0}, requeridas: 15)`);
+            continue;
+          }
+
+          // Map Excel columns to attention object (same logic as CSV but cleaner data)
+          const attention = {
+            patientRut: String(row[0] || ''),
+            patientName: String(row[1] || ''),
+            doctorId: await findOrCreateDoctor(String(row[12] || ''), String(row[16] || ''), String(row[10] || '')),
+            serviceId: await findOrCreateService(String(row[3] || ''), String(row[4] || '')),
+            providerTypeId: getProviderTypeFromPrevision(String(row[5] || '')),
+            attentionDate: formatDate(String(row[2] || '')),
+            attentionTime: '09:00',
+            scheduleType: 'regular' as const,
+            grossAmount: String(row[6] || '0'),
+            netAmount: String(row[7] || '0'),
+            participatedAmount: String(row[6] || '0'), // Assuming gross = participated for now
+            status: 'pending' as const,
+            recordType: 'participacion' as const,
+          };
+
+          if (!attention.patientRut || !attention.patientName) {
+            errors.push(`Fila ${rowIndex}: RUT y nombre del paciente son requeridos`);
+            continue;
+          }
+
+          await storage.createMedicalAttention(attention);
+          importedData.push(attention);
+          imported++;
+        } catch (error) {
+          console.error(`Error processing Excel row ${i + 2}:`, error);
+          errors.push(`Fila ${i + 2}: Error al procesar - ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        }
+      }
+
+      // Add info message if processing was limited
+      if (totalRecords > maxProcessedRecords) {
+        errors.unshift(`Información: Se procesaron ${recordsToProcess} registros de ${totalRecords} totales. Para mejor rendimiento, el sistema procesa máximo ${maxProcessedRecords} registros por importación.`);
+      }
+
+      console.log(`Excel Participacion import complete. Total: ${totalRecords}, Processed: ${recordsToProcess}, Imported: ${imported}, Errors: ${errors.length}`);
+      res.json({
+        success: imported > 0,
+        data: importedData,
+        errors,
+        total: totalRecords,
+        processed: recordsToProcess,
+        imported,
+        recordType: 'participacion'
+      });
+    } catch (error) {
+      console.error('Error importing Excel Participacion:', error);
+      res.status(500).json({
+        success: false,
+        data: [],
+        errors: [`Error interno del servidor: ${error}`],
+        total: 0,
+        imported: 0,
+      });
+    }
+  });
+
+  // Excel Import endpoint for HMQ records
+  app.post('/api/import/excel-hmq', authMiddleware, async (req, res) => {
+    try {
+      console.log('Excel HMQ import started');
+      const { excelData, fileName } = req.body;
+      
+      if (!excelData) {
+        return res.json({
+          success: false,
+          data: [],
+          errors: ['Datos de Excel requeridos'],
+          total: 0,
+          imported: 0,
+        });
+      }
+
+      // Decode base64 to buffer
+      const buffer = Buffer.from(excelData, 'base64');
+      
+      // Parse Excel file
+      const workbook = XLSX.read(buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      
+      // Convert to JSON (header row included)
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      
+      console.log(`Excel HMQ file "${fileName}" loaded. Data rows found: ${jsonData.length}`);
+      
+      if (jsonData.length < 2) {
+        return res.json({
+          success: false,
+          data: [],
+          errors: ['El archivo Excel debe contener al menos una fila de datos'],
+          total: 0,
+          imported: 0,
+        });
+      }
+
+      // Process data similar to HMQ CSV but with cleaner Excel data
+      const maxProcessedRecords = 100;
+      const totalRecords = jsonData.length - 1;
+      const recordsToProcess = Math.min(totalRecords, maxProcessedRecords);
+      const dataToProcess = jsonData.slice(1, recordsToProcess + 1);
+      
+      const errors: string[] = [];
+      const importedData: any[] = [];
+      let imported = 0;
+
+      for (let i = 0; i < dataToProcess.length; i++) {
+        try {
+          const row = dataToProcess[i] as any[];
+          const rowIndex = i + 2;
+          
+          if (!row || row.length < 10) {
+            errors.push(`Fila ${rowIndex}: Error al procesar - columnas insuficientes (encontradas: ${row?.length || 0}, requeridas: 10)`);
+            continue;
+          }
+
+          // Map Excel HMQ columns to attention object
+          const attention = {
+            patientRut: String(row[0] || ''),
+            patientName: String(row[1] || ''),
+            doctorId: await findOrCreateDoctor(String(row[14] || ''), String(row[18] || ''), String(row[10] || '')),
+            serviceId: await findOrCreateService(String(row[3] || ''), String(row[4] || '')),
+            providerTypeId: getProviderTypeFromPrevision(String(row[5] || '')),
+            attentionDate: formatDate(String(row[2] || '')),
+            attentionTime: '09:00',
+            scheduleType: 'regular' as const,
+            grossAmount: String(row[6] || '0'),
+            netAmount: String(row[7] || '0'),
+            participatedAmount: String(row[9] || '0'),
+            status: mapHmqStatus(String(row[11] || 'pending')),
+            recordType: 'hmq' as const,
+          };
+
+          if (!attention.patientRut || !attention.patientName) {
+            errors.push(`Fila ${rowIndex}: RUT y nombre del paciente son requeridos`);
+            continue;
+          }
+
+          await storage.createMedicalAttention(attention);
+          importedData.push(attention);
+          imported++;
+        } catch (error) {
+          console.error(`Error processing Excel HMQ row ${i + 2}:`, error);
+          errors.push(`Fila ${i + 2}: Error al procesar - ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        }
+      }
+
+      if (totalRecords > maxProcessedRecords) {
+        errors.unshift(`Información: Se procesaron ${recordsToProcess} registros de ${totalRecords} totales. Para mejor rendimiento, el sistema procesa máximo ${maxProcessedRecords} registros por importación.`);
+      }
+
+      console.log(`Excel HMQ import complete. Total: ${totalRecords}, Processed: ${recordsToProcess}, Imported: ${imported}, Errors: ${errors.length}`);
+      res.json({
+        success: imported > 0,
+        data: importedData,
+        errors,
+        total: totalRecords,
+        processed: recordsToProcess,
+        imported,
+        recordType: 'hmq'
+      });
+    } catch (error) {
+      console.error('Error importing Excel HMQ:', error);
       res.status(500).json({
         success: false,
         data: [],

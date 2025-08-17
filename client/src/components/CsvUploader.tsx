@@ -127,10 +127,14 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.endsWith('.csv')) {
+    const isValidFile = file.name.toLowerCase().endsWith('.csv') || 
+                       file.name.toLowerCase().endsWith('.xlsx') || 
+                       file.name.toLowerCase().endsWith('.xls');
+    
+    if (!isValidFile) {
       toast({
         title: "Error",
-        description: "Solo se permiten archivos CSV",
+        description: "Solo se permiten archivos CSV, XLS o XLSX",
         variant: "destructive",
       });
       return;
@@ -140,19 +144,37 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
     setUploadProgress(0);
 
     try {
+      const isExcel = file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls');
+      
       // Read file content
       const reader = new FileReader();
       reader.onload = async (e) => {
-        const csvData = e.target?.result as string;
+        let requestData;
+        let endpoint;
+        
+        if (isExcel) {
+          // For Excel files, send as base64
+          const arrayBuffer = e.target?.result as ArrayBuffer;
+          const uint8Array = new Uint8Array(arrayBuffer);
+          const base64 = btoa(String.fromCharCode(...uint8Array));
+          
+          requestData = { excelData: base64, fileName: file.name };
+          endpoint = recordType === 'participacion' 
+            ? '/api/import/excel-participacion' 
+            : '/api/import/excel-hmq';
+        } else {
+          // For CSV files, send as text
+          const csvData = e.target?.result as string;
+          requestData = { csvData };
+          endpoint = recordType === 'participacion' 
+            ? '/api/import/csv-participacion' 
+            : '/api/import/csv-hmq';
+        }
         
         // Simular progreso de carga
         const progressInterval = setInterval(() => {
           setUploadProgress(prev => Math.min(prev + 10, 90));
         }, 200);
-
-        const endpoint = recordType === 'participacion' 
-          ? '/api/import/csv-participacion' 
-          : '/api/import/csv-hmq';
 
         try {
           const response = await fetch(endpoint, {
@@ -160,7 +182,7 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ csvData }),
+            body: JSON.stringify(requestData),
             credentials: 'include',
           });
 
@@ -185,7 +207,7 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
           clearInterval(progressInterval);
           toast({
             title: "Error",
-            description: "Error al procesar el archivo CSV",
+            description: `Error al procesar el archivo ${isExcel ? 'Excel' : 'CSV'}`,
             variant: "destructive",
           });
         } finally {
@@ -193,11 +215,16 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
         }
       };
       
-      reader.readAsText(file);
+      // Read file based on type
+      if (isExcel) {
+        reader.readAsArrayBuffer(file);
+      } else {
+        reader.readAsText(file);
+      }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Error al leer el archivo CSV",
+        description: `Error al leer el archivo ${isExcel ? 'Excel' : 'CSV'}`,
         variant: "destructive",
       });
       setIsProcessing(false);
@@ -380,7 +407,7 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
 
         <Tabs defaultValue="csv" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="csv">Archivo CSV</TabsTrigger>
+            <TabsTrigger value="csv">Archivo</TabsTrigger>
             <TabsTrigger value="api">API Externa</TabsTrigger>
             <TabsTrigger value="his">Sistema HIS</TabsTrigger>
           </TabsList>
@@ -390,7 +417,7 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <FileText className="w-5 h-5 mr-2" />
-                  Importar desde CSV
+                  Importar desde Archivo
                 </CardTitle>
                 <CardDescription>
                   {recordType === 'participacion' 
@@ -400,14 +427,17 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="csv-file">Seleccionar archivo CSV</Label>
+                  <Label htmlFor="csv-file">Seleccionar archivo CSV o Excel</Label>
                   <Input
                     id="csv-file"
                     type="file"
-                    accept=".csv"
+                    accept=".csv,.xlsx,.xls"
                     onChange={handleFileUpload}
                     disabled={isProcessing}
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Archivos soportados: CSV, XLS, XLSX (Excel recomendado para evitar problemas con comas en los datos)
+                  </p>
                 </div>
 
                 {isProcessing && (

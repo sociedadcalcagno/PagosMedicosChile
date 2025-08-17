@@ -89,3 +89,5 @@ Preferred communication style: Simple, everyday language.
 - **LATEST**: Enhanced import result display with professional error categorization, detailed solutions, and collapsible technical details for debugging
 - **LATEST**: Added specific row number indicators for each import error with prominent visual badges, enabling users to easily locate and fix problematic lines in their CSV files
 - **LATEST**: Implemented intelligent CSV separator auto-detection system that automatically identifies the correct delimiter (comma, semicolon, pipe, or tab) by analyzing file structure, solving import issues caused by incorrect separators
+- **LATEST**: Added comprehensive Excel (.xlsx/.xls) file import support alongside CSV, eliminating data corruption issues from commas in medical descriptions and providing more reliable data integrity for Oracle exports
+- **Data Import**: Advanced system with CSV upload, API integration, and HIS connectivity, intelligent data mapping, and robust error handling.
