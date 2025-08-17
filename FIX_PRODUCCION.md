@@ -1,7 +1,13 @@
 # Fix Rápido - Error 401 en Producción
 
 ## Problema
-La aplicación usa autenticación mock que solo funciona en desarrollo. En producción, las APIs devuelven 401.
+1. La aplicación usa autenticación mock que solo funciona en desarrollo
+2. **NUEVO:** Problema de configuración de dominio - accediendo desde `pagosmedicos.chile.cl` pero servidor en `172.24.34.93:5000`
+
+## Problemas identificados:
+- URL del navegador: `pagosmedicos.chile.cl`
+- Servidor real: `172.24.34.93:5000`
+- APIs devuelven 401 por problemas de comunicación
 
 ## Solución Temporal (Habilitar Mock Auth en Producción)
 
