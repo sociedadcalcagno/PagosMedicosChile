@@ -450,16 +450,34 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
                 </div>
 
                 {isProcessing && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Procesando archivo...</span>
-                      <span className="text-sm">{uploadProgress}%</span>
+                  <div className="space-y-4 p-4 bg-blue-50 rounded-lg border">
+                    <div className="flex items-center justify-center space-x-3">
+                      {/* Spinner médico animado */}
+                      <div className="relative">
+                        <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-3 h-3 bg-blue-600 rounded-full animate-pulse"></div>
+                        </div>
+                      </div>
+                      <span className="text-sm font-medium text-blue-700">Procesando datos médicos...</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                        style={{ width: `${uploadProgress}%` }}
-                      ></div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-blue-600">Importando registros</span>
+                        <span className="text-sm font-bold text-blue-700">{uploadProgress}%</span>
+                      </div>
+                      <div className="w-full bg-blue-200 rounded-full h-3 shadow-inner">
+                        <div 
+                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500 shadow-sm" 
+                          style={{ width: `${uploadProgress}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-xs text-blue-500 text-center">
+                        {uploadProgress < 50 ? "Validando estructura de datos..." : 
+                         uploadProgress < 90 ? "Procesando registros médicos..." : 
+                         "Finalizando importación..."}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -533,8 +551,22 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
                   disabled={isProcessing || !apiConfig.url}
                   className="w-full"
                 >
-                  {isProcessing ? "Importando..." : "Importar desde API"}
+                  {isProcessing ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Importando...</span>
+                    </div>
+                  ) : "Importar desde API"}
                 </Button>
+                
+                {isProcessing && (
+                  <div className="mt-4 p-3 bg-green-50 rounded-lg border">
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-6 h-6 border-3 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
+                      <span className="text-sm text-green-700">Conectando con API externa...</span>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -611,8 +643,22 @@ export function CsvUploader({ onDataImported }: CsvUploaderProps) {
                   disabled={isProcessing || !hisConfig.endpoint || !hisConfig.apiKey}
                   className="w-full"
                 >
-                  {isProcessing ? "Conectando..." : "Importar desde HIS"}
+                  {isProcessing ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Conectando...</span>
+                    </div>
+                  ) : "Importar desde HIS"}
                 </Button>
+                
+                {isProcessing && (
+                  <div className="mt-4 p-3 bg-purple-50 rounded-lg border">
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-6 h-6 border-3 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+                      <span className="text-sm text-purple-700">Conectando con sistema HIS...</span>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
