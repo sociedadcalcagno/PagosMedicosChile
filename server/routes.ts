@@ -678,6 +678,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint temporal para marcar un pago como procesado (para testing de cartola)
+  app.post('/api/mark-payment-as-paid', unifiedAuthCheck, async (req, res) => {
+    try {
+      const { paymentId } = req.body;
+      
+      // Marcar el pago como procesado y asignar fecha de pago
+      const [updatedPayment] = await db
+        .update(payments)
+        .set({ 
+          status: 'paid',
+          paymentDate: sql`CURRENT_DATE`,
+          processedAt: sql`CURRENT_TIMESTAMP`
+        })
+        .where(eq(payments.id, paymentId))
+        .returning();
+
+      res.json({ 
+        success: true, 
+        payment: updatedPayment,
+        message: 'Pago marcado como efectivamente realizado'
+      });
+    } catch (error) {
+      console.error('Error marking payment as paid:', error);
+      res.status(500).json({ error: "Failed to mark payment as paid" });
+    }
+  });
+
   // Provider Types endpoint
   app.get('/api/provider-types', unifiedAuthCheck, async (req, res) => {
     try {
@@ -809,72 +836,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const payrollData = await storage.calculatePayroll(month, year);
       const doctorPayroll = payrollData.find(p => p.doctorId === doctorId);
 
-      // Get real medical attentions data for this specific doctor
-      const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0);
+      // *** NUEVA LÓGICA: OBTENER SOLO ATENCIONES EFECTIVAMENTE PAGADAS ***
+      // La cartola debe mostrar únicamente las atenciones que fueron pagadas en el período consultado
+      const paidAttentionsRaw = await storage.getPaidAttentions(doctorId, month, year);
       
-      // Get participación attentions for this doctor
-      const participacionFilters = {
-        doctorId: doctorId,
-        dateFrom: startDate.toISOString().split('T')[0],
-        dateTo: endDate.toISOString().split('T')[0],
-        recordTypes: ['participacion']
-        // Include all statuses - pending and processed
-      };
-      
-      const participacionAttentionsRaw = await storage.getMedicalAttentions(participacionFilters);
-      const participacionAttentions = (participacionAttentionsRaw || []).map(att => ({
-        attentionDate: att.attentionDate,
-        patientRut: att.patientRut || 'No informado',
-        serviceCode: att.serviceName || '',
-        serviceName: att.serviceName || 'Servicio no especificado',
-        providerType: att.providerName || 'No informado',
-        baseAmount: att.grossAmount?.toString() || '0',
-        participationPercentage: att.participationPercentage || '0',
-        participatedAmount: att.participatedAmount || '0',
-        commissionAmount: att.netAmount?.toString() || '0'
-      }));
-      
-      // Get HMQ attentions for this doctor
-      const hmqFilters = {
-        doctorId: doctorId,
-        dateFrom: startDate.toISOString().split('T')[0],
-        dateTo: endDate.toISOString().split('T')[0],
-        recordTypes: ['hmq']
-        // Include all statuses - pending and processed
-      };
-      
-      const hmqAttentionsRaw = await storage.getMedicalAttentions(hmqFilters);
-      const hmqAttentions = (hmqAttentionsRaw || []).map(att => ({
-        attentionDate: att.attentionDate,
-        patientRut: att.patientRut || 'No informado',
-        serviceCode: att.serviceName || '',
-        serviceName: att.serviceName || 'Servicio no especificado',
-        providerType: att.providerName || 'No informado',
-        baseAmount: att.grossAmount?.toString() || '0',
-        participationPercentage: att.participationPercentage || '0',
-        participatedAmount: att.participatedAmount || '0',
-        commissionAmount: att.netAmount?.toString() || '0'
-      }));
-      
-      console.log(`DEBUG - Doctor ${doctorId}: Participaciones=${participacionAttentions.length}, HMQ=${hmqAttentions.length}`);
+      // Separar por tipo de record
+      const participacionAttentions = paidAttentionsRaw
+        .filter(att => att.recordType === 'participacion')
+        .map(att => ({
+          attentionDate: att.attentionDate,
+          patientRut: att.patientRut || 'No informado',
+          serviceCode: att.serviceName || '',
+          serviceName: att.serviceName || 'Servicio no especificado',
+          providerType: att.providerName || 'No informado',
+          baseAmount: att.grossAmount?.toString() || '0',
+          participationPercentage: att.participationPercentage || '0',
+          participatedAmount: att.participatedAmount || '0',
+          commissionAmount: att.netAmount?.toString() || '0',
+          paidAmount: att.paidAmount?.toString() || '0',
+          paymentDate: att.paymentDate
+        }));
 
-      // Check if there are no attentions at all
+      const hmqAttentions = paidAttentionsRaw
+        .filter(att => att.recordType === 'hmq')
+        .map(att => ({
+          attentionDate: att.attentionDate,
+          patientRut: att.patientRut || 'No informado',
+          serviceCode: att.serviceName || '',
+          serviceName: att.serviceName || 'Servicio no especificado',
+          providerType: att.providerName || 'No informado',
+          baseAmount: att.grossAmount?.toString() || '0',
+          participationPercentage: att.participationPercentage || '0',
+          participatedAmount: att.participatedAmount || '0',
+          commissionAmount: att.netAmount?.toString() || '0',
+          paidAmount: att.paidAmount?.toString() || '0',
+          paymentDate: att.paymentDate
+        }));
+      
+      console.log(`DEBUG - Doctor ${doctorId}: Atenciones PAGADAS en ${month}/${year} - Participaciones=${participacionAttentions.length}, HMQ=${hmqAttentions.length}`);
+
+      // Check if there are no paid attentions
       const hasAnyAttentions = participacionAttentions.length > 0 || hmqAttentions.length > 0;
 
-      // Calculate correct totals from the detailed data (participation amount minus commission)
+      // Calculate totals based on PAID amounts (not calculated amounts)
       const calculatedParticipacionTotal = participacionAttentions.reduce((sum, att) => {
-        const netAmount = parseFloat(att.participatedAmount) - parseFloat(att.commissionAmount);
-        console.log(`DEBUG - Participacion: ${att.participatedAmount} - ${att.commissionAmount} = ${netAmount}`);
-        return sum + netAmount;
+        const paidAmount = parseFloat(att.paidAmount || '0');
+        console.log(`DEBUG - Participacion PAGADA: ${att.paidAmount} (fecha pago: ${att.paymentDate})`);
+        return sum + paidAmount;
       }, 0);
       const calculatedHmqTotal = hmqAttentions.reduce((sum, att) => {
-        const netAmount = parseFloat(att.participatedAmount) - parseFloat(att.commissionAmount);
-        console.log(`DEBUG - HMQ: ${att.participatedAmount} - ${att.commissionAmount} = ${netAmount}`);
-        return sum + netAmount;
+        const paidAmount = parseFloat(att.paidAmount || '0');
+        console.log(`DEBUG - HMQ PAGADA: ${att.paidAmount} (fecha pago: ${att.paymentDate})`);
+        return sum + paidAmount;
       }, 0);
       
-      console.log(`DEBUG - TOTALES CALCULADOS: Participaciones=${calculatedParticipacionTotal}, HMQ=${calculatedHmqTotal}, Total=${calculatedParticipacionTotal + calculatedHmqTotal}`);
+      console.log(`DEBUG - TOTALES DE PAGOS EFECTIVOS: Participaciones=${calculatedParticipacionTotal}, HMQ=${calculatedHmqTotal}, Total=${calculatedParticipacionTotal + calculatedHmqTotal}`);
 
       // Import the PDF generator
       const { generatePayrollPDF } = await import('./pdfGenerator.js');
@@ -894,7 +910,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hmqTotal: calculatedHmqTotal,
         totalAmount: calculatedParticipacionTotal + calculatedHmqTotal,
         hasAnyAttentions, // Add flag to handle empty cartola case
-        noDataMessage: !hasAnyAttentions ? `No se encontraron atenciones médicas registradas para el período ${month}/${year}` : null
+        noDataMessage: !hasAnyAttentions ? `No se encontraron atenciones médicas PAGADAS para el período ${month}/${year}. Esta cartola muestra únicamente las atenciones efectivamente pagadas en este período.` : null
       };
 
       const pdfBuffer = await generatePayrollPDF(pdfData);
@@ -906,7 +922,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('PDF generated with pdfId:', pdfId);
       res.json({ 
-        message: hasAnyAttentions ? 'PDF generated successfully' : 'Cartola generada (sin atenciones registradas para este período)',
+        message: hasAnyAttentions ? 'Cartola de pagos efectivos generada exitosamente' : 'Cartola generada (sin pagos efectivos para este período)',
         doctorId,
         period: `${month}/${year}`,
         pdfId,

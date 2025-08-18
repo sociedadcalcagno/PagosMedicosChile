@@ -310,6 +310,9 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
         <div class="title">CARTOLA DE PAGO${data.participacionAttentions.length > 0 && data.hmqAttentions.length > 0 ? '' : data.participacionAttentions.length > 0 ? ' - Participaciones' : data.hmqAttentions.length > 0 ? ' - HMQ' : ''}</div>
         <div class="subtitle">PORTAL PAGOS MÉDICOS</div>
         <div class="date">FECHA PAGO: ${currentDate}</div>
+        <div style="text-align: center; font-size: 9px; color: #666; margin-top: 8px; font-style: italic;">
+            Atenciones efectivamente pagadas en ${monthNames[data.month - 1]} ${data.year}
+        </div>
     </div>
 
     <div class="cartola-info">

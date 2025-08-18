@@ -1190,6 +1190,75 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Obtener atenciones efectivamente pagadas en un período específico
+  async getPaidAttentions(doctorId: string, month: number, year: number): Promise<any[]> {
+    try {
+      // 1. Obtener pagos del doctor para el período especificado (por paymentDate)
+      const paidPayments = await db
+        .select({
+          id: payments.id,
+          paymentDate: payments.paymentDate,
+          status: payments.status
+        })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.doctorId, doctorId),
+            sql`EXTRACT(MONTH FROM ${payments.paymentDate}) = ${month}`,
+            sql`EXTRACT(YEAR FROM ${payments.paymentDate}) = ${year}`,
+            or(eq(payments.status, 'paid'), eq(payments.status, 'processed')) // Pagos realizados o procesados
+          )
+        );
+
+      if (paidPayments.length === 0) {
+        return [];
+      }
+
+      // 2. Para cada pago, obtener los cálculos asociados
+      const paidAttentions = [];
+      
+      for (const payment of paidPayments) {
+        // Obtener cálculos aprobados del período del pago
+        const calculations = await db
+          .select({
+            attentionId: paymentCalculations.attentionId,
+            calculatedAmount: paymentCalculations.calculatedAmount,
+            baseAmount: paymentCalculations.baseAmount,
+          })
+          .from(paymentCalculations)
+          .where(
+            and(
+              eq(paymentCalculations.doctorId, doctorId),
+              eq(paymentCalculations.periodMonth, month),
+              eq(paymentCalculations.periodYear, year),
+              eq(paymentCalculations.status, 'approved') // Cálculos ya procesados en el pago
+            )
+          );
+
+        // 3. Para cada cálculo, obtener la atención médica detallada
+        for (const calc of calculations) {
+          const attention = await db
+            .select()
+            .from(medicalAttentions)
+            .where(eq(medicalAttentions.id, calc.attentionId));
+          
+          if (attention.length > 0) {
+            paidAttentions.push({
+              ...attention[0],
+              paidAmount: calc.calculatedAmount,
+              paymentDate: payment.paymentDate
+            });
+          }
+        }
+      }
+
+      return paidAttentions;
+    } catch (error) {
+      console.error('Error fetching paid attentions:', error);
+      return [];
+    }
+  }
+
   // Obtener pagos realizados al doctor
   async getDoctorPayments(doctorId: string): Promise<any[]> {
     try {
