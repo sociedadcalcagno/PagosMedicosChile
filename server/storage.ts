@@ -1190,15 +1190,12 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Obtener atenciones efectivamente pagadas en un período específico
-  async getPaidAttentions(doctorId: string, month: number, year: number): Promise<any[]> {
+  // Get available payment dates in a month for a doctor
+  async getPaymentDatesInMonth(doctorId: string, month: number, year: number): Promise<string[]> {
     try {
-      // 1. Obtener pagos del doctor para el período especificado (por paymentDate)
-      const paidPayments = await db
-        .select({
-          id: payments.id,
-          paymentDate: payments.paymentDate,
-          status: payments.status
+      const paymentDates = await db
+        .selectDistinct({
+          paymentDate: payments.paymentDate
         })
         .from(payments)
         .where(
@@ -1206,9 +1203,52 @@ export class DatabaseStorage implements IStorage {
             eq(payments.doctorId, doctorId),
             sql`EXTRACT(MONTH FROM ${payments.paymentDate}) = ${month}`,
             sql`EXTRACT(YEAR FROM ${payments.paymentDate}) = ${year}`,
-            or(eq(payments.status, 'paid'), eq(payments.status, 'processed')) // Pagos realizados o procesados
+            or(eq(payments.status, 'paid'), eq(payments.status, 'processed')),
+            sql`${payments.paymentDate} IS NOT NULL`
           )
+        )
+        .orderBy(payments.paymentDate);
+
+      return paymentDates.map(p => p.paymentDate).filter(Boolean) as string[];
+    } catch (error) {
+      console.error('Error getting payment dates:', error);
+      return [];
+    }
+  }
+
+  // Obtener atenciones efectivamente pagadas en un período específico o fecha específica
+  async getPaidAttentions(doctorId: string, month: number, year: number, specificPaymentDate?: string): Promise<any[]> {
+    try {
+      // 1. Obtener pagos del doctor para el período especificado (por paymentDate)
+      // Si se especifica fecha exacta, filtrar por esa fecha específica
+      let paymentWhere = and(
+        eq(payments.doctorId, doctorId),
+        or(eq(payments.status, 'paid'), eq(payments.status, 'processed'))
+      );
+
+      if (specificPaymentDate) {
+        // Filtrar por fecha específica de pago
+        paymentWhere = and(
+          paymentWhere,
+          sql`DATE(${payments.paymentDate}) = ${specificPaymentDate}`
         );
+      } else {
+        // Filtrar por mes y año
+        paymentWhere = and(
+          paymentWhere,
+          sql`EXTRACT(MONTH FROM ${payments.paymentDate}) = ${month}`,
+          sql`EXTRACT(YEAR FROM ${payments.paymentDate}) = ${year}`
+        );
+      }
+
+      const paidPayments = await db
+        .select({
+          id: payments.id,
+          paymentDate: payments.paymentDate,
+          status: payments.status
+        })
+        .from(payments)
+        .where(paymentWhere);
 
       if (paidPayments.length === 0) {
         return [];

@@ -31,6 +31,8 @@ export default function DoctorDashboard() {
   const [activeTab, setActiveTab] = useState("pagos");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedPaymentDate, setSelectedPaymentDate] = useState<string | null>(null);
+  const [showPaymentDateSelector, setShowPaymentDateSelector] = useState(false);
   const { toast } = useToast();
 
   // Query para obtener los datos del doctor autenticado
@@ -51,10 +53,34 @@ export default function DoctorDashboard() {
     enabled: !!doctorProfile?.id,
   }) as { data: any[] | undefined };
 
+  // Query para obtener fechas de pago disponibles en el mes seleccionado
+  const { data: paymentDatesData } = useQuery({
+    queryKey: ['/api/payment-dates', doctorProfile?.id, selectedMonth, selectedYear],
+    queryFn: async () => {
+      if (!doctorProfile?.id) return { paymentDates: [], count: 0 };
+      
+      const response = await fetch(`/api/payment-dates/${doctorProfile.id}/${selectedMonth}/${selectedYear}`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch payment dates');
+      }
+      
+      return await response.json();
+    },
+    enabled: !!doctorProfile?.id && showPaymentDateSelector,
+  }) as { data: { paymentDates: string[]; count: number; message: string } | undefined };
+
   // Mutación para generar PDF de cartola
   const generateCartolaRDFMutation = useMutation({
     mutationFn: async () => {
       if (!doctorProfile?.id) throw new Error('Doctor profile not found');
+      
+      const requestBody: any = { month: selectedMonth, year: selectedYear };
+      if (selectedPaymentDate) {
+        requestBody.paymentDate = selectedPaymentDate;
+      }
       
       const response = await fetch(`/api/generate-payslip/${doctorProfile.id}`, {
         method: 'POST',
@@ -62,7 +88,7 @@ export default function DoctorDashboard() {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ month: selectedMonth, year: selectedYear })
+        body: JSON.stringify(requestBody)
       });
       
       if (!response.ok) {
@@ -484,11 +510,17 @@ export default function DoctorDashboard() {
                 <div className="space-y-6">
                   {/* Selección de período */}
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="font-medium text-gray-900 mb-3">Seleccionar Período</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <h3 className="font-medium text-gray-900 mb-3">Seleccionar Período para Cartola</h3>
+                    
+                    {/* Selectores de mes y año */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div>
                         <label className="text-sm font-medium text-gray-700 mb-2 block">Mes</label>
-                        <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
+                        <Select value={selectedMonth.toString()} onValueChange={(value) => {
+                          setSelectedMonth(parseInt(value));
+                          setSelectedPaymentDate(null); // Reset fecha específica
+                          setShowPaymentDateSelector(false);
+                        }}>
                           <SelectTrigger>
                             <SelectValue placeholder="Seleccionar mes" />
                           </SelectTrigger>
@@ -503,7 +535,11 @@ export default function DoctorDashboard() {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-700 mb-2 block">Año</label>
-                        <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                        <Select value={selectedYear.toString()} onValueChange={(value) => {
+                          setSelectedYear(parseInt(value));
+                          setSelectedPaymentDate(null); // Reset fecha específica
+                          setShowPaymentDateSelector(false);
+                        }}>
                           <SelectTrigger>
                             <SelectValue placeholder="Seleccionar año" />
                           </SelectTrigger>
@@ -514,6 +550,71 @@ export default function DoctorDashboard() {
                           </SelectContent>
                         </Select>
                       </div>
+                    </div>
+
+                    {/* Opción para seleccionar fecha específica */}
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-medium text-gray-700">Filtros Adicionales</h4>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setShowPaymentDateSelector(!showPaymentDateSelector);
+                            if (!showPaymentDateSelector) {
+                              setSelectedPaymentDate(null);
+                            }
+                          }}
+                          className="text-xs"
+                        >
+                          {showPaymentDateSelector ? "Ver todas las del mes" : "Por fecha específica"}
+                        </Button>
+                      </div>
+
+                      {/* Selector de fechas específicas */}
+                      {showPaymentDateSelector && (
+                        <div className="bg-blue-50 p-3 rounded-md">
+                          <label className="text-sm font-medium text-blue-900 mb-2 block">
+                            Fecha de Pago Específica
+                          </label>
+                          {paymentDatesData && paymentDatesData.paymentDates.length > 0 ? (
+                            <Select 
+                              value={selectedPaymentDate || ""} 
+                              onValueChange={(value) => setSelectedPaymentDate(value || null)}
+                            >
+                              <SelectTrigger className="bg-white">
+                                <SelectValue placeholder="Seleccionar fecha de pago" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">Todas las fechas del mes</SelectItem>
+                                {paymentDatesData.paymentDates.map((date) => (
+                                  <SelectItem key={date} value={date}>
+                                    {new Date(date).toLocaleDateString('es-CL', { 
+                                      weekday: 'short', 
+                                      year: 'numeric', 
+                                      month: 'short', 
+                                      day: 'numeric' 
+                                    })}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div className="text-center py-4 text-blue-600">
+                              <Clock className="w-8 h-8 mx-auto mb-2 text-blue-400" />
+                              <p className="text-sm">
+                                {paymentDatesData?.message || "No hay pagos efectivos en este período"}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {selectedPaymentDate && (
+                            <div className="mt-3 p-2 bg-blue-100 rounded text-sm text-blue-800">
+                              <strong>Filtro activo:</strong> Solo atenciones pagadas el {new Date(selectedPaymentDate).toLocaleDateString('es-CL')}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -530,14 +631,33 @@ export default function DoctorDashboard() {
                             <p className="text-sm text-gray-600 mb-4">
                               Descarga tu liquidación profesional del período seleccionado con formato PDF oficial
                             </p>
-                            <Button 
-                              onClick={() => generateCartolaRDFMutation.mutate()}
-                              disabled={generateCartolaRDFMutation.isPending}
-                              className="w-full bg-green-600 hover:bg-green-700 shadow-lg text-white font-medium"
-                            >
-                              <Download className="w-4 h-4 mr-2" />
-                              {generateCartolaRDFMutation.isPending ? "Generando PDF..." : "Generar Cartola PDF"}
-                            </Button>
+                            <div className="space-y-3">
+                              {selectedPaymentDate && (
+                                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                                  <div className="flex items-center space-x-2 text-blue-800">
+                                    <Calendar className="w-4 h-4" />
+                                    <span className="text-sm font-medium">
+                                      Cartola para fecha específica: {new Date(selectedPaymentDate).toLocaleDateString('es-CL')}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-blue-600 mt-1">
+                                    Solo se incluirán atenciones pagadas en esta fecha
+                                  </p>
+                                </div>
+                              )}
+                              
+                              <Button 
+                                onClick={() => generateCartolaRDFMutation.mutate()}
+                                disabled={generateCartolaRDFMutation.isPending}
+                                className="w-full bg-green-600 hover:bg-green-700 shadow-lg text-white font-medium"
+                              >
+                                <Download className="w-4 h-4 mr-2" />
+                                {generateCartolaRDFMutation.isPending ? "Generando PDF..." : 
+                                  selectedPaymentDate ? `Generar Cartola - ${new Date(selectedPaymentDate).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}` : 
+                                  `Generar Cartola - ${new Date(2025, selectedMonth - 1).toLocaleDateString('es-CL', { month: 'long' })} ${selectedYear}`
+                                }
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </CardContent>

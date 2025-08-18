@@ -17,6 +17,7 @@ import {
   insertAgreementTypeSchema,
   medicalAttentions,
   paymentCalculations,
+  payments as paymentsTable,
 } from "@shared/schema";
 import { db } from "./db";
 import { and, eq, gte, lte, desc, asc, inArray, sql, like, ilike } from "drizzle-orm";
@@ -678,6 +679,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Obtener fechas de pago disponibles en un mes para un doctor
+  app.get('/api/payment-dates/:doctorId/:month/:year', unifiedAuthCheck, async (req, res) => {
+    try {
+      const { doctorId, month, year } = req.params;
+      const paymentDates = await storage.getPaymentDatesInMonth(doctorId, parseInt(month), parseInt(year));
+      
+      res.json({ 
+        paymentDates,
+        count: paymentDates.length,
+        message: paymentDates.length > 0 
+          ? `Se encontraron ${paymentDates.length} fechas de pago en ${month}/${year}`
+          : `No se encontraron pagos efectivos en ${month}/${year}`
+      });
+    } catch (error) {
+      console.error('Error fetching payment dates:', error);
+      res.status(500).json({ error: "Failed to fetch payment dates" });
+    }
+  });
+
   // Endpoint temporal para marcar un pago como procesado (para testing de cartola)
   app.post('/api/mark-payment-as-paid', unifiedAuthCheck, async (req, res) => {
     try {
@@ -685,13 +705,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Marcar el pago como procesado y asignar fecha de pago
       const [updatedPayment] = await db
-        .update(payments)
+        .update(paymentsTable)
         .set({ 
           status: 'paid',
           paymentDate: sql`CURRENT_DATE`,
           processedAt: sql`CURRENT_TIMESTAMP`
         })
-        .where(eq(payments.id, paymentId))
+        .where(eq(paymentsTable.id, paymentId))
         .returning();
 
       res.json({ 
@@ -817,7 +837,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/generate-payslip/:doctorId', unifiedAuthCheck, async (req, res) => {
     try {
       const { doctorId } = req.params;
-      const { month, year } = req.body;
+      const { month, year, paymentDate } = req.body; // Agregar paymentDate opcional
       
       // Get doctor information
       const doctor = await storage.getDoctorById(doctorId);
@@ -837,8 +857,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const doctorPayroll = payrollData.find(p => p.doctorId === doctorId);
 
       // *** NUEVA LÓGICA: OBTENER SOLO ATENCIONES EFECTIVAMENTE PAGADAS ***
-      // La cartola debe mostrar únicamente las atenciones que fueron pagadas en el período consultado
-      const paidAttentionsRaw = await storage.getPaidAttentions(doctorId, month, year);
+      // La cartola puede mostrar todas las del mes o solo las de una fecha específica de pago
+      const paidAttentionsRaw = await storage.getPaidAttentions(doctorId, month, year, paymentDate);
       
       // Separar por tipo de record
       const participacionAttentions = paidAttentionsRaw
@@ -873,7 +893,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           paymentDate: att.paymentDate
         }));
       
-      console.log(`DEBUG - Doctor ${doctorId}: Atenciones PAGADAS en ${month}/${year} - Participaciones=${participacionAttentions.length}, HMQ=${hmqAttentions.length}`);
+      const filterDesc = paymentDate ? `fecha específica ${paymentDate}` : `mes ${month}/${year}`;
+      console.log(`DEBUG - Doctor ${doctorId}: Atenciones PAGADAS en ${filterDesc} - Participaciones=${participacionAttentions.length}, HMQ=${hmqAttentions.length}`);
 
       // Check if there are no paid attentions
       const hasAnyAttentions = participacionAttentions.length > 0 || hmqAttentions.length > 0;
@@ -910,7 +931,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hmqTotal: calculatedHmqTotal,
         totalAmount: calculatedParticipacionTotal + calculatedHmqTotal,
         hasAnyAttentions, // Add flag to handle empty cartola case
-        noDataMessage: !hasAnyAttentions ? `No se encontraron atenciones médicas PAGADAS para el período ${month}/${year}. Esta cartola muestra únicamente las atenciones efectivamente pagadas en este período.` : null
+        noDataMessage: !hasAnyAttentions ? `No se encontraron atenciones médicas PAGADAS para ${paymentDate ? `la fecha ${paymentDate}` : `el período ${month}/${year}`}. Esta cartola muestra únicamente las atenciones efectivamente pagadas${paymentDate ? ' en esta fecha específica' : ' en este período'}.` : null
       };
 
       const pdfBuffer = await generatePayrollPDF(pdfData);
@@ -922,7 +943,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('PDF generated with pdfId:', pdfId);
       res.json({ 
-        message: hasAnyAttentions ? 'Cartola de pagos efectivos generada exitosamente' : 'Cartola generada (sin pagos efectivos para este período)',
+        message: hasAnyAttentions ? 
+          `Cartola de pagos efectivos generada${paymentDate ? ` para ${paymentDate}` : ` para ${month}/${year}`}` : 
+          `Cartola generada (sin pagos efectivos para ${paymentDate ? paymentDate : `${month}/${year}`})`,
         doctorId,
         period: `${month}/${year}`,
         pdfId,
