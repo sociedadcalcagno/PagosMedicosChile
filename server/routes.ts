@@ -30,28 +30,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup unified authentication (username/password for all users)
   setupUnifiedAuth(app);
 
-  // Middleware to check unified auth for API routes
-  app.use('/api', (req, res, next) => {
-    // Skip auth check for login, logout, and current-user endpoints
-    const skipAuth = [
-      '/api/unified-login',
-      '/api/unified-logout', 
-      '/api/logout',
-      '/api/current-user',
-      '/api/auth/user'
-    ];
-    
-    if (skipAuth.includes(req.path)) {
-      return next();
-    }
-    
+  // Middleware personalizado para autenticación unificada
+  const unifiedAuthCheck = (req: any, res: any, next: any) => {
     const userId = (req.session as any)?.unifiedUser;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-    
     next();
-  });
+  };
 
   // Auth routes - support both real and mock auth
   app.get('/api/auth/user', async (req: any, res) => {
@@ -92,7 +78,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Link/unlink doctor profile
-  app.post('/api/link-doctor', authMiddleware, async (req: any, res) => {
+  app.post('/api/link-doctor', unifiedAuthCheck, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { doctorId } = req.body;
@@ -104,7 +90,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/unlink-doctor', authMiddleware, async (req: any, res) => {
+  app.post('/api/unlink-doctor', unifiedAuthCheck, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       await storage.unlinkUserFromDoctor(userId);
@@ -115,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/user-doctor', authMiddleware, async (req: any, res) => {
+  app.get('/api/user-doctor', unifiedAuthCheck, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const userDoctor = await storage.getUserDoctor(userId);
@@ -127,7 +113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Agent routes
-  app.post('/api/ai/chat', authMiddleware, async (req: any, res) => {
+  app.post('/api/ai/chat', unifiedAuthCheck, async (req: any, res) => {
     try {
       const { message, conversationHistory } = req.body;
       
@@ -148,7 +134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/ai/analyze-rule', authMiddleware, async (req, res) => {
+  app.post('/api/ai/analyze-rule', unifiedAuthCheck, async (req, res) => {
     try {
       const { rule } = req.body;
       
@@ -164,7 +150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/ai/suggest-rule', authMiddleware, async (req, res) => {
+  app.post('/api/ai/suggest-rule', unifiedAuthCheck, async (req, res) => {
     try {
       const { context } = req.body;
       
@@ -177,7 +163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Doctor routes
-  app.get('/api/doctors', authMiddleware, async (req, res) => {
+  app.get('/api/doctors', unifiedAuthCheck, async (req, res) => {
     try {
       const { rut, name, specialtyId } = req.query;
       const filters: any = {};
@@ -194,7 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/doctors/:id', authMiddleware, async (req, res) => {
+  app.get('/api/doctors/:id', unifiedAuthCheck, async (req, res) => {
     try {
       const doctor = await storage.getDoctorById(req.params.id);
       if (!doctor) {
@@ -207,7 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/doctors', authMiddleware, async (req, res) => {
+  app.post('/api/doctors', unifiedAuthCheck, async (req, res) => {
     try {
       const validatedData = insertDoctorSchema.parse(req.body);
       const doctor = await storage.createDoctor(validatedData);
@@ -218,7 +204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/doctors/:id', authMiddleware, async (req, res) => {
+  app.put('/api/doctors/:id', unifiedAuthCheck, async (req, res) => {
     try {
       const validatedData = insertDoctorSchema.partial().parse(req.body);
       const doctor = await storage.updateDoctor(req.params.id, validatedData);
@@ -229,7 +215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/doctors/:id', authMiddleware, async (req, res) => {
+  app.delete('/api/doctors/:id', unifiedAuthCheck, async (req, res) => {
     try {
       await storage.deleteDoctor(req.params.id);
       res.status(204).send();
@@ -240,7 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Specialty routes
-  app.get('/api/specialties', authMiddleware, async (req, res) => {
+  app.get('/api/specialties', unifiedAuthCheck, async (req, res) => {
     try {
       const specialties = await storage.getSpecialties();
       res.json(specialties);
@@ -251,7 +237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Medical societies routes
-  app.get('/api/medical-societies', authMiddleware, async (req, res) => {
+  app.get('/api/medical-societies', unifiedAuthCheck, async (req, res) => {
     try {
       const societies = await storage.getMedicalSocieties();
       res.json(societies);
@@ -261,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/specialties', authMiddleware, async (req, res) => {
+  app.post('/api/specialties', unifiedAuthCheck, async (req, res) => {
     try {
       const validatedData = insertSpecialtySchema.parse(req.body);
       const specialty = await storage.createSpecialty(validatedData);
@@ -272,7 +258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/specialties/:id', authMiddleware, async (req, res) => {
+  app.put('/api/specialties/:id', unifiedAuthCheck, async (req, res) => {
     try {
       const validatedData = insertSpecialtySchema.partial().parse(req.body);
       const specialty = await storage.updateSpecialty(req.params.id, validatedData);
@@ -283,7 +269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/specialties/:id', authMiddleware, async (req, res) => {
+  app.delete('/api/specialties/:id', unifiedAuthCheck, async (req, res) => {
     try {
       await storage.deleteSpecialty(req.params.id);
       res.status(204).send();
@@ -294,7 +280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Service routes
-  app.get('/api/services', authMiddleware, async (req, res) => {
+  app.get('/api/services', unifiedAuthCheck, async (req, res) => {
     try {
       const { specialtyId, participationType } = req.query;
       const filters: any = {};
@@ -310,7 +296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/services', authMiddleware, async (req, res) => {
+  app.post('/api/services', unifiedAuthCheck, async (req, res) => {
     try {
       const validatedData = insertServiceSchema.parse(req.body);
       const service = await storage.createService(validatedData);
@@ -321,7 +307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/services/:id', authMiddleware, async (req, res) => {
+  app.put('/api/services/:id', unifiedAuthCheck, async (req, res) => {
     try {
       const validatedData = insertServiceSchema.partial().parse(req.body);
       const service = await storage.updateService(req.params.id, validatedData);
@@ -332,7 +318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/services/:id', authMiddleware, async (req, res) => {
+  app.delete('/api/services/:id', unifiedAuthCheck, async (req, res) => {
     try {
       await storage.deleteService(req.params.id);
       res.status(204).send();
@@ -343,7 +329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Calculation rule routes
-  app.get('/api/calculation-rules', authMiddleware, async (req, res) => {
+  app.get('/api/calculation-rules', unifiedAuthCheck, async (req, res) => {
     try {
       const { code, participationType, specialtyId, isActive } = req.query;
       const filters: any = {};
@@ -361,7 +347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/calculation-rules/:id', authMiddleware, async (req, res) => {
+  app.get('/api/calculation-rules/:id', unifiedAuthCheck, async (req, res) => {
     try {
       const rule = await storage.getCalculationRuleById(req.params.id);
       if (!rule) {
@@ -374,7 +360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/calculation-rules', authMiddleware, async (req, res) => {
+  app.post('/api/calculation-rules', unifiedAuthCheck, async (req, res) => {
     try {
       const validatedData = insertCalculationRuleSchema.parse(req.body);
       const rule = await storage.createCalculationRule(validatedData);
@@ -385,7 +371,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/calculation-rules/:id', authMiddleware, async (req, res) => {
+  app.put('/api/calculation-rules/:id', unifiedAuthCheck, async (req, res) => {
     try {
       const validatedData = insertCalculationRuleSchema.partial().parse(req.body);
       const rule = await storage.updateCalculationRule(req.params.id, validatedData);
@@ -407,7 +393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/calculation-rules/:id', authMiddleware, async (req, res) => {
+  app.delete('/api/calculation-rules/:id', unifiedAuthCheck, async (req, res) => {
     try {
       await storage.deleteCalculationRule(req.params.id);
       res.status(204).send();
@@ -418,7 +404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Medical society routes
-  app.get('/api/medical-societies', authMiddleware, async (req, res) => {
+  app.get('/api/medical-societies', unifiedAuthCheck, async (req, res) => {
     try {
       const societies = await storage.getMedicalSocieties();
       res.json(societies);
@@ -428,7 +414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/medical-societies', authMiddleware, async (req, res) => {
+  app.post('/api/medical-societies', unifiedAuthCheck, async (req, res) => {
     try {
       const validatedData = insertMedicalSocietySchema.parse(req.body);
       const society = await storage.createMedicalSociety(validatedData);
@@ -440,7 +426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Medical center routes
-  app.get('/api/medical-centers', authMiddleware, async (req, res) => {
+  app.get('/api/medical-centers', unifiedAuthCheck, async (req, res) => {
     try {
       const centers = await storage.getMedicalCenters();
       res.json(centers);
@@ -451,7 +437,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Insurance type routes
-  app.get('/api/insurance-types', authMiddleware, async (req, res) => {
+  app.get('/api/insurance-types', unifiedAuthCheck, async (req, res) => {
     try {
       const types = await storage.getInsuranceTypes();
       res.json(types);
@@ -462,7 +448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Medical Attentions endpoints
-  app.get('/api/medical-attentions', authMiddleware, async (req, res) => {
+  app.get('/api/medical-attentions', unifiedAuthCheck, async (req, res) => {
     try {
       const { doctorId, dateFrom, dateTo, status, participationTypes, showOnlyPending } = req.query;
       const filters: any = {};
@@ -489,7 +475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Borrar atenciones médicas no procesadas (estado: pendiente)
-  app.delete('/api/medical-attentions/delete-unprocessed', authMiddleware, async (req, res) => {
+  app.delete('/api/medical-attentions/delete-unprocessed', unifiedAuthCheck, async (req, res) => {
     try {
       const { recordType } = req.body;
       
@@ -509,7 +495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete medical attentions by patient filter
-  app.delete('/api/medical-attentions/delete-by-patient', authMiddleware, async (req, res) => {
+  app.delete('/api/medical-attentions/delete-by-patient', unifiedAuthCheck, async (req, res) => {
     try {
       const { patientName, patientRut } = req.body;
       
@@ -570,7 +556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete all medical attentions (for complete cleanup)
-  app.delete('/api/medical-attentions/delete-all', authMiddleware, async (req, res) => {
+  app.delete('/api/medical-attentions/delete-all', unifiedAuthCheck, async (req, res) => {
     try {
       const { confirmText } = req.body;
       
@@ -601,7 +587,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Payment Calculations endpoints
-  app.get('/api/payment-calculations', authMiddleware, async (req, res) => {
+  app.get('/api/payment-calculations', unifiedAuthCheck, async (req, res) => {
     try {
       const { doctorId, month, year, status } = req.query;
       const calculations = await storage.getPaymentCalculations({
@@ -617,7 +603,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/calculate-payments', authMiddleware, async (req, res) => {
+  app.post('/api/calculate-payments', unifiedAuthCheck, async (req, res) => {
     try {
       const { doctorId, dateFrom, dateTo, includeParticipaciones, includeHmq } = req.body;
       
@@ -649,7 +635,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Payments endpoints
-  app.get('/api/payments', authMiddleware, async (req, res) => {
+  app.get('/api/payments', unifiedAuthCheck, async (req, res) => {
     try {
       const payments = await storage.getPayments();
       res.json(payments);
@@ -659,7 +645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/process-payment', authMiddleware, async (req, res) => {
+  app.post('/api/process-payment', unifiedAuthCheck, async (req, res) => {
     try {
       const { doctorId, month, year } = req.body;
       const payment = await storage.processPayment(doctorId, month, year);
@@ -671,7 +657,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Provider Types endpoint
-  app.get('/api/provider-types', authMiddleware, async (req, res) => {
+  app.get('/api/provider-types', unifiedAuthCheck, async (req, res) => {
     try {
       const providerTypes = await storage.getProviderTypes();
       res.json(providerTypes);
@@ -682,7 +668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Agreement type routes
-  app.get('/api/agreement-types', authMiddleware, async (req, res) => {
+  app.get('/api/agreement-types', unifiedAuthCheck, async (req, res) => {
     try {
       const types = await storage.getAgreementTypes();
       res.json(types);
@@ -693,7 +679,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Payment system routes
-  app.get('/api/provider-types', authMiddleware, async (req, res) => {
+  app.get('/api/provider-types', unifiedAuthCheck, async (req, res) => {
     try {
       const types = await storage.getProviderTypes();
       res.json(types);
@@ -703,7 +689,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/service-tariffs', authMiddleware, async (req, res) => {
+  app.get('/api/service-tariffs', unifiedAuthCheck, async (req, res) => {
     try {
       const { serviceId, providerTypeId } = req.query;
       const tariffs = await storage.getServiceTariffs(
@@ -719,7 +705,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
-  app.get('/api/payments', authMiddleware, async (req, res) => {
+  app.get('/api/payments', unifiedAuthCheck, async (req, res) => {
     try {
       const { doctorId, month, year, status } = req.query;
       const payments = await storage.getPayments({
@@ -735,7 +721,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/process-payment', authMiddleware, async (req, res) => {
+  app.post('/api/process-payment', unifiedAuthCheck, async (req, res) => {
     try {
       const { doctorId, month, year } = req.body;
       const payment = await storage.processPayment(doctorId, month, year);
@@ -747,7 +733,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Payroll processing endpoints
-  app.post('/api/calculate-payroll', authMiddleware, async (req, res) => {
+  app.post('/api/calculate-payroll', unifiedAuthCheck, async (req, res) => {
     try {
       const { month, year } = req.body;
       
@@ -763,7 +749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/process-payroll', authMiddleware, async (req, res) => {
+  app.post('/api/process-payroll', unifiedAuthCheck, async (req, res) => {
     try {
       const { month, year } = req.body;
       
@@ -779,7 +765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/generate-payslip/:doctorId', authMiddleware, async (req, res) => {
+  app.post('/api/generate-payslip/:doctorId', unifiedAuthCheck, async (req, res) => {
     try {
       const { doctorId } = req.params;
       const { month, year } = req.body;
@@ -950,7 +936,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/send-payslip/:doctorId', authMiddleware, async (req, res) => {
+  app.post('/api/send-payslip/:doctorId', unifiedAuthCheck, async (req, res) => {
     try {
       const { doctorId } = req.params;
       const { month, year } = req.body;
@@ -968,7 +954,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Enhanced payment processing endpoints
-  app.post('/api/calculate-payment-summaries', authMiddleware, async (req, res) => {
+  app.post('/api/calculate-payment-summaries', unifiedAuthCheck, async (req, res) => {
     try {
       const { month, year, recordType } = req.body;
       
@@ -984,7 +970,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/process-bulk-payments', authMiddleware, async (req, res) => {
+  app.post('/api/process-bulk-payments', unifiedAuthCheck, async (req, res) => {
     try {
       const { month, year, selectedDoctors, paymentMethod, notes, recordType } = req.body;
       
@@ -1181,7 +1167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  app.post('/api/import/csv-participacion', authMiddleware, async (req, res) => {
+  app.post('/api/import/csv-participacion', unifiedAuthCheck, async (req, res) => {
     try {
       console.log('Participacion import started. Request body:', req.body);
       const csvData = req.body.csvData || '';
@@ -1432,7 +1418,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // CSV Import endpoint for HMQ Activities records
-  app.post('/api/import/csv-hmq', authMiddleware, async (req, res) => {
+  app.post('/api/import/csv-hmq', unifiedAuthCheck, async (req, res) => {
     try {
       console.log('HMQ import started. Request body:', req.body);
       const csvData = req.body.csvData || '';
@@ -1588,7 +1574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Excel Import endpoint for Participacion records
-  app.post('/api/import/excel-participacion', authMiddleware, async (req, res) => {
+  app.post('/api/import/excel-participacion', unifiedAuthCheck, async (req, res) => {
     try {
       console.log('Excel Participacion import started');
       const { excelData, fileName } = req.body;
@@ -1802,7 +1788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Excel Import endpoint for HMQ records
-  app.post('/api/import/excel-hmq', authMiddleware, async (req, res) => {
+  app.post('/api/import/excel-hmq', unifiedAuthCheck, async (req, res) => {
     try {
       console.log('Excel HMQ import started');
       const { excelData, fileName } = req.body;
@@ -1918,7 +1904,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // CSV Import endpoint for general attentions (backward compatibility)
-  app.post('/api/import/csv-attentions', authMiddleware, async (req, res) => {
+  app.post('/api/import/csv-attentions', unifiedAuthCheck, async (req, res) => {
     try {
       const csvData = req.body.csvData || '';
       const lines = csvData.split('\n').filter((line: string) => line.trim());
@@ -2005,7 +1991,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // API Import endpoint for Participacion records
-  app.post('/api/import/api-participacion', authMiddleware, async (req, res) => {
+  app.post('/api/import/api-participacion', unifiedAuthCheck, async (req, res) => {
     try {
       const { url, method = 'GET', headers = {}, body } = req.body;
       
@@ -2079,7 +2065,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // API Import endpoint for HMQ Activities records  
-  app.post('/api/import/api-hmq', authMiddleware, async (req, res) => {
+  app.post('/api/import/api-hmq', unifiedAuthCheck, async (req, res) => {
     try {
       const { url, method = 'GET', headers = {}, body } = req.body;
       
@@ -2155,7 +2141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // API Import endpoint for general attentions (backward compatibility)
-  app.post('/api/import/api-attentions', authMiddleware, async (req, res) => {
+  app.post('/api/import/api-attentions', unifiedAuthCheck, async (req, res) => {
     try {
       const { url, method, headers, body } = req.body;
 
@@ -2232,7 +2218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // HIS Import endpoint for Participacion records
-  app.post('/api/import/his-participacion', authMiddleware, async (req, res) => {
+  app.post('/api/import/his-participacion', unifiedAuthCheck, async (req, res) => {
     try {
       const { endpoint, apiKey, facility, dateFrom, dateTo } = req.body;
 
@@ -2318,7 +2304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // HIS Import endpoint for HMQ Activities
-  app.post('/api/import/his-hmq', authMiddleware, async (req, res) => {
+  app.post('/api/import/his-hmq', unifiedAuthCheck, async (req, res) => {
     try {
       const { endpoint, apiKey, facility, dateFrom, dateTo } = req.body;
 
@@ -2406,7 +2392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // HIS Import endpoint for general attentions (backward compatibility)
-  app.post('/api/import/his-attentions', authMiddleware, async (req, res) => {
+  app.post('/api/import/his-attentions', unifiedAuthCheck, async (req, res) => {
     try {
       const { endpoint, apiKey, facility, dateFrom, dateTo } = req.body;
 
@@ -2968,7 +2954,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ENDPOINTS DE DESCARGA DE MANUALES
   // Descargar Manual de Sistema
-  app.get('/api/download-manual/sistema', authMiddleware, async (req, res) => {
+  app.get('/api/download-manual/sistema', unifiedAuthCheck, async (req, res) => {
     try {
       const pdfBuffer = await generateManualPDF('sistema');
       
@@ -2984,7 +2970,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Descargar Manual Técnico
-  app.get('/api/download-manual/tecnico', authMiddleware, async (req, res) => {
+  app.get('/api/download-manual/tecnico', unifiedAuthCheck, async (req, res) => {
     try {
       const pdfBuffer = await generateManualPDF('tecnico');
       
@@ -3000,7 +2986,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Descargar Manual de Ventajas Competitivas
-  app.get('/api/download-manual/competitivo', authMiddleware, async (req, res) => {
+  app.get('/api/download-manual/competitivo', unifiedAuthCheck, async (req, res) => {
     try {
       const pdfBuffer = await generateManualPDF('competitivo');
       
@@ -3016,7 +3002,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Endpoint para consultar información sobre límites de importación
-  app.get('/api/import/limits', authMiddleware, async (req, res) => {
+  app.get('/api/import/limits', unifiedAuthCheck, async (req, res) => {
     try {
       const limits = {
         maxFileSize: '50MB',
