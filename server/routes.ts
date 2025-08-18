@@ -80,7 +80,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Link/unlink doctor profile
   app.post('/api/link-doctor', unifiedAuthCheck, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = (req.session as any)?.unifiedUser;
       const { doctorId } = req.body;
       await storage.linkUserToDoctor(userId, doctorId);
       res.json({ success: true });
@@ -92,7 +92,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/unlink-doctor', unifiedAuthCheck, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = (req.session as any)?.unifiedUser;
       await storage.unlinkUserFromDoctor(userId);
       res.json({ success: true });
     } catch (error) {
@@ -103,7 +103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/user-doctor', unifiedAuthCheck, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = (req.session as any)?.unifiedUser;
       const userDoctor = await storage.getUserDoctor(userId);
       res.json(userDoctor);
     } catch (error) {
@@ -123,6 +123,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/doctor-payments/:doctorId', unifiedAuthCheck, async (req, res) => {
+    try {
+      const { doctorId } = req.params;
+      const payments = await storage.getDoctorPayments(doctorId);
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching doctor payments:", error);
+      res.status(500).json({ message: "Failed to fetch doctor payments" });
+    }
+  });
+
   // AI Agent routes
   app.post('/api/ai/chat', unifiedAuthCheck, async (req: any, res) => {
     try {
@@ -133,7 +144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get user information and associated doctor profile
-      const userId = req.user.claims.sub;
+      const userId = (req.session as any)?.unifiedUser;
       const user = await storage.getUser(userId);
       const userDoctor = await storage.getUserDoctor(userId);
 

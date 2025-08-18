@@ -1131,7 +1131,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Obtener estadísticas del doctor para dashboard
-  async getDoctorStats(doctorId: string, month: number, year: number): Promise<{ totalAttentions: number; totalGross: number; totalNet: number; pendingCount: number }> {
+  async getDoctorStats(doctorId: string, month: number, year: number): Promise<{ totalAttentions: number; totalGross: number; totalNet: number; pendingCount: number; totalPaid: number; averageDaily: number }> {
     try {
       // Obtener atenciones del mes/año especificado
       const attentionsQuery = db
@@ -1156,15 +1156,62 @@ export class DatabaseStorage implements IStorage {
       const totalNet = attentions.reduce((sum, att) => sum + (parseFloat(att.netAmount) || 0), 0);
       const pendingCount = attentions.filter(att => att.status === 'pending').length;
 
+      // Obtener total pagado (de la tabla payments)
+      const paidQuery = await db
+        .select({
+          totalAmount: payments.totalAmount
+        })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.doctorId, doctorId),
+            sql`EXTRACT(MONTH FROM ${payments.paymentDate}) = ${month}`,
+            sql`EXTRACT(YEAR FROM ${payments.paymentDate}) = ${year}`
+          )
+        );
+
+      const totalPaid = paidQuery.reduce((sum, payment) => sum + (parseFloat(payment.totalAmount) || 0), 0);
+      
+      // Calcular promedio diario basado en días del mes
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const averageDaily = totalNet / daysInMonth;
+
       return {
         totalAttentions,
         totalGross,
         totalNet,
-        pendingCount
+        pendingCount,
+        totalPaid,
+        averageDaily
       };
     } catch (error) {
       console.error('Error fetching doctor stats:', error);
       throw new Error(`Error al obtener estadísticas del doctor: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    }
+  }
+
+  // Obtener pagos realizados al doctor
+  async getDoctorPayments(doctorId: string): Promise<any[]> {
+    try {
+      const paymentsQuery = await db
+        .select({
+          id: payments.id,
+          totalAmount: payments.totalAmount,
+          paymentDate: payments.paymentDate,
+          status: payments.status,
+          paymentMethod: payments.paymentMethod,
+          payeeName: payments.payeeName,
+          bankAccount: payments.bankAccount,
+          transactionReference: payments.transactionReference
+        })
+        .from(payments)
+        .where(eq(payments.doctorId, doctorId))
+        .orderBy(desc(payments.paymentDate));
+
+      return paymentsQuery;
+    } catch (error) {
+      console.error('Error fetching doctor payments:', error);
+      throw new Error(`Error al obtener pagos del doctor: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
   }
 }

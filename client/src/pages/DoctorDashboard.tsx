@@ -43,7 +43,13 @@ export default function DoctorDashboard() {
   const { data: doctorStats } = useQuery({
     queryKey: ['/api/doctor-stats', doctorProfile?.id, selectedMonth, selectedYear],
     enabled: !!doctorProfile?.id,
-  }) as { data: { totalAttentions: number; totalGross: number; totalNet: number; pendingCount: number } | undefined };
+  }) as { data: { totalAttentions: number; totalGross: number; totalNet: number; pendingCount: number; totalPaid: number; averageDaily: number } | undefined };
+
+  // Query para obtener los pagos reales del doctor
+  const { data: doctorPayments } = useQuery({
+    queryKey: ['/api/doctor-payments', doctorProfile?.id],
+    enabled: !!doctorProfile?.id,
+  }) as { data: any[] | undefined };
 
   // Mutación para generar PDF de cartola
   const generateCartolaRDFMutation = useMutation({
@@ -289,7 +295,7 @@ export default function DoctorDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-green-100 text-sm font-medium">Total del Mes</p>
-                  <p className="text-3xl font-bold">${(doctorStats?.totalNet || 0).toLocaleString('es-CL')}</p>
+                  <p className="text-3xl font-bold">${(doctorStats?.totalPaid || 0).toLocaleString('es-CL')}</p>
                   <p className="text-green-200 text-xs mt-1">+12% vs mes anterior</p>
                 </div>
                 <div className="bg-white/20 p-3 rounded-full">
@@ -334,7 +340,7 @@ export default function DoctorDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-purple-100 text-sm font-medium">Promedio/Día</p>
-                  <p className="text-3xl font-bold">$60.585</p>
+                  <p className="text-3xl font-bold">${(doctorStats?.averageDaily || 0).toLocaleString('es-CL')}</p>
                   <p className="text-purple-200 text-xs mt-1">Últimos 30 días</p>
                 </div>
                 <div className="bg-white/20 p-3 rounded-full">
@@ -373,37 +379,46 @@ export default function DoctorDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {mockPayments.map((pago) => (
-                    <div
-                      key={pago.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3">
-                          <div>
-                            <p className="font-medium text-gray-900">{pago.tipo}</p>
-                            <p className="text-sm text-gray-500">
-                              {pago.paciente} • {pago.centro}
+                  {doctorPayments && doctorPayments.length > 0 ? (
+                    doctorPayments.map((payment) => (
+                      <div
+                        key={payment.id}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3">
+                            <div>
+                              <p className="font-medium text-gray-900">Pago Honorarios Médicos</p>
+                              <p className="text-sm text-gray-500">
+                                {payment.paymentMethod ? `Vía ${payment.paymentMethod}` : 'Transferencia bancaria'}
+                                {payment.bankAccount && ` • Cta. ${payment.bankAccount}`}
+                                {payment.payeeName && ` • ${payment.payeeName}`}
+                              </p>
+                              <p className="text-xs text-gray-400">{new Date(payment.paymentDate).toLocaleDateString('es-CL')}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <div className="text-right">
+                            <p className="font-bold text-gray-900">
+                              ${parseFloat(payment.totalAmount).toLocaleString('es-CL')}
                             </p>
-                            <p className="text-xs text-gray-400">{pago.fecha}</p>
                           </div>
+                          <Badge className={getStatusColor(payment.status)}>
+                            <div className="flex items-center space-x-1">
+                              {getStatusIcon(payment.status)}
+                              <span>{payment.status}</span>
+                            </div>
+                          </Badge>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-4">
-                        <div className="text-right">
-                          <p className="font-bold text-gray-900">
-                            ${pago.monto.toLocaleString()}
-                          </p>
-                        </div>
-                        <Badge className={getStatusColor(pago.estado)}>
-                          <div className="flex items-center space-x-1">
-                            {getStatusIcon(pago.estado)}
-                            <span>{pago.estado}</span>
-                          </div>
-                        </Badge>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <p>No se han registrado pagos aún</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
