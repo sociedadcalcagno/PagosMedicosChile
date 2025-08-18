@@ -805,13 +805,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         society = await storage.getMedicalSocietyById(doctorData.societyId);
       }
 
-      // Get payroll data for the doctor
+      // Get payroll data for the doctor (optional, we'll generate cartola even without formal payroll)
       const payrollData = await storage.calculatePayroll(month, year);
       const doctorPayroll = payrollData.find(p => p.doctorId === doctorId);
-      
-      if (!doctorPayroll) {
-        return res.status(404).json({ error: 'No payroll data found for this doctor in the specified period' });
-      }
 
       // Get real medical attentions data for this specific doctor
       const startDate = new Date(year, month - 1, 1);
@@ -863,6 +859,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG - Doctor ${doctorId}: Participaciones=${participacionAttentions.length}, HMQ=${hmqAttentions.length}`);
 
+      // Check if there are no attentions at all
+      const hasAnyAttentions = participacionAttentions.length > 0 || hmqAttentions.length > 0;
+
       // Calculate correct totals from the detailed data (participation amount minus commission)
       const calculatedParticipacionTotal = participacionAttentions.reduce((sum, att) => {
         const netAmount = parseFloat(att.participatedAmount) - parseFloat(att.commissionAmount);
@@ -894,6 +893,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         participacionTotal: calculatedParticipacionTotal,
         hmqTotal: calculatedHmqTotal,
         totalAmount: calculatedParticipacionTotal + calculatedHmqTotal,
+        hasAnyAttentions, // Add flag to handle empty cartola case
+        noDataMessage: !hasAnyAttentions ? `No se encontraron atenciones médicas registradas para el período ${month}/${year}` : null
       };
 
       const pdfBuffer = await generatePayrollPDF(pdfData);
@@ -905,12 +906,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('PDF generated with pdfId:', pdfId);
       res.json({ 
-        message: 'PDF generated successfully',
+        message: hasAnyAttentions ? 'PDF generated successfully' : 'Cartola generada (sin atenciones registradas para este período)',
         doctorId,
         period: `${month}/${year}`,
         pdfId,
         downloadUrl: `/api/download-pdf/${pdfId}`,
-        success: true
+        success: true,
+        hasData: hasAnyAttentions,
+        attentionCount: participacionAttentions.length + hmqAttentions.length
       });
     } catch (error: any) {
       console.error('PDF generation error:', error);

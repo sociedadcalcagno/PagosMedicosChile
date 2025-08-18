@@ -18,6 +18,8 @@ interface PDFPayrollData {
   participacionTotal: number;
   hmqTotal: number;
   totalAmount: number;
+  hasAnyAttentions?: boolean;
+  noDataMessage?: string | null;
 }
 
 export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> {
@@ -395,9 +397,21 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
             `).join('')}
         </tbody>
     </table>
+    ` : data.participacionAttentions.length === 0 ? `
+    <div class="section-title">HMQ</div>
+    <div class="table-header">
+        Fecha Atención&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RUT&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Paciente&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Previsión&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Código Prestación&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Nombre&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Horario&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bruto&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;%&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Monto Participación&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Comisión
+    </div>
+    <div class="no-data">No se encontraron datos</div>
     ` : ''}
 
     <div class="totals">
+        ${data.hasAnyAttentions === false ? `
+        <div class="no-data-message" style="text-align: center; padding: 40px; background-color: #f8f9fa; border: 1px dashed #dee2e6; margin: 20px 0; border-radius: 8px;">
+            <h3 style="color: #6c757d; margin-bottom: 10px;">Sin Actividad Registrada</h3>
+            <p style="color: #6c757d; margin: 0;">${data.noDataMessage || `No se encontraron atenciones médicas registradas para el período ${monthNames[data.month - 1]} ${data.year}`}</p>
+        </div>
+        ` : ''}
         ${data.participacionTotal > 0 ? `
         <div class="total-row">
             <span class="total-label">TOTAL PARTICIPACIONES:</span>
@@ -408,10 +422,18 @@ export async function generatePayrollPDF(data: PDFPayrollData): Promise<Buffer> 
             <span class="total-label">TOTAL HMQ:</span>
             <span class="total-amount">$${formatCurrency(data.hmqTotal)}</span>
         </div>` : ''}
+        ${data.totalAmount > 0 ? `
         <div class="total-row">
             <span class="total-label">${data.participacionTotal > 0 && data.hmqTotal > 0 ? 'TOTAL GENERAL:' : data.participacionTotal > 0 ? 'TOTAL PARTICIPACIONES:' : 'TOTAL HMQ:'}</span>
             <span class="total-amount">$${formatCurrency(data.totalAmount)}</span>
         </div>
+        ` : ''}
+        ${data.totalAmount === 0 && data.hasAnyAttentions !== false ? `
+        <div class="total-row">
+            <span class="total-label">TOTAL PERÍODO:</span>
+            <span class="total-amount">$0</span>
+        </div>
+        ` : ''}
     </div>
 
     <div class="footer">

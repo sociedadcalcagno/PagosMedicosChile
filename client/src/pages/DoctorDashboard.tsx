@@ -106,16 +106,20 @@ export default function DoctorDashboard() {
         throw new Error('PDF generation failed - no PDF ID returned');
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
-        title: "Cartola generada exitosamente",
-        description: "Su liquidación se abrió en nueva pestaña con opción de impresión",
+        title: data.hasData === false ? "Cartola generada" : "Cartola generada exitosamente",
+        description: data.hasData === false 
+          ? `Se generó la cartola para ${selectedMonth}/${selectedYear}, pero no se encontraron atenciones para este período.`
+          : `Su liquidación se abrió en nueva pestaña con opción de impresión (${data.attentionCount || 0} atenciones)`,
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error al generar cartola",
-        description: error.message || "No se pudo generar la cartola",
+        description: error.message.includes("No payroll data") 
+          ? `No hay datos de liquidación disponibles para ${selectedMonth}/${selectedYear}. Prueba con otro período.`
+          : error.message || "No se pudo generar la cartola",
         variant: "destructive",
       });
     },
