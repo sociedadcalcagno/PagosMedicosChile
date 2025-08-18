@@ -72,7 +72,7 @@ export function setupUnifiedAuth(app: Express) {
     });
   });
 
-  // También manejar logout legacy
+  // También manejar logout legacy - redirigir al login
   app.get('/api/logout', (req, res) => {
     req.session.destroy((err: any) => {
       if (err) {
@@ -80,7 +80,7 @@ export function setupUnifiedAuth(app: Express) {
       }
       res.clearCookie('medical.sid');
       res.clearCookie('connect.sid');
-      res.json({ message: 'Sesión cerrada exitosamente' });
+      res.redirect('/');
     });
   });
   
