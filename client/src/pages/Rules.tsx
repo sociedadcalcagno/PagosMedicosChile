@@ -683,7 +683,7 @@ export default function Rules() {
                                 <SelectContent>
                                   {(Array.isArray(doctors) ? doctors : []).map((doctor: any) => (
                                     <SelectItem key={doctor.id} value={doctor.id}>
-                                      {doctor.rut} - {doctor.name}
+                                      {doctor.name} ({doctor.rut})
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
