@@ -112,6 +112,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/doctor-stats/:doctorId/:month/:year', unifiedAuthCheck, async (req, res) => {
+    try {
+      const { doctorId, month, year } = req.params;
+      const stats = await storage.getDoctorStats(doctorId, parseInt(month), parseInt(year));
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching doctor stats:", error);
+      res.status(500).json({ message: "Failed to fetch doctor statistics" });
+    }
+  });
+
   // AI Agent routes
   app.post('/api/ai/chat', unifiedAuthCheck, async (req: any, res) => {
     try {

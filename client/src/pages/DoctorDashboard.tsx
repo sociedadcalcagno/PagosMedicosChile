@@ -39,6 +39,12 @@ export default function DoctorDashboard() {
     enabled: !!user,
   }) as { data: any };
 
+  // Query para obtener las estadísticas reales del doctor
+  const { data: doctorStats } = useQuery({
+    queryKey: ['/api/doctor-stats', doctorProfile?.id, selectedMonth, selectedYear],
+    enabled: !!doctorProfile?.id,
+  }) as { data: { totalAttentions: number; totalGross: number; totalNet: number; pendingCount: number } | undefined };
+
   // Mutación para generar PDF de cartola
   const generateCartolaRDFMutation = useMutation({
     mutationFn: async () => {
@@ -283,7 +289,7 @@ export default function DoctorDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-green-100 text-sm font-medium">Total del Mes</p>
-                  <p className="text-3xl font-bold">$2.847.500</p>
+                  <p className="text-3xl font-bold">${(doctorStats?.totalNet || 0).toLocaleString('es-CL')}</p>
                   <p className="text-green-200 text-xs mt-1">+12% vs mes anterior</p>
                 </div>
                 <div className="bg-white/20 p-3 rounded-full">
@@ -298,7 +304,7 @@ export default function DoctorDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-orange-100 text-sm font-medium">Por Procesar</p>
-                  <p className="text-3xl font-bold">8</p>
+                  <p className="text-3xl font-bold">{doctorStats?.pendingCount || 0}</p>
                   <p className="text-orange-200 text-xs mt-1">Pendientes liquidación</p>
                 </div>
                 <div className="bg-white/20 p-3 rounded-full">
@@ -313,7 +319,7 @@ export default function DoctorDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-blue-100 text-sm font-medium">Atenciones</p>
-                  <p className="text-3xl font-bold">47</p>
+                  <p className="text-3xl font-bold">{doctorStats?.totalAttentions || 0}</p>
                   <p className="text-blue-200 text-xs mt-1">Este mes</p>
                 </div>
                 <div className="bg-white/20 p-3 rounded-full">

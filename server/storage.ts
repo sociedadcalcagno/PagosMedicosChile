@@ -1129,6 +1129,44 @@ export class DatabaseStorage implements IStorage {
       throw new Error(`Error al eliminar registros: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
   }
+
+  // Obtener estadísticas del doctor para dashboard
+  async getDoctorStats(doctorId: string, month: number, year: number): Promise<{ totalAttentions: number; totalGross: number; totalNet: number; pendingCount: number }> {
+    try {
+      // Obtener atenciones del mes/año especificado
+      const attentionsQuery = db
+        .select({
+          grossAmount: medicalAttentions.grossAmount,
+          netAmount: medicalAttentions.netAmount,
+          status: medicalAttentions.status
+        })
+        .from(medicalAttentions)
+        .where(
+          and(
+            eq(medicalAttentions.doctorId, doctorId),
+            sql`EXTRACT(MONTH FROM ${medicalAttentions.attentionDate}) = ${month}`,
+            sql`EXTRACT(YEAR FROM ${medicalAttentions.attentionDate}) = ${year}`
+          )
+        );
+
+      const attentions = await attentionsQuery;
+
+      const totalAttentions = attentions.length;
+      const totalGross = attentions.reduce((sum, att) => sum + (parseFloat(att.grossAmount) || 0), 0);
+      const totalNet = attentions.reduce((sum, att) => sum + (parseFloat(att.netAmount) || 0), 0);
+      const pendingCount = attentions.filter(att => att.status === 'pending').length;
+
+      return {
+        totalAttentions,
+        totalGross,
+        totalNet,
+        pendingCount
+      };
+    } catch (error) {
+      console.error('Error fetching doctor stats:', error);
+      throw new Error(`Error al obtener estadísticas del doctor: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
