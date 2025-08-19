@@ -1,24 +1,24 @@
-import { SimpleRuleStorage } from './simpleRuleStorage.js';
+import { storage } from './storage.js';
 
 export interface CalculationRule {
   id: string;
   code: string;
   name: string;
-  description?: string;
+  description?: string | null;
   validFrom: string;
   validTo: string;
-  participationType: string;
-  specialtyId?: string;
-  serviceId?: string;
-  doctorId?: string;
-  societyId?: string;
+  participationType: string | null;
+  specialtyId?: string | null;
+  serviceId?: string | null;
+  doctorId?: string | null;
+  societyId?: string | null;
   paymentType: string;
   paymentValue: number | string;
-  scheduleType?: string;
-  applicableDays?: string[];
+  scheduleType?: string | null;
+  applicableDays?: string[] | null;
   isActive: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: string | Date | null;
+  updatedAt?: string | Date | null;
 }
 
 export interface RuleSimulationRequest {
@@ -75,7 +75,7 @@ export class IntelligentRuleEngine {
       // Get applicable rules with intelligent matching
       const applicableRules = await this.getApplicableRules({
         ...request,
-        date,
+        date: request.date,
         weekday
       });
       
@@ -126,9 +126,14 @@ export class IntelligentRuleEngine {
   /**
    * Gets applicable rules based on criteria with intelligent matching
    */
-  async getApplicableRules(request: RuleSimulationRequest & { date: Date; weekday: string }): Promise<CalculationRule[]> {
-    const ruleStorage = new SimpleRuleStorage();
-    const allRules = await ruleStorage.getAllRules();
+  async getApplicableRules(request: RuleSimulationRequest & { date: string; weekday: string }): Promise<CalculationRule[]> {
+    const rawRules = await storage.getCalculationRules({ isActive: true });
+    
+    // Type conversion for applicableDays
+    const allRules: CalculationRule[] = rawRules.map(rule => ({
+      ...rule,
+      applicableDays: Array.isArray(rule.applicableDays) ? rule.applicableDays as string[] : null
+    }));
     
     console.log(`[RuleEngine] Evaluating ${allRules.length} total rules`);
     console.log(`[RuleEngine] Request criteria:`, {
@@ -136,7 +141,7 @@ export class IntelligentRuleEngine {
       doctorId: request.doctorId,
       serviceId: request.serviceId,
       scheduleType: request.scheduleType,
-      date: request.date.toISOString().split('T')[0]
+      date: request.date
     });
     
     const applicableRules = allRules.filter(rule => {
@@ -149,13 +154,14 @@ export class IntelligentRuleEngine {
       }
       
       // Check valid date range
+      const requestDate = new Date(request.date);
       const validFrom = new Date(rule.validFrom);
       const validTo = new Date(rule.validTo);
-      if (validFrom > request.date) {
+      if (validFrom > requestDate) {
         console.log(`  ❌ Not yet valid (starts ${validFrom.toISOString().split('T')[0]})`);
         return false;
       }
-      if (validTo < request.date) {
+      if (validTo < requestDate) {
         console.log(`  ❌ Expired (ended ${validTo.toISOString().split('T')[0]})`);
         return false;
       }
@@ -166,6 +172,9 @@ export class IntelligentRuleEngine {
           console.log(`  ❌ Specialty mismatch: rule=${rule.specialtyId}, request=${request.specialtyId}`);
           return false;
         }
+      } else if (!request.specialtyId && rule.specialtyId) {
+        console.log(`  ⚠️  Rule has specialty ${rule.specialtyId} but no specialty requested`);
+        // Don't exclude - rule may be more general
       }
       // If rule has no specialty specified, it applies to all specialties
       
@@ -198,7 +207,7 @@ export class IntelligentRuleEngine {
       }
       
       // Day of week matching - empty means applies to all days
-      if (rule.applicableDays && Array.isArray(rule.applicableDays) && rule.applicableDays.length > 0) {
+      if (rule.applicableDays && rule.applicableDays.length > 0) {
         if (!rule.applicableDays.includes(request.weekday)) {
           console.log(`  ❌ Weekday mismatch: rule=${rule.applicableDays.join(',')}, request=${request.weekday}`);
           return false;
@@ -274,7 +283,7 @@ export class IntelligentRuleEngine {
     }
     
     // Day-specific rules (lower priority)
-    if (rule.applicableDays && Array.isArray(rule.applicableDays) && rule.applicableDays.length > 0) {
+    if (rule.applicableDays && rule.applicableDays.length > 0) {
       score += 25;
       // More specific if fewer days
       score += Math.max(0, 7 - rule.applicableDays.length) * 5;
@@ -346,7 +355,7 @@ export class IntelligentRuleEngine {
       criteria.push("para atención en sociedad médica");
     }
     if (selectedRule.scheduleType && selectedRule.scheduleType !== 'all') {
-      const scheduleNames = {
+      const scheduleNames: Record<string, string> = {
         'regular': 'horario regular',
         'night': 'horario nocturno',
         'irregular': 'horario irregular'
@@ -354,7 +363,7 @@ export class IntelligentRuleEngine {
       criteria.push(`para ${scheduleNames[selectedRule.scheduleType] || selectedRule.scheduleType}`);
     }
     if (selectedRule.applicableDays && selectedRule.applicableDays.length > 0 && selectedRule.applicableDays.length < 7) {
-      const dayNames = {
+      const dayNames: Record<string, string> = {
         'monday': 'lunes', 'tuesday': 'martes', 'wednesday': 'miércoles',
         'thursday': 'jueves', 'friday': 'viernes', 'saturday': 'sábado', 'sunday': 'domingo'
       };
@@ -404,8 +413,11 @@ export class IntelligentRuleEngine {
    * Detects conflicts between rules
    */
   async detectConflicts(): Promise<RuleConflictError[]> {
-    const ruleStorage = new SimpleRuleStorage();
-    const allRules = await ruleStorage.getAllRules();
+    const rawRules = await storage.getCalculationRules({ isActive: true });
+    const allRules: CalculationRule[] = rawRules.map(rule => ({
+      ...rule,
+      applicableDays: Array.isArray(rule.applicableDays) ? rule.applicableDays as string[] : null
+    }));
     const conflicts: RuleConflictError[] = [];
     
     for (let i = 0; i < allRules.length; i++) {
