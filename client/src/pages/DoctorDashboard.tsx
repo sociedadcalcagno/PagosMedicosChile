@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   DollarSign,
@@ -760,11 +760,12 @@ export default function DoctorDashboard() {
                           <Dialog>
                             <DialogTrigger asChild>
                               <div className="text-right cursor-pointer hover:bg-blue-50 p-2 rounded-lg transition-colors" 
-                                   onClick={() => {
-                                     // Usar los datos ya cargados en lugar de hacer nueva petición
+                                   onClick={async () => {
+                                     // Obtener los detalles específicos de este pago
+                                     const paymentDetails = await getPaymentDetails(payment);
                                      setSelectedPaymentDetails({
                                        payment,
-                                       attentions: paidAttentions || []
+                                       attentions: paymentDetails || []
                                      });
                                    }}>
                                 <p className="font-bold text-blue-600 hover:text-blue-800">
@@ -776,10 +777,10 @@ export default function DoctorDashboard() {
                             <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                               <DialogHeader>
                                 <DialogTitle>Detalle de Pago - ${parseFloat(payment.totalAmount).toLocaleString('es-CL')}</DialogTitle>
-                                <p className="text-sm text-gray-600">
+                                <DialogDescription>
                                   Período: {payment.periodMonth || selectedMonth}/{payment.periodYear || selectedYear} 
                                   • Pagado el: {new Date(payment.paymentDate).toLocaleDateString('es-CL')}
-                                </p>
+                                </DialogDescription>
                               </DialogHeader>
                               <div className="space-y-4">
                                 {selectedPaymentDetails?.attentions?.length > 0 ? (
