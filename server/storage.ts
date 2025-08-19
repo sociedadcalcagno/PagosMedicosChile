@@ -397,23 +397,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCalculationRule(rule: InsertCalculationRule): Promise<CalculationRule> {
-    const ruleWithStringValue = {
+    // Clean up empty strings and convert them to null for foreign key fields
+    const cleanedRule = {
       ...rule,
-      paymentValue: rule.paymentValue.toString()
+      paymentValue: rule.paymentValue.toString(),
+      doctorId: rule.doctorId === '' ? null : rule.doctorId,
+      societyId: rule.societyId === '' ? null : rule.societyId,
+      serviceId: rule.serviceId === '' ? null : rule.serviceId,
+      specialtyId: rule.specialtyId === '' ? null : rule.specialtyId
     };
-    const [newRule] = await db.insert(calculationRules).values(ruleWithStringValue).returning();
+    const [newRule] = await db.insert(calculationRules).values(cleanedRule).returning();
     return newRule;
   }
 
   async updateCalculationRule(id: string, rule: Partial<InsertCalculationRule>): Promise<CalculationRule> {
-    const ruleWithStringValue = {
+    // Clean up empty strings and convert them to null for foreign key fields
+    const cleanedRule = {
       ...rule,
       paymentValue: rule.paymentValue ? rule.paymentValue.toString() : undefined,
+      doctorId: rule.doctorId === '' ? null : rule.doctorId,
+      societyId: rule.societyId === '' ? null : rule.societyId,
+      serviceId: rule.serviceId === '' ? null : rule.serviceId,
+      specialtyId: rule.specialtyId === '' ? null : rule.specialtyId,
       updatedAt: new Date()
     };
     const [updatedRule] = await db
       .update(calculationRules)
-      .set(ruleWithStringValue)
+      .set(cleanedRule)
       .where(eq(calculationRules.id, id))
       .returning();
     return updatedRule;
