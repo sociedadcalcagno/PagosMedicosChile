@@ -8,6 +8,9 @@ const credentials = {
   // Doctor específico
   '14366756-1': { password: '123', userId: 'doctor_14366756' },
   '14.366.756-1': { password: '123', userId: 'doctor_14366756' }, // Con puntos
+  // Doctor Andueza
+  '6095009-1': { password: '123', userId: 'doctor_c8941b14-2e68-4399-b480-145f173b90d9' },
+  '6.095.009-1': { password: '123', userId: 'doctor_c8941b14-2e68-4399-b480-145f173b90d9' }, // Con puntos
 };
 
 export function setupUnifiedAuth(app: Express) {
