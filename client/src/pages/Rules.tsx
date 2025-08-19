@@ -271,7 +271,7 @@ export default function Rules() {
   };
 
   // Filter rules based on search and filters
-  const filteredRules = (rules || []).filter((rule: any) => {
+  const filteredRules = Array.isArray(rules) ? rules.filter((rule: any) => {
     const matchesSearch = 
       rule.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       rule.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -296,7 +296,7 @@ export default function Rules() {
     }
     
     return matchesSearch && matchesParticipation && matchesSpecialty && matchesStatus;
-  });
+  }) : [];
 
   const calculateStats = () => {
     if (!rules || !Array.isArray(rules)) return { active: 0, pending: 0, expired: 0, total: 0 };
