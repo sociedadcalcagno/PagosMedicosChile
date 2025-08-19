@@ -11,6 +11,10 @@ const credentials = {
   // Doctor Andueza
   '6095009-1': { password: '123', userId: 'doctor_c8941b14-2e68-4399-b480-145f173b90d9' },
   '6.095.009-1': { password: '123', userId: 'doctor_c8941b14-2e68-4399-b480-145f173b90d9' }, // Con puntos
+  // Doctor Cortes Fuentes Ignacio Antonio
+  '18403994-K': { password: '123456', userId: 'cortes_81cc32d7' },
+  '18.403.994-K': { password: '123456', userId: 'cortes_81cc32d7' }, // Con puntos
+  'cortes_81cc32d7': { password: '123456', userId: 'cortes_81cc32d7' }, // Por ID
 };
 
 export function setupUnifiedAuth(app: Express) {
