@@ -636,6 +636,10 @@ export default function DoctorDashboard() {
                                 {attention.status === 'paid' ? 'Pagado' : 
                                  attention.status === 'calculated' ? 'Calculado' : 'Pendiente'}
                               </Badge>
+                              {/* Debug temporal */}
+                              <div className="text-xs text-red-500 mt-1 bg-yellow-100 p-1 rounded">
+                                DEBUG: paid:{attention.paidAmount} | calc:{attention.calculatedAmount} | part:{attention.participatedAmount} | base:{attention.baseAmount} | amt:{attention.amount}
+                              </div>
                             </div>
                           </div>
                         </div>
