@@ -135,6 +135,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all paid attentions for a doctor (historical)
+  app.get('/api/doctor-all-paid-attentions/:doctorId', unifiedAuthCheck, async (req, res) => {
+    try {
+      const { doctorId } = req.params;
+      const attentions = await storage.getMedicalAttentions({ 
+        doctorId, 
+        status: 'calculated' // Include calculated attentions
+      });
+      res.json(attentions);
+    } catch (error) {
+      console.error('Error fetching doctor paid attentions:', error);
+      res.status(500).json({ error: 'Failed to fetch doctor paid attentions' });
+    }
+  });
+
+  // Get paid attentions for a doctor in specific month/year
+  app.get('/api/doctor-paid-attentions/:doctorId/:month/:year', unifiedAuthCheck, async (req, res) => {
+    try {
+      const { doctorId, month, year } = req.params;
+      const startDate = `${year}-${month.padStart(2, '0')}-01`;
+      const endDate = `${year}-${month.padStart(2, '0')}-31`;
+      
+      const attentions = await storage.getMedicalAttentions({ 
+        doctorId,
+        dateFrom: startDate,
+        dateTo: endDate,
+        status: 'calculated'
+      });
+      res.json(attentions);
+    } catch (error) {
+      console.error('Error fetching doctor monthly paid attentions:', error);
+      res.status(500).json({ error: 'Failed to fetch doctor monthly paid attentions' });
+    }
+  });
+
+  // Get detailed attentions for a doctor in specific month/year
+  app.get('/api/doctor-attentions-detail/:doctorId/:month/:year', unifiedAuthCheck, async (req, res) => {
+    try {
+      const { doctorId, month, year } = req.params;
+      const startDate = `${year}-${month.padStart(2, '0')}-01`;
+      const endDate = `${year}-${month.padStart(2, '0')}-31`;
+      
+      const attentions = await storage.getMedicalAttentions({ 
+        doctorId,
+        dateFrom: startDate,
+        dateTo: endDate,
+        status: 'calculated'
+      });
+      res.json(attentions);
+    } catch (error) {
+      console.error('Error fetching doctor attentions detail:', error);
+      res.status(500).json({ error: 'Failed to fetch doctor attentions detail' });
+    }
+  });
+
+  // Get detailed attentions with status filter
+  app.get('/api/doctor-attentions-detail/:doctorId/:month/:year/:status', unifiedAuthCheck, async (req, res) => {
+    try {
+      const { doctorId, month, year, status } = req.params;
+      const startDate = `${year}-${month.padStart(2, '0')}-01`;
+      const endDate = `${year}-${month.padStart(2, '0')}-31`;
+      
+      const attentions = await storage.getMedicalAttentions({ 
+        doctorId,
+        dateFrom: startDate,
+        dateTo: endDate,
+        status: status === 'c' ? 'calculated' : status
+      });
+      res.json(attentions);
+    } catch (error) {
+      console.error('Error fetching doctor attentions detail with status:', error);
+      res.status(500).json({ error: 'Failed to fetch doctor attentions detail with status' });
+    }
+  });
+
   // AI Agent routes
   app.post('/api/ai/chat', unifiedAuthCheck, async (req: any, res) => {
     try {
