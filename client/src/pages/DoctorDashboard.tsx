@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   DollarSign,
@@ -21,6 +23,7 @@ import {
   User as UserIcon,
   LogOut,
   Download,
+  X,
 } from "lucide-react";
 import type { User } from "@shared/schema";
 import AIChat from "@/components/AIChat";
@@ -33,6 +36,7 @@ export default function DoctorDashboard() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedPaymentDate, setSelectedPaymentDate] = useState<string | null>(null);
   const [showPaymentDateSelector, setShowPaymentDateSelector] = useState(false);
+  const [selectedPaymentDetails, setSelectedPaymentDetails] = useState<any>(null);
   const { toast } = useToast();
 
   // Query para obtener los datos del doctor autenticado
@@ -50,6 +54,50 @@ export default function DoctorDashboard() {
   // Query para obtener los pagos reales del doctor
   const { data: doctorPayments } = useQuery({
     queryKey: ['/api/doctor-payments', doctorProfile?.id],
+    enabled: !!doctorProfile?.id,
+  }) as { data: any[] | undefined };
+
+  // Query para obtener TODAS las atenciones médicas PAGADAS (histórico completo)
+  const { data: allPaidAttentions } = useQuery({
+    queryKey: ['/api/doctor-all-paid-attentions', doctorProfile?.id],
+    enabled: !!doctorProfile?.id,
+  }) as { data: any[] | undefined };
+
+  // Query para obtener atenciones médicas pagadas del mes actual
+  const { data: paidAttentions } = useQuery({
+    queryKey: ['/api/doctor-paid-attentions', doctorProfile?.id, selectedMonth, selectedYear],
+    enabled: !!doctorProfile?.id,
+  }) as { data: any[] | undefined };
+
+  // Query para obtener atenciones detalladas calculadas (pendientes)
+  const { data: pendingAttentions } = useQuery({
+    queryKey: ['/api/doctor-attentions-detail', doctorProfile?.id, selectedMonth, selectedYear, 'calculated'],
+    enabled: !!doctorProfile?.id,
+  }) as { data: any[] | undefined };
+
+  // Función para obtener detalles de un pago específico
+  const getPaymentDetails = async (payment: any) => {
+    try {
+      const response = await fetch(`/api/doctor-paid-attentions/${doctorProfile?.id}/${payment.periodMonth || selectedMonth}/${payment.periodYear || selectedYear}`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching payment details:', error);
+      return [];
+    }
+  };
+
+  // Query para obtener todas las atenciones del mes
+  const { data: allAttentions } = useQuery({
+    queryKey: ['/api/doctor-attentions-detail', doctorProfile?.id, selectedMonth, selectedYear],
     enabled: !!doctorProfile?.id,
   }) as { data: any[] | undefined };
 
@@ -203,29 +251,62 @@ export default function DoctorDashboard() {
     },
   ];
 
+  // Función para traducir estados de inglés a español
+  const translateStatus = (status: string) => {
+    const statusMap: { [key: string]: string } = {
+      'processed': 'Procesado',
+      'paid': 'Pagado',
+      'pending': 'Pendiente',
+      'calculating': 'Calculando',
+      'calculated': 'Calculado',
+      'approved': 'Aprobado',
+      'rejected': 'Rechazado'
+    };
+    return statusMap[status.toLowerCase()] || status;
+  };
+
   const getStatusColor = (estado: string) => {
-    switch (estado) {
+    // Normalizar estado para comparación
+    const normalizedEstado = translateStatus(estado);
+    
+    switch (normalizedEstado) {
       case "Pagado":
+      case "Procesado":
       case "Confirmado":
         return "bg-green-100 text-green-800 border-green-200";
       case "Pendiente":
+      case "Calculando":
         return "bg-yellow-100 text-yellow-800 border-yellow-200";
       case "Procesando":
+      case "Calculado":
         return "bg-blue-100 text-blue-800 border-blue-200";
+      case "Aprobado":
+        return "bg-emerald-100 text-emerald-800 border-emerald-200";
+      case "Rechazado":
+        return "bg-red-100 text-red-800 border-red-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
   const getStatusIcon = (estado: string) => {
-    switch (estado) {
+    // Normalizar estado para comparación
+    const normalizedEstado = translateStatus(estado);
+    
+    switch (normalizedEstado) {
       case "Pagado":
+      case "Procesado":
       case "Confirmado":
+      case "Aprobado":
         return <CheckCircle className="w-4 h-4" />;
       case "Pendiente":
+      case "Calculando":
         return <AlertCircle className="w-4 h-4" />;
       case "Procesando":
+      case "Calculado":
         return <Clock className="w-4 h-4" />;
+      case "Rechazado":
+        return <X className="w-4 h-4" />;
       default:
         return <AlertCircle className="w-4 h-4" />;
     }
@@ -318,67 +399,314 @@ export default function DoctorDashboard() {
           </div>
         </div>
 
-        {/* Summary Cards - Diseño Premium */}
+        {/* Summary Cards - Diseño Premium con Detalles */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gradient-to-br from-green-500 to-green-600 border-0 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-green-100 text-sm font-medium">Total del Mes</p>
-                  <p className="text-3xl font-bold">${(doctorStats?.totalPaid || 0).toLocaleString('es-CL')}</p>
-                  <p className="text-green-200 text-xs mt-1">+12% vs mes anterior</p>
+          {/* Total del Mes */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Card className="bg-gradient-to-br from-green-500 to-green-600 border-0 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-green-100 text-sm font-medium">Total del Mes</p>
+                      <p className="text-3xl font-bold">${(doctorStats?.totalPaid || 0).toLocaleString('es-CL')}</p>
+                      <p className="text-green-200 text-xs mt-1">+12% vs mes anterior</p>
+                    </div>
+                    <div className="bg-white/20 p-3 rounded-full">
+                      <DollarSign className="h-8 w-8" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </PopoverTrigger>
+            <PopoverContent className="w-96">
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900">Detalles de Pagos (${(doctorStats?.totalPaid || 0).toLocaleString('es-CL')})</h4>
+                <div className="max-h-64 overflow-y-auto space-y-2">
+                  {allPaidAttentions && allPaidAttentions.length > 0 ? (
+                    allPaidAttentions.map((detail: any, index: number) => (
+                      <div key={index} className="bg-green-50 p-3 rounded border-l-4 border-green-500">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm text-gray-900">
+                              {detail.attention?.patientName || 'Paciente no disponible'}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              RUT: {detail.attention?.patientRut || 'N/A'}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              Servicio: {detail.attention?.serviceName || 'N/A'}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              Atención: {detail.attention?.attentionDate ? new Date(detail.attention.attentionDate).toLocaleDateString('es-CL') : 'N/A'}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              Pagado: {detail.payment?.paymentDate ? new Date(detail.payment.paymentDate).toLocaleDateString('es-CL') : 'Procesado'}
+                            </p>
+                            <p className="text-xs text-blue-600">
+                              Base: ${parseFloat(detail.calculation?.baseAmount || 0).toLocaleString('es-CL')} → {detail.calculation?.ruleType === 'percentage' ? `${detail.calculation?.ruleValue}%` : 'Fijo'}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-bold text-green-600">
+                              ${parseFloat(detail.calculation?.calculatedAmount || 0).toLocaleString('es-CL')}
+                            </span>
+                            <div className="text-xs text-gray-500 mt-1">{detail.attention?.recordType || 'calc'}</div>
+                            <div className="text-xs text-green-600">{detail.payment?.status}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-sm">No hay detalles de pago disponibles</p>
+                  )}
                 </div>
-                <div className="bg-white/20 p-3 rounded-full">
-                  <DollarSign className="h-8 w-8" />
+                <div className="border-t pt-3">
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">Atenciones pagadas:</span>
+                      <span className="font-medium">{allPaidAttentions?.length || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">Total de detalles:</span>
+                      <span className="font-medium">
+                        ${allPaidAttentions ? allPaidAttentions.reduce((sum, detail) => sum + parseFloat(detail.calculation?.calculatedAmount || 0), 0).toLocaleString('es-CL') : 0}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center font-semibold text-green-600">
+                      <span>Total mostrado (${(doctorStats?.totalPaid || 0).toLocaleString('es-CL')}):</span>
+                      <span className="text-xs">Incluye todos los pagos</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Estas son las atenciones médicas específicas que componen el total histórico pagado
+                  </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </PopoverContent>
+          </Popover>
 
-          <Card className="bg-gradient-to-br from-amber-500 to-orange-500 border-0 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-orange-100 text-sm font-medium">Por Procesar</p>
-                  <p className="text-3xl font-bold">{doctorStats?.pendingCount || 0}</p>
-                  <p className="text-orange-200 text-xs mt-1">Pendientes liquidación</p>
+          {/* Por Procesar */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Card className="bg-gradient-to-br from-amber-500 to-orange-500 border-0 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-orange-100 text-sm font-medium">Por Procesar</p>
+                      <p className="text-3xl font-bold">{doctorStats?.pendingCount || 0}</p>
+                      <p className="text-orange-200 text-xs mt-1">Pendientes liquidación</p>
+                    </div>
+                    <div className="bg-white/20 p-3 rounded-full">
+                      <Clock className="h-8 w-8" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </PopoverTrigger>
+            <PopoverContent className="w-96">
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900">Atenciones Por Procesar - {selectedMonth}/{selectedYear}</h4>
+                <div className="max-h-64 overflow-y-auto space-y-2">
+                  {pendingAttentions && pendingAttentions.length > 0 ? (
+                    pendingAttentions.map((attention: any, index: number) => (
+                      <div key={index} className="bg-orange-50 p-3 rounded border-l-4 border-orange-500">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm text-gray-900">
+                              {attention.patientName}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              RUT: {attention.patientRut}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              Fecha: {new Date(attention.attentionDate).toLocaleDateString('es-CL')}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              Tipo: {attention.recordType}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-bold text-orange-600">
+                              ${parseFloat(attention.amount || 0).toLocaleString('es-CL')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-sm">No hay atenciones pendientes</p>
+                  )}
                 </div>
-                <div className="bg-white/20 p-3 rounded-full">
-                  <Clock className="h-8 w-8" />
+                <div className="border-t pt-3">
+                  <div className="flex justify-between items-center font-semibold text-orange-600">
+                    <span>Total estimado:</span>
+                    <span>${(doctorStats?.totalGross || 0).toLocaleString('es-CL')}</span>
+                  </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </PopoverContent>
+          </Popover>
 
-          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-0 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-blue-100 text-sm font-medium">Atenciones</p>
-                  <p className="text-3xl font-bold">{doctorStats?.totalAttentions || 0}</p>
-                  <p className="text-blue-200 text-xs mt-1">Este mes</p>
+          {/* Atenciones */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-0 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-blue-100 text-sm font-medium">Atenciones</p>
+                      <p className="text-3xl font-bold">{doctorStats?.totalAttentions || 0}</p>
+                      <p className="text-blue-200 text-xs mt-1">Este mes</p>
+                    </div>
+                    <div className="bg-white/20 p-3 rounded-full">
+                      <FileText className="h-8 w-8" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </PopoverTrigger>
+            <PopoverContent className="w-96">
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900">Todas las Atenciones - {selectedMonth}/{selectedYear}</h4>
+                <div className="max-h-64 overflow-y-auto space-y-2">
+                  {allAttentions && allAttentions.length > 0 ? (
+                    allAttentions.slice(0, 10).map((attention: any, index: number) => (
+                      <div key={index} className={`p-3 rounded border-l-4 ${
+                        attention.status === 'paid' ? 'bg-green-50 border-green-500' :
+                        attention.status === 'calculated' ? 'bg-orange-50 border-orange-500' :
+                        'bg-gray-50 border-gray-500'
+                      }`}>
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm text-gray-900">
+                              {attention.patientName}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              RUT: {attention.patientRut}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              Fecha: {new Date(attention.attentionDate).toLocaleDateString('es-CL')}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              Tipo: {attention.recordType}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <span className={`font-bold ${
+                              attention.status === 'paid' ? 'text-green-600' :
+                              attention.status === 'calculated' ? 'text-orange-600' :
+                              'text-gray-600'
+                            }`}>
+                              ${parseFloat(attention.amount || 0).toLocaleString('es-CL')}
+                            </span>
+                            <div className="text-xs mt-1">
+                              <Badge variant={attention.status === 'paid' ? 'default' : 'secondary'}>
+                                {attention.status === 'paid' ? 'Pagado' : 
+                                 attention.status === 'calculated' ? 'Calculado' : 'Pendiente'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-sm">No hay atenciones registradas</p>
+                  )}
+                  {allAttentions && allAttentions.length > 10 && (
+                    <p className="text-xs text-gray-500 text-center">
+                      ... y {allAttentions.length - 10} atenciones más
+                    </p>
+                  )}
                 </div>
-                <div className="bg-white/20 p-3 rounded-full">
-                  <FileText className="h-8 w-8" />
+                <div className="border-t pt-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Total atenciones:</span>
+                    <span className="font-bold">{doctorStats?.totalAttentions || 0}</span>
+                  </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </PopoverContent>
+          </Popover>
 
-          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 border-0 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-purple-100 text-sm font-medium">Promedio/Día</p>
-                  <p className="text-3xl font-bold">${(doctorStats?.averageDaily || 0).toLocaleString('es-CL')}</p>
-                  <p className="text-purple-200 text-xs mt-1">Últimos 30 días</p>
+          {/* Promedio/Día */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Card className="bg-gradient-to-br from-purple-500 to-purple-600 border-0 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-purple-100 text-sm font-medium">Promedio/Día</p>
+                      <p className="text-3xl font-bold">${(doctorStats?.averageDaily || 0).toLocaleString('es-CL')}</p>
+                      <p className="text-purple-200 text-xs mt-1">Últimos 30 días</p>
+                    </div>
+                    <div className="bg-white/20 p-3 rounded-full">
+                      <TrendingUp className="h-8 w-8" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </PopoverTrigger>
+            <PopoverContent className="w-96">
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900">Análisis de Rendimiento - {selectedMonth}/{selectedYear}</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-sm text-gray-600">Ingreso diario promedio:</span>
+                    <span className="font-medium">${(doctorStats?.averageDaily || 0).toLocaleString('es-CL')}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-sm text-gray-600">Días con actividad:</span>
+                    <span className="font-medium">
+                      {allAttentions ? new Set(allAttentions.map(a => new Date(a.attentionDate).toDateString())).size : 0}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-sm text-gray-600">Atenciones por día:</span>
+                    <span className="font-medium">
+                      {allAttentions && allAttentions.length > 0 ? 
+                        Math.round(allAttentions.length / Math.max(1, new Set(allAttentions.map(a => new Date(a.attentionDate).toDateString())).size)) : 0}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-sm text-gray-600">Valor promedio por atención:</span>
+                    <span className="font-medium">
+                      ${allAttentions && allAttentions.length > 0 ? 
+                        Math.round(allAttentions.reduce((sum, a) => sum + (parseFloat(a.amount) || 0), 0) / allAttentions.length).toLocaleString('es-CL') : 0}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-sm text-gray-600">Especialidades atendidas:</span>
+                    <span className="font-medium">
+                      {allAttentions ? new Set(allAttentions.map(a => a.recordType)).size : 0}
+                    </span>
+                  </div>
                 </div>
-                <div className="bg-white/20 p-3 rounded-full">
-                  <TrendingUp className="h-8 w-8" />
-                </div>
+                
+                {/* Pequeño gráfico de distribución por tipo */}
+                {allAttentions && allAttentions.length > 0 && (
+                  <div className="border-t pt-3">
+                    <h5 className="text-sm font-medium text-gray-900 mb-2">Distribución por Tipo:</h5>
+                    <div className="space-y-1">
+                      {Object.entries(
+                        allAttentions.reduce((acc: any, attention: any) => {
+                          acc[attention.recordType] = (acc[attention.recordType] || 0) + 1;
+                          return acc;
+                        }, {})
+                      ).map(([type, count]: [string, any]) => (
+                        <div key={type} className="flex justify-between text-xs">
+                          <span className="text-gray-600">{type}:</span>
+                          <span className="font-medium">{count} atenciones</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                <p className="text-xs text-gray-500">Análisis basado en actividad real registrada en el sistema</p>
               </div>
-            </CardContent>
-          </Card>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Main Content Tabs */}
@@ -429,15 +757,115 @@ export default function DoctorDashboard() {
                           </div>
                         </div>
                         <div className="flex items-center space-x-4">
-                          <div className="text-right">
-                            <p className="font-bold text-gray-900">
-                              ${parseFloat(payment.totalAmount).toLocaleString('es-CL')}
-                            </p>
-                          </div>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <div className="text-right cursor-pointer hover:bg-blue-50 p-2 rounded-lg transition-colors" 
+                                   onClick={() => {
+                                     // Usar los datos ya cargados en lugar de hacer nueva petición
+                                     setSelectedPaymentDetails({
+                                       payment,
+                                       attentions: paidAttentions || []
+                                     });
+                                   }}>
+                                <p className="font-bold text-blue-600 hover:text-blue-800">
+                                  ${parseFloat(payment.totalAmount).toLocaleString('es-CL')}
+                                </p>
+                                <p className="text-xs text-gray-500">Ver detalle</p>
+                              </div>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle>Detalle de Pago - ${parseFloat(payment.totalAmount).toLocaleString('es-CL')}</DialogTitle>
+                                <p className="text-sm text-gray-600">
+                                  Período: {payment.periodMonth || selectedMonth}/{payment.periodYear || selectedYear} 
+                                  • Pagado el: {new Date(payment.paymentDate).toLocaleDateString('es-CL')}
+                                </p>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                {selectedPaymentDetails?.attentions?.length > 0 ? (
+                                  <>
+                                    <div className="bg-blue-50 p-4 rounded-lg">
+                                      <h3 className="font-semibold text-gray-900 mb-2">Resumen del Pago</h3>
+                                      <div className="grid grid-cols-3 gap-4 text-sm">
+                                        <div>
+                                          <p className="text-gray-600">Total Atenciones:</p>
+                                          <p className="font-medium">{selectedPaymentDetails.attentions.length}</p>
+                                        </div>
+                                        <div>
+                                          <p className="text-gray-600">Monto Bruto:</p>
+                                          <p className="font-medium">${selectedPaymentDetails.attentions.reduce((sum: number, att: any) => sum + parseFloat(att.baseAmount || att.participatedAmount || 0), 0).toLocaleString('es-CL')}</p>
+                                        </div>
+                                        <div>
+                                          <p className="text-gray-600">Monto Líquido:</p>
+                                          <p className="font-medium text-green-600">${selectedPaymentDetails.attentions.reduce((sum: number, att: any) => sum + parseFloat(att.paidAmount || att.amount || 0), 0).toLocaleString('es-CL')}</p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="space-y-3">
+                                      <h3 className="font-semibold text-gray-900">Detalle por Atención Médica</h3>
+                                      {selectedPaymentDetails.attentions.map((attention: any, index: number) => (
+                                        <div key={attention.id || index} className="border border-gray-200 rounded-lg p-4 bg-white">
+                                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            {/* Información del Paciente */}
+                                            <div>
+                                              <h4 className="font-medium text-gray-900 mb-2">Paciente</h4>
+                                              <div className="space-y-1 text-sm">
+                                                <p><span className="text-gray-600">RUT:</span> {attention.patientRut || 'No disponible'}</p>
+                                                <p><span className="text-gray-600">Nombre:</span> {attention.patientName || 'No disponible'}</p>
+                                                <p><span className="text-gray-600">Fecha:</span> {new Date(attention.attentionDate).toLocaleDateString('es-CL')}</p>
+                                                <p><span className="text-gray-600">Tipo:</span> {attention.recordType || 'participacion'}</p>
+                                              </div>
+                                            </div>
+                                            
+                                            {/* Información del Servicio */}
+                                            <div>
+                                              <h4 className="font-medium text-gray-900 mb-2">Servicio Médico</h4>
+                                              <div className="space-y-1 text-sm">
+                                                <p><span className="text-gray-600">Código:</span> {attention.serviceCode || 'No disponible'}</p>
+                                                <p><span className="text-gray-600">Descripción:</span> {attention.serviceDescription || 'Consulta médica'}</p>
+                                                <p><span className="text-gray-600">ID Atención:</span> {attention.externalId || attention.id}</p>
+                                              </div>
+                                            </div>
+                                            
+                                            {/* Información Financiera */}
+                                            <div>
+                                              <h4 className="font-medium text-gray-900 mb-2">Montos</h4>
+                                              <div className="space-y-1 text-sm">
+                                                <p><span className="text-gray-600">Monto Bruto:</span> <span className="font-medium">${parseFloat(attention.baseAmount || attention.participatedAmount || 0).toLocaleString('es-CL')}</span></p>
+                                                <p><span className="text-gray-600">Participado:</span> <span className="font-medium">${parseFloat(attention.participatedAmount || 0).toLocaleString('es-CL')}</span></p>
+                                                <p><span className="text-gray-600">Líquido Pagado:</span> <span className="font-medium text-green-600">${parseFloat(attention.paidAmount || attention.amount || 0).toLocaleString('es-CL')}</span></p>
+                                                {attention.hasRule && (
+                                                  <p className="text-blue-600 text-xs flex items-center gap-1">
+                                                    <span className="text-green-600">✓</span>
+                                                    <span>Regla de cálculo aplicada</span>
+                                                    {attention.ruleType === 'percentage' && attention.ruleValue && (
+                                                      <span className="font-medium">- {attention.ruleValue}%</span>
+                                                    )}
+                                                    {attention.ruleType === 'fixed_amount' && (
+                                                      <span className="font-medium">- según monto</span>
+                                                    )}
+                                                  </p>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="text-center py-8 text-gray-500">
+                                    <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                                    <p>No se encontraron detalles de atenciones para este pago</p>
+                                  </div>
+                                )}
+                              </div>
+                            </DialogContent>
+                          </Dialog>
                           <Badge className={getStatusColor(payment.status)}>
                             <div className="flex items-center space-x-1">
                               {getStatusIcon(payment.status)}
-                              <span>{payment.status}</span>
+                              <span>{translateStatus(payment.status)}</span>
                             </div>
                           </Badge>
                         </div>
