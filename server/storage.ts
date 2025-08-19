@@ -563,6 +563,62 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(medicalAttentions).orderBy(desc(medicalAttentions.attentionDate));
   }
 
+  // Get medical attentions with doctor specialty information
+  async getMedicalAttentionsWithSpecialty(filters?: {
+    doctorId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    status?: string;
+    recordTypes?: string[];
+  }): Promise<any[]> {
+    let conditions = [];
+
+    if (filters?.doctorId && filters.doctorId !== 'all') {
+      conditions.push(eq(medicalAttentions.doctorId, filters.doctorId));
+    }
+    if (filters?.dateFrom) {
+      conditions.push(gte(medicalAttentions.attentionDate, filters.dateFrom));
+    }
+    if (filters?.dateTo) {
+      conditions.push(lte(medicalAttentions.attentionDate, filters.dateTo));
+    }
+    if (filters?.status) {
+      conditions.push(eq(medicalAttentions.status, filters.status));
+    }
+    if (filters?.recordTypes && filters.recordTypes.length > 0) {
+      conditions.push(inArray(medicalAttentions.recordType, filters.recordTypes));
+    }
+
+    const baseQuery = db
+      .select({
+        id: medicalAttentions.id,
+        doctorId: medicalAttentions.doctorId,
+        serviceId: medicalAttentions.serviceId,
+        patientRut: medicalAttentions.patientRut,
+        patientName: medicalAttentions.patientName,
+        attentionDate: medicalAttentions.attentionDate,
+        attentionTime: medicalAttentions.attentionTime,
+        scheduleType: medicalAttentions.scheduleType,
+        grossAmount: medicalAttentions.grossAmount,
+        netAmount: medicalAttentions.netAmount,
+        participatedAmount: medicalAttentions.participatedAmount,
+        recordType: medicalAttentions.recordType,
+        status: medicalAttentions.status,
+        createdAt: medicalAttentions.createdAt,
+        updatedAt: medicalAttentions.updatedAt,
+        doctorSpecialtyId: doctors.specialtyId
+      })
+      .from(medicalAttentions)
+      .leftJoin(doctors, eq(medicalAttentions.doctorId, doctors.id))
+      .orderBy(desc(medicalAttentions.attentionDate));
+
+    if (conditions.length > 0) {
+      return await baseQuery.where(and(...conditions));
+    }
+
+    return await baseQuery;
+  }
+
   async createMedicalAttention(attention: any): Promise<MedicalAttention> {
     const [newAttention] = await db.insert(medicalAttentions).values(attention).returning();
     return newAttention;
@@ -585,8 +641,8 @@ export class DatabaseStorage implements IStorage {
     status?: string;
     recordTypes?: string[];
   }): Promise<PaymentCalculation[]> {
-    // Get attentions based on flexible filters
-    const attentions = await this.getMedicalAttentions(filters);
+    // Get attentions with doctor specialty information
+    const attentions = await this.getMedicalAttentionsWithSpecialty(filters);
     
     // Get applicable calculation rules
     const rules = await this.getCalculationRules({ isActive: true });
@@ -601,7 +657,8 @@ export class DatabaseStorage implements IStorage {
         serviceId: attention.serviceId,
         participatedAmount: attention.participatedAmount,
         attentionDate: attention.attentionDate,
-        recordType: attention.recordType
+        recordType: attention.recordType,
+        doctorSpecialtyId: attention.doctorSpecialtyId
       });
 
       // Find the best matching rule for this attention
@@ -611,6 +668,7 @@ export class DatabaseStorage implements IStorage {
           name: rule.name,
           doctorId: rule.doctorId,
           serviceId: rule.serviceId,
+          specialtyId: rule.specialtyId,
           participationType: rule.participationType
         });
 
@@ -623,6 +681,15 @@ export class DatabaseStorage implements IStorage {
           console.log('❌ Rule rejected: Service ID mismatch', {
             ruleServiceId: rule.serviceId,
             attentionServiceId: attention.serviceId
+          });
+          return false;
+        }
+        
+        // 🔥 CRITICAL: Check specialty match - this prevents wrong rules from being applied
+        if (rule.specialtyId && rule.specialtyId !== attention.doctorSpecialtyId) {
+          console.log('❌ Rule rejected: Specialty mismatch', {
+            ruleSpecialtyId: rule.specialtyId,
+            doctorSpecialtyId: attention.doctorSpecialtyId
           });
           return false;
         }
