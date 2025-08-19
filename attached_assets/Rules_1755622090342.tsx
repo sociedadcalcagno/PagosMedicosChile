@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-const isUnauthorizedError = (error: any) => error?.status === 401 || error?.message?.includes("Unauthorized");
+import { isUnauthorizedError } from "@/lib/authUtils";
 
 const ruleFormSchema = z.object({
   code: z.string().min(1, "Código es requerido"),
