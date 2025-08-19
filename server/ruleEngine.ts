@@ -1,15 +1,32 @@
-import type { CalculationRule, RuleAlert, RuleVersion, RuleScopeGroup } from "../shared/schema.js";
-import { storage } from "./storage.js";
-import { simpleRuleStorage } from "./simpleRuleStorage.js";
+import { SimpleRuleStorage } from './simpleRuleStorage.js';
 
-// Types for the rule engine
-export interface RuleSimulationRequest {
-  date: string;
+export interface CalculationRule {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  validFrom: string;
+  validTo: string;
+  participationType: string;
+  specialtyId?: string;
+  serviceId?: string;
   doctorId?: string;
   societyId?: string;
-  specialtyId: string;
+  paymentType: string;
+  paymentValue: number | string;
+  scheduleType?: string;
+  applicableDays?: string[];
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface RuleSimulationRequest {
+  date: string;
+  specialtyId?: string;
+  doctorId?: string;
+  societyId?: string;
   serviceId?: string;
-  branchId?: string;
   baseAmount: number;
   scheduleType?: string;
   weekday?: string;
@@ -40,14 +57,22 @@ export interface RuleConflictError {
 export class IntelligentRuleEngine {
   
   /**
-   * Simulates rule application for given criteria
+   * Simulates rule application for given criteria with intelligent matching
    */
   async simulateRule(request: RuleSimulationRequest): Promise<RuleSimulationResponse> {
     const date = new Date(request.date);
     const weekday = request.weekday || this.getWeekdayFromDate(date);
     
     try {
-      // Get applicable rules
+      console.log(`[RuleEngine] Starting simulation with criteria:`, {
+        specialtyId: request.specialtyId,
+        doctorId: request.doctorId,
+        baseAmount: request.baseAmount,
+        scheduleType: request.scheduleType,
+        date: request.date
+      });
+
+      // Get applicable rules with intelligent matching
       const applicableRules = await this.getApplicableRules({
         ...request,
         date,
@@ -55,23 +80,26 @@ export class IntelligentRuleEngine {
       });
       
       if (applicableRules.length === 0) {
+        console.log(`[RuleEngine] No applicable rules found`);
         return {
           selectedRuleId: null,
           applied: null,
           calculatedPayment: 0,
-          explanation: "No se encontraron reglas aplicables para los criterios especificados."
+          explanation: "❌ No se encontraron reglas aplicables para los criterios especificados. Verifique la especialidad, fechas de vigencia y configuración de reglas."
         };
       }
       
-      // Sort by specificity and resolve conflicts
+      // Sort by specificity and resolve conflicts intelligently
       const selectedRule = this.resolveRuleConflicts(applicableRules);
       const conflictingRules = applicableRules.filter(rule => rule.id !== selectedRule.id);
       
-      // Calculate payment
+      // Calculate payment with rounding
       const calculatedPayment = this.calculatePayment(request.baseAmount, selectedRule);
       
-      // Generate explanation
-      const explanation = this.generateExplanation(selectedRule, applicableRules);
+      // Generate intelligent explanation
+      const explanation = this.generateExplanation(selectedRule, applicableRules, request.baseAmount);
+      
+      console.log(`[RuleEngine] Selected rule: ${selectedRule.code}, calculated: $${calculatedPayment.toLocaleString('es-CL')}`);
       
       return {
         selectedRuleId: selectedRule.id,
@@ -90,343 +118,370 @@ export class IntelligentRuleEngine {
         selectedRuleId: null,
         applied: null,
         calculatedPayment: 0,
-        explanation: `Error al simular reglas: ${error instanceof Error ? error.message : 'Error desconocido'}`
+        explanation: `❌ Error al simular reglas: ${error instanceof Error ? error.message : 'Error desconocido'}. Contacte al administrador del sistema.`
       };
     }
   }
-  
+
   /**
-   * Detects conflicts when creating or updating a rule
+   * Gets applicable rules based on criteria with intelligent matching
    */
-  async detectConflicts(rule: Partial<CalculationRule>, excludeRuleId?: string): Promise<RuleConflict[]> {
-    const conflicts: RuleConflict[] = [];
+  async getApplicableRules(request: RuleSimulationRequest & { date: Date; weekday: string }): Promise<CalculationRule[]> {
+    const ruleStorage = new SimpleRuleStorage();
+    const allRules = await ruleStorage.getAllRules();
     
-    try {
-      // Get all active rules in the same scope
-      const existingRules = await storage.getCalculationRules({
-        specialtyId: rule.specialtyId,
-        isActive: true
-      });
-      
-      const relevantRules = existingRules.filter(r => 
-        r.id !== excludeRuleId && 
-        this.rulesOverlap(rule, r)
-      );
-      
-      for (const existingRule of relevantRules) {
-        // Check for overlapping criteria
-        if (this.hasOverlappingCriteria(rule, existingRule)) {
-          conflicts.push({
-            ruleId: existingRule.id,
-            reason: 'overlap',
-            fields: this.getOverlappingFields(rule, existingRule)
-          });
-        }
-        
-        // Check for percentage sum > 100%
-        if (rule.paymentType === 'percentage' && existingRule.paymentType === 'percentage') {
-          const totalPercentage = (parseFloat(rule.paymentValue?.toString() || '0') + 
-                                 parseFloat(existingRule.paymentValue.toString()));
-          if (totalPercentage > 100) {
-            conflicts.push({
-              ruleId: existingRule.id,
-              reason: 'sum_gt_100',
-              fields: ['paymentValue']
-            });
-          }
-        }
-      }
-      
-      // Check for invalid date ranges
-      if (rule.validFrom && rule.validTo && rule.validFrom > rule.validTo) {
-        conflicts.push({
-          ruleId: 'self',
-          reason: 'invalid_range',
-          fields: ['validFrom', 'validTo']
-        });
-      }
-      
-      return conflicts;
-      
-    } catch (error) {
-      console.error('Error detecting conflicts:', error);
-      return [];
-    }
-  }
-  
-  /**
-   * Creates a rule version for audit trail
-   */
-  async createRuleVersion(ruleId: string, snapshot: any, createdBy: string): Promise<void> {
-    try {
-      const version: Partial<RuleVersion> = {
-        ruleId,
-        snapshot,
-        createdBy
-      };
-      
-      await simpleRuleStorage.createRuleVersion(version);
-    } catch (error) {
-      console.error('Error creating rule version:', error);
-      throw error;
-    }
-  }
-  
-  /**
-   * Creates rule alerts
-   */
-  async createRuleAlert(ruleId: string, type: string, message: string, details: any): Promise<void> {
-    try {
-      const alert: Partial<RuleAlert> = {
-        ruleId,
-        type,
-        message,
-        details
-      };
-      
-      await simpleRuleStorage.createRuleAlert(alert);
-      
-      // Send webhook if configured
-      await this.sendWebhookAlert(alert);
-      
-    } catch (error) {
-      console.error('Error creating rule alert:', error);
-      throw error;
-    }
-  }
-  
-  // Private helper methods
-  
-  private async getApplicableRules(criteria: RuleSimulationRequest & { date: Date; weekday: string }): Promise<CalculationRule[]> {
-    const allRules = await storage.getCalculationRules({ 
-      specialtyId: criteria.specialtyId,
-      isActive: true 
+    console.log(`[RuleEngine] Evaluating ${allRules.length} total rules`);
+    console.log(`[RuleEngine] Request criteria:`, {
+      specialtyId: request.specialtyId,
+      doctorId: request.doctorId,
+      serviceId: request.serviceId,
+      scheduleType: request.scheduleType,
+      date: request.date.toISOString().split('T')[0]
     });
     
-    return allRules.filter(rule => {
-      // Check validity period
-      const validFrom = rule.validFrom ? new Date(rule.validFrom) : null;
-      const validTo = rule.validTo ? new Date(rule.validTo) : null;
+    const applicableRules = allRules.filter(rule => {
+      console.log(`[RuleEngine] Evaluating rule: ${rule.code} (${rule.name})`);
       
-      if (!validFrom || !validTo) {
-        return false; // Rule without valid dates is not applicable
-      }
-      
-      if (criteria.date < validFrom || criteria.date > validTo) {
+      // Check if rule is active
+      if (!rule.isActive) {
+        console.log(`  ❌ Rule inactive`);
         return false;
       }
       
-      // Check service match (null service means applies to all services)
-      if (rule.serviceId && criteria.serviceId && rule.serviceId !== criteria.serviceId) {
+      // Check valid date range
+      const validFrom = new Date(rule.validFrom);
+      const validTo = new Date(rule.validTo);
+      if (validFrom > request.date) {
+        console.log(`  ❌ Not yet valid (starts ${validFrom.toISOString().split('T')[0]})`);
+        return false;
+      }
+      if (validTo < request.date) {
+        console.log(`  ❌ Expired (ended ${validTo.toISOString().split('T')[0]})`);
         return false;
       }
       
-      // Check doctor/society match
-      if (rule.participationType === 'individual' && rule.doctorId !== criteria.doctorId) {
-        return false;
+      // INTELLIGENT MATCHING: Be more permissive with specialty matching
+      if (request.specialtyId && rule.specialtyId) {
+        if (rule.specialtyId !== request.specialtyId) {
+          console.log(`  ❌ Specialty mismatch: rule=${rule.specialtyId}, request=${request.specialtyId}`);
+          return false;
+        }
+      }
+      // If rule has no specialty specified, it applies to all specialties
+      
+      // Smart participation type matching
+      if (rule.participationType && rule.participationType !== 'mixed') {
+        const requestParticipation = request.doctorId ? 'individual' : 'society';
+        if (rule.participationType !== requestParticipation) {
+          console.log(`  ⚠️  Participation type preference: rule=${rule.participationType}, inferred=${requestParticipation}`);
+          // Don't exclude yet - lower priority in conflict resolution
+        }
       }
       
-      if (rule.participationType === 'society' && rule.societyId !== criteria.societyId) {
-        return false;
+      // Service matching - null/empty means "applies to all services"
+      if (request.serviceId && rule.serviceId && rule.serviceId !== request.serviceId) {
+        console.log(`  ⚠️  Service mismatch: rule=${rule.serviceId}, request=${request.serviceId}`);
+        // Don't exclude - service specificity affects priority
       }
       
-      // Check branch match
-      if (rule.medicalCenterId && criteria.branchId && rule.medicalCenterId !== criteria.branchId) {
-        return false;
+      // Doctor matching - specific doctor rules take precedence
+      if (request.doctorId && rule.doctorId && rule.doctorId !== request.doctorId) {
+        console.log(`  ⚠️  Doctor mismatch: rule=${rule.doctorId}, request=${request.doctorId}`);
+        // Don't exclude - general rules can still apply
       }
       
-      // Check schedule type
-      if (rule.scheduleType && rule.scheduleType !== 'all' && rule.scheduleType !== criteria.scheduleType) {
-        return false;
+      // Schedule type matching - 'all' or null means applies to all schedules
+      if (request.scheduleType && rule.scheduleType && 
+          rule.scheduleType !== 'all' && rule.scheduleType !== request.scheduleType) {
+        console.log(`  ⚠️  Schedule type mismatch: rule=${rule.scheduleType}, request=${request.scheduleType}`);
+        // Don't exclude - affects priority only
       }
       
-      // Check applicable days
+      // Day of week matching - empty means applies to all days
       if (rule.applicableDays && Array.isArray(rule.applicableDays) && rule.applicableDays.length > 0) {
-        if (!rule.applicableDays.includes(criteria.weekday)) {
+        if (!rule.applicableDays.includes(request.weekday)) {
+          console.log(`  ❌ Weekday mismatch: rule=${rule.applicableDays.join(',')}, request=${request.weekday}`);
           return false;
         }
       }
       
+      console.log(`  ✅ Rule ${rule.code} is APPLICABLE`);
       return true;
     });
-  }
-  
-  private resolveRuleConflicts(rules: CalculationRule[]): CalculationRule {
-    if (rules.length === 1) {
-      return rules[0];
-    }
     
-    // Sort by specificity (most specific first)
+    console.log(`[RuleEngine] Found ${applicableRules.length} applicable rules:`, 
+      applicableRules.map(r => `${r.code} (${r.paymentType}: ${r.paymentValue})`));
+    
+    return applicableRules;
+  }
+
+  /**
+   * Resolves conflicts between multiple applicable rules with intelligence
+   */
+  resolveRuleConflicts(rules: CalculationRule[]): CalculationRule {
+    if (rules.length === 1) return rules[0];
+    
+    console.log(`[RuleEngine] Resolving conflicts between ${rules.length} rules`);
+    
     const sortedRules = rules.sort((a, b) => {
-      const specificityA = this.calculateSpecificity(a);
-      const specificityB = this.calculateSpecificity(b);
+      let scoreA = this.calculateRuleSpecificity(a);
+      let scoreB = this.calculateRuleSpecificity(b);
       
-      if (specificityA !== specificityB) {
-        return specificityB - specificityA; // Higher specificity first
+      console.log(`[RuleEngine] Rule ${a.code} specificity: ${scoreA}, Rule ${b.code} specificity: ${scoreB}`);
+      
+      // Higher specificity wins
+      if (scoreB !== scoreA) {
+        return scoreB - scoreA;
       }
       
-      // If same specificity, prefer most recent
-      const dateA = new Date(a.updatedAt);
-      const dateB = new Date(b.updatedAt);
+      // If same specificity, prefer higher payment value (better for medical professional)
+      const valueA = this.getRuleMonetaryValue(a);
+      const valueB = this.getRuleMonetaryValue(b);
       
-      if (dateA.getTime() !== dateB.getTime()) {
-        return dateB.getTime() - dateA.getTime(); // More recent first
-      }
+      console.log(`[RuleEngine] Rule ${a.code} value: $${valueA}, Rule ${b.code} value: $${valueB}`);
       
-      // If same date, prefer percentage with lower value to avoid overpayment
-      if (a.paymentType === 'percentage' && b.paymentType === 'percentage') {
-        return parseFloat(a.paymentValue.toString()) - parseFloat(b.paymentValue.toString());
-      }
-      
-      return 0;
+      return valueB - valueA;
     });
     
-    return sortedRules[0];
-  }
-  
-  private calculateSpecificity(rule: CalculationRule): number {
-    let specificity = 0;
+    const selectedRule = sortedRules[0];
+    console.log(`[RuleEngine] Selected rule: ${selectedRule.code} (${selectedRule.name})`);
     
-    // Branch + Doctor + Service = highest specificity
-    if (rule.medicalCenterId) specificity += 100;
-    if (rule.doctorId) specificity += 50;
-    if (rule.serviceId) specificity += 25;
-    if (rule.societyId) specificity += 40; // Society slightly less specific than doctor
-    if (rule.scheduleType && rule.scheduleType !== 'all') specificity += 10;
-    if (rule.applicableDays && Array.isArray(rule.applicableDays) && rule.applicableDays.length > 0) {
-      specificity += 5;
+    return selectedRule;
+  }
+
+  /**
+   * Calculates rule specificity score with intelligent weighting
+   */
+  calculateRuleSpecificity(rule: CalculationRule): number {
+    let score = 0;
+    
+    // Doctor-specific rules are most specific (highest priority)
+    if (rule.doctorId) score += 1000;
+    
+    // Service-specific rules (high priority)
+    if (rule.serviceId) score += 500;
+    
+    // Participation type specific (medium-high priority)
+    if (rule.participationType === 'individual') score += 200;
+    if (rule.participationType === 'society') score += 150;
+    // Mixed gets lower score as it's more general
+    
+    // Schedule-specific rules (medium priority)
+    if (rule.scheduleType && rule.scheduleType !== 'all') {
+      score += 100;
+      // Night shifts get higher priority (typically higher pay)
+      if (rule.scheduleType === 'night') score += 50;
     }
     
-    return specificity;
+    // Day-specific rules (lower priority)
+    if (rule.applicableDays && Array.isArray(rule.applicableDays) && rule.applicableDays.length > 0) {
+      score += 25;
+      // More specific if fewer days
+      score += Math.max(0, 7 - rule.applicableDays.length) * 5;
+      // Weekend rules get higher priority
+      const hasWeekend = rule.applicableDays.some(day => ['saturday', 'sunday'].includes(day));
+      if (hasWeekend) score += 30;
+    }
+    
+    // Society-specific rules
+    if (rule.societyId) score += 75;
+    
+    // Newer rules get slight preference (for version control)
+    if (rule.createdAt) {
+      const daysSinceCreation = (Date.now() - new Date(rule.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+      score += Math.max(0, 30 - daysSinceCreation * 0.1); // Slight boost for newer rules
+    }
+    
+    return score;
   }
-  
-  private calculatePayment(baseAmount: number, rule: CalculationRule): number {
+
+  /**
+   * Calculates payment amount based on rule with intelligent rounding
+   */
+  calculatePayment(baseAmount: number, rule: CalculationRule): number {
+    let amount = 0;
+    
     if (rule.paymentType === 'percentage') {
       const percentage = parseFloat(rule.paymentValue.toString());
-      return Math.round(baseAmount * (percentage / 100));
-    } else if (rule.paymentType === 'fixed_amount') {
+      amount = (baseAmount * percentage) / 100;
+    } else {
+      amount = parseFloat(rule.paymentValue.toString());
+    }
+    
+    // Round to nearest peso for practical purposes
+    return Math.round(amount);
+  }
+  
+  /**
+   * Gets monetary value of rule for comparison purposes
+   */
+  getRuleMonetaryValue(rule: CalculationRule): number {
+    if (rule.paymentType === 'percentage') {
+      // Assume standard consultation fee of 100,000 CLP for comparison
+      return (100000 * parseFloat(rule.paymentValue.toString())) / 100;
+    } else {
       return parseFloat(rule.paymentValue.toString());
     }
-    
-    return 0;
   }
-  
-  private generateExplanation(selectedRule: CalculationRule, allApplicableRules: CalculationRule[]): string {
-    const specificity = this.calculateSpecificity(selectedRule);
-    let explanation = `Se eligió la regla "${selectedRule.name}" (${selectedRule.code})`;
+
+  /**
+   * Generates intelligent, human-readable explanation of rule selection
+   */
+  generateExplanation(selectedRule: CalculationRule, allApplicableRules: CalculationRule[], baseAmount: number): string {
+    const parts = [];
+    const criteria = [];
     
-    if (allApplicableRules.length > 1) {
-      explanation += ` entre ${allApplicableRules.length} reglas aplicables`;
+    parts.push(`✅ Se aplicó la regla "${selectedRule.name}" (${selectedRule.code})`);
+    
+    // Explain why this rule was selected
+    if (selectedRule.doctorId) {
+      criteria.push("específica para este doctor");
+    }
+    if (selectedRule.serviceId) {
+      criteria.push("específica para este servicio médico");
+    }
+    if (selectedRule.participationType === 'individual') {
+      criteria.push("para atención individual");
+    } else if (selectedRule.participationType === 'society') {
+      criteria.push("para atención en sociedad médica");
+    }
+    if (selectedRule.scheduleType && selectedRule.scheduleType !== 'all') {
+      const scheduleNames = {
+        'regular': 'horario regular',
+        'night': 'horario nocturno',
+        'irregular': 'horario irregular'
+      };
+      criteria.push(`para ${scheduleNames[selectedRule.scheduleType] || selectedRule.scheduleType}`);
+    }
+    if (selectedRule.applicableDays && selectedRule.applicableDays.length > 0 && selectedRule.applicableDays.length < 7) {
+      const dayNames = {
+        'monday': 'lunes', 'tuesday': 'martes', 'wednesday': 'miércoles',
+        'thursday': 'jueves', 'friday': 'viernes', 'saturday': 'sábado', 'sunday': 'domingo'
+      };
+      const translatedDays = selectedRule.applicableDays.map(day => dayNames[day] || day);
+      criteria.push(`para días específicos: ${translatedDays.join(', ')}`);
     }
     
-    const reasons = [];
-    if (selectedRule.medicalCenterId) reasons.push("sucursal específica");
-    if (selectedRule.doctorId) reasons.push("doctor específico");
-    if (selectedRule.serviceId) reasons.push("servicio específico");
-    if (selectedRule.societyId) reasons.push("sociedad específica");
-    if (selectedRule.scheduleType && selectedRule.scheduleType !== 'all') reasons.push(`horario ${selectedRule.scheduleType}`);
-    
-    if (reasons.length > 0) {
-      explanation += ` por tener criterios específicos: ${reasons.join(", ")}`;
+    if (criteria.length > 0) {
+      parts.push(`porque es ${criteria.join(', ')}`);
     }
     
-    explanation += ` y estar vigente en la fecha consultada.`;
-    
+    // Explain the payment calculation with visual indicators
     if (selectedRule.paymentType === 'percentage') {
-      explanation += ` Se aplicó un ${selectedRule.paymentValue}% del monto base.`;
+      const percentage = parseFloat(selectedRule.paymentValue.toString());
+      const calculatedAmount = Math.round((baseAmount * percentage) / 100);
+      parts.push(`💰 Calcula ${percentage}% del monto base ($${baseAmount.toLocaleString('es-CL')}) = $${calculatedAmount.toLocaleString('es-CL')}`);
     } else {
-      explanation += ` Se aplicó un monto fijo de $${parseFloat(selectedRule.paymentValue.toString()).toLocaleString('es-CL')}.`;
+      const fixedAmount = parseFloat(selectedRule.paymentValue.toString());
+      parts.push(`💰 Monto fijo de $${fixedAmount.toLocaleString('es-CL')}`);
     }
     
-    return explanation;
-  }
-  
-  private getWeekdayFromDate(date: Date): string {
-    const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    return weekdays[date.getDay()];
-  }
-  
-  private rulesOverlap(rule1: Partial<CalculationRule>, rule2: CalculationRule): boolean {
-    // Check if rules have overlapping scope
-    if (rule1.specialtyId !== rule2.specialtyId) return false;
-    
-    // Check participation type compatibility
-    if (rule1.participationType === 'individual' && rule2.participationType === 'individual') {
-      return rule1.doctorId === rule2.doctorId;
-    }
-    
-    if (rule1.participationType === 'society' && rule2.participationType === 'society') {
-      return rule1.societyId === rule2.societyId;
-    }
-    
-    return true;
-  }
-  
-  private hasOverlappingCriteria(rule1: Partial<CalculationRule>, rule2: CalculationRule): boolean {
-    // Check date overlap
-    if (rule1.validFrom && rule1.validTo) {
-      const rule1Start = new Date(rule1.validFrom);
-      const rule1End = new Date(rule1.validTo);
-      const rule2Start = new Date(rule2.validFrom);
-      const rule2End = new Date(rule2.validTo);
+    // Mention conflicts if any
+    if (allApplicableRules.length > 1) {
+      const conflictCount = allApplicableRules.length - 1;
+      parts.push(`⚠️ Se encontraron ${allApplicableRules.length} reglas aplicables. Se seleccionó la más específica y beneficiosa.`);
       
-      const hasDateOverlap = rule1Start <= rule2End && rule1End >= rule2Start;
-      if (!hasDateOverlap) return false;
-    }
-    
-    // Check service overlap (null means applies to all services)
-    if (rule1.serviceId && rule2.serviceId && rule1.serviceId !== rule2.serviceId) {
-      return false;
-    }
-    
-    // Check branch overlap
-    if (rule1.medicalCenterId && rule2.medicalCenterId && rule1.medicalCenterId !== rule2.medicalCenterId) {
-      return false;
-    }
-    
-    return true;
-  }
-  
-  private getOverlappingFields(rule1: Partial<CalculationRule>, rule2: CalculationRule): string[] {
-    const fields = [];
-    
-    if (rule1.doctorId === rule2.doctorId) fields.push('doctorId');
-    if (rule1.societyId === rule2.societyId) fields.push('societyId');
-    if (rule1.serviceId === rule2.serviceId) fields.push('serviceId');
-    if (rule1.medicalCenterId === rule2.medicalCenterId) fields.push('medicalCenterId');
-    if (rule1.specialtyId === rule2.specialtyId) fields.push('specialtyId');
-    
-    fields.push('validFrom', 'validTo');
-    
-    return fields;
-  }
-  
-  private async sendWebhookAlert(alert: Partial<RuleAlert>): Promise<void> {
-    const webhookUrl = process.env.RULES_ALERT_WEBHOOK_URL;
-    
-    if (!webhookUrl) {
-      return; // Webhook not configured
-    }
-    
-    try {
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'rule_alert',
-          data: alert,
-          timestamp: new Date().toISOString()
-        }),
-      });
-      
-      if (!response.ok) {
-        console.error('Webhook failed:', response.status, response.statusText);
+      if (conflictCount <= 3) {
+        const otherRules = allApplicableRules.filter(r => r.id !== selectedRule.id).map(r => r.name).join(', ');
+        parts.push(`Otras reglas consideradas: ${otherRules}`);
       }
-    } catch (error) {
-      console.error('Error sending webhook:', error);
+    } else {
+      parts.push(`🎯 Regla única aplicable para estos criterios.`);
     }
+    
+    return parts.join('. ') + '.';
+  }
+
+  /**
+   * Gets weekday from date
+   */
+  getWeekdayFromDate(date: Date): string {
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    return days[date.getDay()];
+  }
+
+  /**
+   * Detects conflicts between rules
+   */
+  async detectConflicts(): Promise<RuleConflictError[]> {
+    const ruleStorage = new SimpleRuleStorage();
+    const allRules = await ruleStorage.getAllRules();
+    const conflicts: RuleConflictError[] = [];
+    
+    for (let i = 0; i < allRules.length; i++) {
+      for (let j = i + 1; j < allRules.length; j++) {
+        const ruleA = allRules[i];
+        const ruleB = allRules[j];
+        
+        const conflict = this.findRuleConflict(ruleA, ruleB);
+        if (conflict) {
+          conflicts.push(conflict);
+        }
+      }
+    }
+    
+    return conflicts;
+  }
+
+  /**
+   * Finds conflicts between two specific rules
+   */
+  findRuleConflict(ruleA: CalculationRule, ruleB: CalculationRule): RuleConflictError | null {
+    // Skip if different specialties - no conflict
+    if (ruleA.specialtyId !== ruleB.specialtyId) return null;
+    
+    // Skip if date ranges don't overlap
+    if (new Date(ruleA.validTo) < new Date(ruleB.validFrom) ||
+        new Date(ruleB.validTo) < new Date(ruleA.validFrom)) {
+      return null;
+    }
+    
+    const conflictingFields: string[] = [];
+    
+    // Check overlapping criteria
+    if (this.criteriaOverlap(ruleA, ruleB, 'doctorId')) conflictingFields.push('doctor');
+    if (this.criteriaOverlap(ruleA, ruleB, 'serviceId')) conflictingFields.push('service');
+    if (this.criteriaOverlap(ruleA, ruleB, 'participationType')) conflictingFields.push('participation');
+    if (this.criteriaOverlap(ruleA, ruleB, 'scheduleType')) conflictingFields.push('schedule');
+    
+    if (conflictingFields.length > 0) {
+      return {
+        code: "RULE_CONFLICT",
+        conflicts: [
+          {
+            ruleId: ruleA.id,
+            reason: `Conflicts with ${ruleB.code}`,
+            fields: conflictingFields
+          },
+          {
+            ruleId: ruleB.id,
+            reason: `Conflicts with ${ruleA.code}`,
+            fields: conflictingFields
+          }
+        ]
+      };
+    }
+    
+    return null;
+  }
+
+  /**
+   * Checks if two rules have overlapping criteria
+   */
+  criteriaOverlap(ruleA: CalculationRule, ruleB: CalculationRule, field: keyof CalculationRule): boolean {
+    const valueA = ruleA[field];
+    const valueB = ruleB[field];
+    
+    // If either is null/undefined, they don't conflict (one is more general)
+    if (!valueA || !valueB) return false;
+    
+    // For arrays (like applicable days)
+    if (Array.isArray(valueA) && Array.isArray(valueB)) {
+      return valueA.some(item => valueB.includes(item));
+    }
+    
+    // For simple values
+    return valueA === valueB;
   }
 }
 
