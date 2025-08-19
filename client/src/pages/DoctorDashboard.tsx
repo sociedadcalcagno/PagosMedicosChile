@@ -614,7 +614,14 @@ export default function DoctorDashboard() {
                               attention.status === 'calculated' ? 'text-orange-600' :
                               'text-gray-600'
                             }`}>
-                              ${parseFloat(attention.amount || 0).toLocaleString('es-CL')}
+                              ${parseFloat(
+                                attention.paidAmount ||
+                                attention.calculatedAmount ||
+                                attention.participatedAmount ||
+                                attention.baseAmount ||
+                                attention.amount ||
+                                0
+                              ).toLocaleString('es-CL')}
                             </span>
                             <div className="text-xs mt-1">
                               <Badge variant={attention.status === 'paid' ? 'default' : 'secondary'}>
