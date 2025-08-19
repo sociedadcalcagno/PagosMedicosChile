@@ -25,14 +25,18 @@ export function setupUnifiedAuth(app: Express) {
       }
       
       console.log(`Unified login attempt: ${username}`);
+      console.log(`Password received: ${password}`);
       
       // Normalizar username (remover puntos para RUTs)
       const normalizedUsername = username.trim().replace(/\./g, '');
+      console.log(`Normalized username: ${normalizedUsername}`);
       
       // Buscar credenciales
       const cred = credentials[username as keyof typeof credentials] || credentials[normalizedUsername as keyof typeof credentials];
+      console.log(`Found credentials:`, cred);
       
       if (!cred || cred.password !== password) {
+        console.log(`Authentication failed - cred exists: ${!!cred}, password match: ${cred ? cred.password === password : 'no cred'}`);
         return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
       }
       
