@@ -78,7 +78,23 @@ export default function DoctorDashboard() {
   // Función para obtener detalles de un pago específico
   const getPaymentDetails = async (payment: any) => {
     try {
-      const response = await fetch(`/api/doctor-paid-attentions/${doctorProfile?.id}/${payment.periodMonth || selectedMonth}/${payment.periodYear || selectedYear}`, {
+      // Usar la ruta de medical-attentions con filtros para obtener las atenciones pagadas
+      const month = payment.periodMonth || selectedMonth;
+      const year = payment.periodYear || selectedYear;
+      
+      // Crear fechas para el filtro del mes específico
+      const dateFrom = `${year}-${month.toString().padStart(2, '0')}-01`;
+      const lastDay = new Date(year, month, 0).getDate();
+      const dateTo = `${year}-${month.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
+      
+      const params = new URLSearchParams({
+        doctorId: doctorProfile?.id || '',
+        dateFrom,
+        dateTo,
+        status: 'paid'
+      });
+      
+      const response = await fetch(`/api/medical-attentions?${params}`, {
         method: 'GET',
         credentials: 'include'
       });
