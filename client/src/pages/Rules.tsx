@@ -132,10 +132,7 @@ export default function Rules() {
   // Mutations
   const createRuleMutation = useMutation({
     mutationFn: async (data: RuleFormData) => {
-      return apiRequest("/api/calculation-rules", {
-        method: "POST",
-        body: data,
-      });
+      return apiRequest("/api/calculation-rules", "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"] });
@@ -167,10 +164,7 @@ export default function Rules() {
 
   const updateRuleMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<RuleFormData> }) => {
-      return apiRequest(`/api/calculation-rules/${id}`, {
-        method: "PUT",
-        body: data,
-      });
+      return apiRequest(`/api/calculation-rules/${id}`, "PUT", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"] });
@@ -203,9 +197,7 @@ export default function Rules() {
 
   const deleteRuleMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/calculation-rules/${id}`, {
-        method: "DELETE",
-      });
+      return apiRequest(`/api/calculation-rules/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"] });
@@ -279,17 +271,17 @@ export default function Rules() {
   };
 
   // Filter rules based on search and filters
-  const filteredRules = rules?.filter((rule: any) => {
+  const filteredRules = (rules || []).filter((rule: any) => {
     const matchesSearch = 
       rule.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       rule.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       rule.description?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesParticipation = !participationFilter || rule.participationType === participationFilter;
-    const matchesSpecialty = !specialtyFilter || rule.specialtyId === specialtyFilter;
+    const matchesParticipation = !participationFilter || participationFilter === "all" || rule.participationType === participationFilter;
+    const matchesSpecialty = !specialtyFilter || specialtyFilter === "all" || rule.specialtyId === specialtyFilter;
     
     let matchesStatus = true;
-    if (statusFilter) {
+    if (statusFilter && statusFilter !== "all") {
       const today = new Date();
       const validFrom = new Date(rule.validFrom);
       const validTo = new Date(rule.validTo);
@@ -304,10 +296,10 @@ export default function Rules() {
     }
     
     return matchesSearch && matchesParticipation && matchesSpecialty && matchesStatus;
-  }) || [];
+  });
 
   const calculateStats = () => {
-    if (!rules) return { active: 0, pending: 0, expired: 0, total: 0 };
+    if (!rules || !Array.isArray(rules)) return { active: 0, pending: 0, expired: 0, total: 0 };
     
     const today = new Date();
     
@@ -325,7 +317,7 @@ export default function Rules() {
       active,
       pending: 8, // Mock data for pending rules in review
       expired,
-      total: rules.length,
+      total: rules.length || 0,
     };
   };
 
@@ -412,11 +404,11 @@ export default function Rules() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {specialties?.map((specialty: any) => (
+                                {Array.isArray(specialties) ? specialties.map((specialty: any) => (
                                   <SelectItem key={specialty.id} value={specialty.id}>
                                     {specialty.name}
                                   </SelectItem>
-                                ))}
+                                )) : []}
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -579,7 +571,7 @@ export default function Rules() {
                   <SelectValue placeholder="Tipo de participación" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="individual">Individual</SelectItem>
                   <SelectItem value="society">Sociedad</SelectItem>
                   <SelectItem value="mixed">Mixta</SelectItem>
@@ -590,12 +582,12 @@ export default function Rules() {
                   <SelectValue placeholder="Especialidad" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas</SelectItem>
-                  {specialties?.map((specialty: any) => (
+                  <SelectItem value="all">Todas</SelectItem>
+                  {Array.isArray(specialties) ? specialties.map((specialty: any) => (
                     <SelectItem key={specialty.id} value={specialty.id}>
                       {specialty.name}
                     </SelectItem>
-                  ))}
+                  )) : []}
                 </SelectContent>
               </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -603,7 +595,7 @@ export default function Rules() {
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="active">Activas</SelectItem>
                   <SelectItem value="pending">Pendientes</SelectItem>
                   <SelectItem value="expired">Vencidas</SelectItem>
@@ -727,7 +719,7 @@ export default function Rules() {
                           <TableCell className="font-mono text-sm">{rule.code}</TableCell>
                           <TableCell className="font-medium">{rule.name}</TableCell>
                           <TableCell>
-                            {specialties?.find((s: any) => s.id === rule.specialtyId)?.name || "N/A"}
+                            {Array.isArray(specialties) ? specialties.find((s: any) => s.id === rule.specialtyId)?.name || "N/A" : "N/A"}
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">
@@ -819,10 +811,10 @@ export default function Rules() {
                 throw error;
               }
             }}
-            specialties={specialties || []}
-            services={services || []}
-            doctors={doctors || []}
-            medicalSocieties={medicalSocieties || []}
+            specialties={Array.isArray(specialties) ? specialties : []}
+            services={Array.isArray(services) ? services : []}
+            doctors={Array.isArray(doctors) ? doctors : []}
+            medicalSocieties={Array.isArray(medicalSocieties) ? medicalSocieties : []}
             result={simulationResult}
           />
         </DialogContent>
