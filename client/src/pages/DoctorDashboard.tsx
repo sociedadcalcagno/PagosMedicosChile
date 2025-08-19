@@ -623,6 +623,14 @@ export default function DoctorDashboard() {
                                 0
                               ).toLocaleString('es-CL')}
                             </span>
+                            {/* Debug: campos disponibles */}
+                            <div className="text-xs text-gray-400 mt-1">
+                              {attention.paidAmount && `Paid: ${attention.paidAmount}`}
+                              {attention.calculatedAmount && ` | Calc: ${attention.calculatedAmount}`}
+                              {attention.participatedAmount && ` | Part: ${attention.participatedAmount}`}
+                              {attention.baseAmount && ` | Base: ${attention.baseAmount}`}
+                              {attention.amount && ` | Amt: ${attention.amount}`}
+                            </div>
                             <div className="text-xs mt-1">
                               <Badge variant={attention.status === 'paid' ? 'default' : 'secondary'}>
                                 {attention.status === 'paid' ? 'Pagado' : 
