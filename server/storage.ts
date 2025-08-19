@@ -961,19 +961,51 @@ export class DatabaseStorage implements IStorage {
 
       if (attentions.length > 0) {
         const doctorTotal = attentions.reduce((sum, att) => sum + parseFloat(att.participatedAmount), 0);
+        const paymentDate = new Date().toISOString().split('T')[0];
         
-        // Create payment record
-        await db.insert(payments).values({
-          doctorId,
-          periodMonth: data.month,
-          periodYear: data.year,
-          totalAmount: doctorTotal.toString(),
-          totalAttentions: attentions.length,
-          paymentMethod: data.paymentMethod,
-          status: 'processed',
-          paymentDate: new Date().toISOString().split('T')[0], // fecha como string
-          processedAt: new Date(),
-        });
+        // Check if payment already exists for this doctor, date, and period
+        const [existingPayment] = await db.select()
+          .from(payments)
+          .where(
+            and(
+              eq(payments.doctorId, doctorId),
+              eq(payments.paymentDate, paymentDate),
+              eq(payments.periodMonth, data.month),
+              eq(payments.periodYear, data.year)
+            )
+          )
+          .limit(1);
+
+        if (existingPayment) {
+          // Update existing payment and mark as recalculated
+          await db.update(payments)
+            .set({
+              totalAmount: doctorTotal.toString(),
+              totalAttentions: attentions.length,
+              paymentMethod: data.paymentMethod,
+              status: 'recalculado',
+              processedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(payments.id, existingPayment.id));
+            
+          console.log(`💡 Payment updated (recalculated) for doctor ${doctorId}`);
+        } else {
+          // Create new payment record
+          await db.insert(payments).values({
+            doctorId,
+            periodMonth: data.month,
+            periodYear: data.year,
+            totalAmount: doctorTotal.toString(),
+            totalAttentions: attentions.length,
+            paymentMethod: data.paymentMethod,
+            status: 'processed',
+            paymentDate: paymentDate,
+            processedAt: new Date(),
+          });
+          
+          console.log(`✅ New payment created for doctor ${doctorId}`);
+        }
 
         processedCount++;
         totalAmount += doctorTotal;
