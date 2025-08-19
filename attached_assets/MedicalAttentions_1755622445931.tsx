@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Calendar, User, Stethoscope, CreditCard, ChevronLeft, ChevronRight, Filter, Search, Trash2, AlertTriangle } from "lucide-react";
 import { CsvUploader } from "@/components/CsvUploader";
