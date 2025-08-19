@@ -150,13 +150,19 @@ export const calculationRules = pgTable("calculation_rules", {
   insuranceTypeId: varchar("insurance_type_id").references(() => insuranceTypes.id),
   societyId: varchar("society_id").references(() => medicalSocieties.id),
   
+  // New fields for intelligent rules
+  scopeType: varchar("scope_type").notNull().default('individual'), // 'individual', 'group'
+  scopeGroupId: varchar("scope_group_id"), // references ruleScopeGroups
+  societyRut: varchar("society_rut"), // for society participation
+  societyName: varchar("society_name"), // for society participation
+  
   // Schedule criteria
-  scheduleType: varchar("schedule_type"), // 'regular', 'irregular', 'night'
+  scheduleType: varchar("schedule_type").default('all'), // 'all', 'regular', 'irregular', 'night'
   applicableDays: jsonb("applicable_days"), // JSON array of weekdays
   
   // Payment calculation
   paymentType: varchar("payment_type").notNull(), // 'percentage', 'fixed_amount'
-  paymentValue: decimal("payment_value", { precision: 10, scale: 2 }).notNull(),
+  paymentValue: decimal("payment_value", { precision: 15, scale: 2 }).notNull(), // Increased precision
   
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -343,7 +349,7 @@ export const payments = pgTable("payments", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const calculationRulesRelations = relations(calculationRules, ({ one }) => ({
+export const calculationRulesRelations = relations(calculationRules, ({ one, many }) => ({
   specialty: one(specialties, {
     fields: [calculationRules.specialtyId],
     references: [specialties.id],
@@ -372,6 +378,12 @@ export const calculationRulesRelations = relations(calculationRules, ({ one }) =
     fields: [calculationRules.societyId],
     references: [medicalSocieties.id],
   }),
+  scopeGroup: one(ruleScopeGroups, {
+    fields: [calculationRules.scopeGroupId],
+    references: [ruleScopeGroups.id],
+  }),
+  versions: many(ruleVersions),
+  alerts: many(ruleAlerts),
 }));
 
 // New relations for payment system
@@ -520,3 +532,145 @@ export type InsertMedicalCenter = z.infer<typeof insertMedicalCenterSchema>;
 
 export type AgreementType = typeof agreementTypes.$inferSelect;
 export type InsertAgreementType = z.infer<typeof insertAgreementTypeSchema>;
+
+// NEW INTELLIGENT RULES TABLES
+
+// Rule versions for audit trail
+export const ruleVersions = pgTable("rule_versions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ruleId: varchar("rule_id").notNull().references(() => calculationRules.id),
+  snapshot: jsonb("snapshot").notNull(), // Complete rule data at time of change
+  createdAt: timestamp("created_at").defaultNow(),
+  createdBy: varchar("created_by").notNull(),
+});
+
+// Rule alerts for conflicts and issues
+export const ruleAlerts = pgTable("rule_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ruleId: varchar("rule_id").notNull().references(() => calculationRules.id),
+  type: varchar("type").notNull(), // 'overlap', 'sum_gt_100', 'invalid_range'
+  message: text("message").notNull(),
+  details: jsonb("details").notNull(), // Structured alert details
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Rule scope groups for managing collections of entities
+export const ruleScopeGroups = pgTable("rule_scope_groups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  type: varchar("type").notNull(), // 'doctor', 'service', 'branch', 'society'
+  members: jsonb("members").notNull(), // array of entity IDs
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Enhanced relations
+export const ruleVersionsRelations = relations(ruleVersions, ({ one }) => ({
+  rule: one(calculationRules, {
+    fields: [ruleVersions.ruleId],
+    references: [calculationRules.id],
+  }),
+}));
+
+export const ruleAlertsRelations = relations(ruleAlerts, ({ one }) => ({
+  rule: one(calculationRules, {
+    fields: [ruleAlerts.ruleId],
+    references: [calculationRules.id],
+  }),
+}));
+
+export const ruleScopeGroupsRelations = relations(ruleScopeGroups, ({ many }) => ({
+  rules: many(calculationRules),
+}));
+
+
+// Insert schemas for new tables
+export const insertRuleVersionSchema = createInsertSchema(ruleVersions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRuleAlertSchema = createInsertSchema(ruleAlerts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRuleScopeGroupSchema = createInsertSchema(ruleScopeGroups).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for new tables
+export type RuleVersion = typeof ruleVersions.$inferSelect;
+export type InsertRuleVersion = z.infer<typeof insertRuleVersionSchema>;
+
+export type RuleAlert = typeof ruleAlerts.$inferSelect;
+export type InsertRuleAlert = z.infer<typeof insertRuleAlertSchema>;
+
+export type RuleScopeGroup = typeof ruleScopeGroups.$inferSelect;
+export type InsertRuleScopeGroup = z.infer<typeof insertRuleScopeGroupSchema>;
+
+// Enhanced calculation rule schema with new fields
+export const enhancedCalculationRuleSchema = insertCalculationRuleSchema.extend({
+  scopeType: z.enum(['individual', 'group']).default('individual'),
+  scopeGroupId: z.string().optional(),
+  societyRut: z.string().optional(),
+  societyName: z.string().optional(),
+  scheduleType: z.enum(['all', 'regular', 'irregular', 'night']).default('all'),
+  applicableDays: z.array(z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])).optional(),
+  validFrom: z.union([z.string(), z.date()]).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  validTo: z.union([z.string(), z.date()]).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  paymentType: z.enum(['percentage', 'fixed_amount']),
+  paymentValue: z.number().refine((val) => {
+    return val > 0;
+  }, { message: 'Payment value must be positive' }),
+}).superRefine((data, ctx) => {
+  // Validation: percentage must be between 0 and 100
+  if (data.paymentType === 'percentage' && (data.paymentValue < 0 || data.paymentValue > 100)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['paymentValue'],
+      message: 'Percentage must be between 0 and 100',
+    });
+  }
+  
+  // Validation: valid dates
+  if (data.validFrom && data.validTo && data.validFrom > data.validTo) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['validTo'],
+      message: 'Valid to date must be after valid from date',
+    });
+  }
+  
+  // Validation: participation type consistency
+  if (data.participationType === 'individual' && !data.doctorId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['doctorId'],
+      message: 'Doctor ID is required for individual participation',
+    });
+  }
+  
+  if (data.participationType === 'society' && !data.societyId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['societyId'],
+      message: 'Society ID is required for society participation',
+    });
+  }
+  
+  // Validation: scope type consistency
+  if (data.scopeType === 'group' && !data.scopeGroupId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['scopeGroupId'],
+      message: 'Scope group ID is required when scope type is group',
+    });
+  }
+});
+
+export type EnhancedInsertCalculationRule = z.infer<typeof enhancedCalculationRuleSchema>;

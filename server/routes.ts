@@ -6,6 +6,8 @@ import { setupUnifiedAuth } from "./unifiedAuth";
 import { authMiddleware } from "./authMiddleware";
 import { honorariosAgent, type AIMessage } from "./openai";
 import { generateManualPDF } from "./pdfGenerator";
+import { ruleEngine } from "./ruleEngine.js";
+import { simpleRuleStorage } from "./simpleRuleStorage.js";
 import {
   insertDoctorSchema,
   insertSpecialtySchema,
@@ -498,6 +500,184 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting calculation rule:", error);
       res.status(500).json({ message: "Failed to delete calculation rule" });
+    }
+  });
+
+  // INTELLIGENT RULES ENGINE ENDPOINTS
+  
+  // Rule simulation endpoint
+  app.post('/api/rules/simulate', unifiedAuthCheck, async (req, res) => {
+    try {
+      const {
+        date,
+        doctorId,
+        societyId,
+        specialtyId,
+        serviceId,
+        branchId,
+        baseAmount,
+        scheduleType,
+        weekday
+      } = req.body;
+      
+      if (!date || !specialtyId || !baseAmount) {
+        return res.status(400).json({
+          message: "Date, specialtyId, and baseAmount are required"
+        });
+      }
+      
+      const simulation = await ruleEngine.simulateRule({
+        date,
+        doctorId,
+        societyId,
+        specialtyId,
+        serviceId,
+        branchId,
+        baseAmount: parseFloat(baseAmount),
+        scheduleType,
+        weekday
+      });
+      
+      res.json(simulation);
+    } catch (error) {
+      console.error('Error simulating rules:', error);
+      res.status(500).json({
+        message: "Failed to simulate rules",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+  
+  // Rule conflict detection endpoint
+  app.post('/api/rules/conflicts', unifiedAuthCheck, async (req, res) => {
+    try {
+      const { rule, excludeRuleId } = req.body;
+      
+      if (!rule) {
+        return res.status(400).json({
+          message: "Rule data is required"
+        });
+      }
+      
+      const conflicts = await ruleEngine.detectConflicts(rule, excludeRuleId);
+      
+      res.json({
+        hasConflicts: conflicts.length > 0,
+        conflicts
+      });
+    } catch (error) {
+      console.error('Error detecting rule conflicts:', error);
+      res.status(500).json({
+        message: "Failed to detect conflicts",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+  
+  // Enhanced calculation rules creation with conflict checking
+  app.post('/api/calculation-rules-enhanced', unifiedAuthCheck, async (req, res) => {
+    try {
+      const ruleData = req.body;
+      
+      // First, detect conflicts
+      const conflicts = await ruleEngine.detectConflicts(ruleData);
+      
+      if (conflicts.length > 0) {
+        return res.status(409).json({
+          message: "Rule conflicts detected",
+          conflicts,
+          code: "RULE_CONFLICT"
+        });
+      }
+      
+      // Create the rule
+      const rule = await storage.createCalculationRule(ruleData);
+      
+      // Create audit version
+      await ruleEngine.createRuleVersion(rule.id, rule, (req.session as any)?.unifiedUser || 'system');
+      
+      res.status(201).json(rule);
+    } catch (error) {
+      console.error('Error creating enhanced calculation rule:', error);
+      res.status(500).json({
+        message: "Failed to create rule",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+  
+  // Rule scope groups endpoints
+  app.get('/api/rule-groups', unifiedAuthCheck, async (req, res) => {
+    try {
+      const { type } = req.query;
+      const groups = await simpleRuleStorage.getRuleScopeGroups(type as string);
+      res.json(groups);
+    } catch (error) {
+      console.error('Error fetching rule scope groups:', error);
+      res.status(500).json({ message: "Failed to fetch rule scope groups" });
+    }
+  });
+  
+  app.post('/api/rule-groups', unifiedAuthCheck, async (req, res) => {
+    try {
+      const group = await simpleRuleStorage.createRuleScopeGroup(req.body);
+      res.status(201).json(group);
+    } catch (error) {
+      console.error('Error creating rule scope group:', error);
+      res.status(500).json({ message: "Failed to create rule scope group" });
+    }
+  });
+  
+  app.put('/api/rule-groups/:id', unifiedAuthCheck, async (req, res) => {
+    try {
+      const group = await simpleRuleStorage.updateRuleScopeGroup(req.params.id, req.body);
+      res.json(group);
+    } catch (error) {
+      console.error('Error updating rule scope group:', error);
+      res.status(500).json({ message: "Failed to update rule scope group" });
+    }
+  });
+  
+  app.delete('/api/rule-groups/:id', unifiedAuthCheck, async (req, res) => {
+    try {
+      await simpleRuleStorage.deleteRuleScopeGroup(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting rule scope group:', error);
+      res.status(500).json({ message: "Failed to delete rule scope group" });
+    }
+  });
+  
+  // Rule versions (audit trail) endpoints
+  app.get('/api/rules/:ruleId/versions', unifiedAuthCheck, async (req, res) => {
+    try {
+      const versions = await simpleRuleStorage.getRuleVersions(req.params.ruleId);
+      res.json(versions);
+    } catch (error) {
+      console.error('Error fetching rule versions:', error);
+      res.status(500).json({ message: "Failed to fetch rule versions" });
+    }
+  });
+  
+  // Rule alerts endpoints
+  app.get('/api/rule-alerts', unifiedAuthCheck, async (req, res) => {
+    try {
+      const { ruleId } = req.query;
+      const alerts = await simpleRuleStorage.getRuleAlerts(ruleId as string);
+      res.json(alerts);
+    } catch (error) {
+      console.error('Error fetching rule alerts:', error);
+      res.status(500).json({ message: "Failed to fetch rule alerts" });
+    }
+  });
+  
+  app.delete('/api/rule-alerts/:id', unifiedAuthCheck, async (req, res) => {
+    try {
+      await simpleRuleStorage.deleteRuleAlert(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting rule alert:', error);
+      res.status(500).json({ message: "Failed to delete rule alert" });
     }
   });
 

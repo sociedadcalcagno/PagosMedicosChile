@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/Layout";
+import RuleSimulator from "@/components/RuleSimulator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,12 +40,13 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Search, Edit, Trash2, Calculator, Eye, Copy, CheckCircle, Clock, AlertTriangle, TrendingUp } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calculator, Eye, Copy, CheckCircle, Clock, AlertTriangle, TrendingUp, PlayCircle, Zap } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+
 const isUnauthorizedError = (error: any) => error?.status === 401 || error?.message?.includes("Unauthorized");
 
 const ruleFormSchema = z.object({
@@ -78,9 +80,13 @@ export default function Rules() {
   const [editingRule, setEditingRule] = useState<any>(null);
   const [step, setStep] = useState(1);
   const [lastSavedRule, setLastSavedRule] = useState<string | null>(null);
+  const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
+  const [simulationResult, setSimulationResult] = useState<any>(null);
+  const [conflictDetectionResults, setConflictDetectionResults] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Queries
   const { data: rules, isLoading } = useQuery({
     queryKey: ["/api/calculation-rules"],
   });
@@ -123,166 +129,83 @@ export default function Rules() {
     },
   });
 
+  // Mutations
   const createRuleMutation = useMutation({
     mutationFn: async (data: RuleFormData) => {
-      const submitData = {
-        ...data,
-        paymentValue: parseFloat(data.paymentValue),
-        applicableDays: data.applicableDays || [],
-        // Convert empty strings to null for foreign key fields
-        specialtyId: data.specialtyId || null,
-        serviceId: data.serviceId === 'all' ? null : (data.serviceId || null),
-        doctorId: data.doctorId || null,
-        societyId: data.societyId || null,
-        
-        
-        
-        // Remove empty string fields that should be null
-        societyRut: data.societyRut || undefined,
-        societyName: data.societyName || undefined,
-        baseRule: data.baseRule || undefined,
-      };
-      const response = await apiRequest("/api/calculation-rules", "POST", submitData);
-      return response.json();
+      return apiRequest("/api/calculation-rules", {
+        method: "POST",
+        body: data,
+      });
     },
-    onSuccess: (response, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"] });
-      
-      // Preserve selected professional context after saving
-      const currentValues = form.getValues();
-      const preservedValues = {
-        doctorId: currentValues.doctorId,
-        specialtyId: currentValues.specialtyId,
-        participationType: currentValues.participationType,
-      };
-      
-      setIsDialogOpen(false);
-      setStep(1);
-      
-      // Reset form but preserve context
-      form.reset({
-        ...form.formState.defaultValues,
-        ...preservedValues,
-      });
-      
-      // Mark this professional as having a saved rule
-      if (variables.doctorId) {
-        setLastSavedRule(variables.doctorId);
-        setTimeout(() => setLastSavedRule(null), 3000); // Clear after 3 seconds
-      }
-      
       toast({
-        title: "✅ Regla creada",
-        description: `La regla de cálculo ha sido creada exitosamente para ${variables.participationType === 'individual' ? 'el profesional seleccionado' : 'la sociedad médica'}. El profesional permanece seleccionado para crear más reglas.`,
+        title: "Regla creada",
+        description: "La regla de cálculo ha sido creada exitosamente.",
       });
+      setIsDialogOpen(false);
+      form.reset();
+      setStep(1);
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
+          title: "Sesión expirada",
+          description: "Por favor, inicia sesión nuevamente.",
           variant: "destructive",
         });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
+      } else {
+        console.error("Error creating rule:", error);
+        toast({
+          title: "Error",
+          description: "No se pudo crear la regla. Inténtalo de nuevo.",
+          variant: "destructive",
+        });
       }
-      toast({
-        title: "Error",
-        description: "No se pudo crear la regla de cálculo.",
-        variant: "destructive",
-      });
     },
   });
 
   const updateRuleMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: RuleFormData }) => {
-      const submitData = {
-        ...data,
-        paymentValue: parseFloat(data.paymentValue),
-        applicableDays: data.applicableDays || [],
-        // Convert empty strings to null for foreign key fields
-        specialtyId: data.specialtyId || null,
-        serviceId: data.serviceId === 'all' ? null : (data.serviceId || null),
-        doctorId: data.doctorId || null,
-        societyId: data.societyId || null,
-        
-        
-        
-        // Remove empty string fields that should be null
-        societyRut: data.societyRut || undefined,
-        societyName: data.societyName || undefined,
-        baseRule: data.baseRule || undefined,
-      };
-      const response = await apiRequest(`/api/calculation-rules/${id}`, "PUT", submitData);
-      return response.json();
+    mutationFn: async ({ id, data }: { id: string; data: Partial<RuleFormData> }) => {
+      return apiRequest(`/api/calculation-rules/${id}`, {
+        method: "PUT",
+        body: data,
+      });
     },
-    onSuccess: (response, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"] });
-      
-      // Preserve selected professional context after updating
-      const currentValues = form.getValues();
-      const preservedValues = {
-        doctorId: currentValues.doctorId,
-        specialtyId: currentValues.specialtyId,
-        participationType: currentValues.participationType,
-      };
-      
+      toast({
+        title: "Regla actualizada",
+        description: "La regla de cálculo ha sido actualizada exitosamente.",
+      });
       setIsDialogOpen(false);
       setEditingRule(null);
+      form.reset();
       setStep(1);
-      
-      // Reset form but preserve context
-      form.reset({
-        ...form.formState.defaultValues,
-        ...preservedValues,
-      });
-      
-      // Mark this professional as having a saved rule
-      if (variables.data.doctorId) {
-        setLastSavedRule(variables.data.doctorId);
-        setTimeout(() => setLastSavedRule(null), 3000); // Clear after 3 seconds
-      }
-      
-      toast({
-        title: "✅ Regla actualizada",
-        description: `La regla de cálculo ha sido actualizada exitosamente para ${variables.data.participationType === 'individual' ? 'el profesional seleccionado' : 'la sociedad médica'}. El profesional permanece seleccionado para crear más reglas.`,
-      });
     },
     onError: (error) => {
-      console.error('Rule update error:', error);
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
+          title: "Sesión expirada",
+          description: "Por favor, inicia sesión nuevamente.",
           variant: "destructive",
         });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
+      } else {
+        console.error("Error updating rule:", error);
+        toast({
+          title: "Error",
+          description: "No se pudo actualizar la regla. Inténtalo de nuevo.",
+          variant: "destructive",
+        });
       }
-      
-      // Try to extract detailed error message
-      let errorMessage = "No se pudo actualizar la regla de cálculo.";
-      if (error.message?.includes('validation') || error.message?.includes('Invalid')) {
-        errorMessage = "Error de validación: Revisa los datos ingresados.";
-      } else if (error.message) {
-        errorMessage = `Error: ${error.message}`;
-      }
-      
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
     },
   });
 
   const deleteRuleMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest(`/api/calculation-rules/${id}`, "DELETE");
+      return apiRequest(`/api/calculation-rules/${id}`, {
+        method: "DELETE",
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"] });
@@ -294,74 +217,30 @@ export default function Rules() {
     onError: (error) => {
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
+          title: "Sesión expirada",
+          description: "Por favor, inicia sesión nuevamente.",
           variant: "destructive",
         });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar la regla de cálculo.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const duplicateRuleMutation = useMutation({
-    mutationFn: async (rule: any) => {
-      const duplicatedRule = {
-        ...rule,
-        code: `${rule.code}_COPY`,
-        name: `${rule.name} (Copia)`,
-        paymentValue: parseFloat(rule.paymentValue),
-      };
-      delete duplicatedRule.id;
-      delete duplicatedRule.createdAt;
-      delete duplicatedRule.updatedAt;
-      
-      const response = await apiRequest("/api/calculation-rules", "POST", duplicatedRule);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"] });
-      toast({
-        title: "Regla duplicada",
-        description: "La regla de cálculo ha sido duplicada exitosamente.",
-      });
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
+      } else {
+        console.error("Error deleting rule:", error);
         toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
+          title: "Error",
+          description: "No se pudo eliminar la regla. Inténtalo de nuevo.",
           variant: "destructive",
         });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
       }
-      toast({
-        title: "Error",
-        description: "No se pudo duplicar la regla de cálculo.",
-        variant: "destructive",
-      });
     },
   });
 
-  const handleSubmit = (data: RuleFormData) => {
-    if (editingRule) {
-      updateRuleMutation.mutate({ id: editingRule.id, data });
-    } else {
-      createRuleMutation.mutate(data);
-    }
+  // Event handlers
+  const handleNewRule = () => {
+    setEditingRule(null);
+    form.reset();
+    setStep(1);
+    setLastSavedRule(null);
   };
 
-  const handleEdit = (rule: any) => {
+  const handleEditRule = (rule: any) => {
     setEditingRule(rule);
     form.reset({
       code: rule.code || "",
@@ -374,110 +253,68 @@ export default function Rules() {
       specialtyId: rule.specialtyId || "",
       serviceId: rule.serviceId || "all",
       doctorId: rule.doctorId || "",
-      societyId: rule.societyId || "",
       societyRut: rule.societyRut || "",
       societyName: rule.societyName || "",
       paymentType: rule.paymentType || "percentage",
-      paymentValue: rule.paymentValue ? rule.paymentValue.toString() : "",
+      paymentValue: rule.paymentValue?.toString() || "",
       scheduleType: rule.scheduleType || "",
       applicableDays: rule.applicableDays || [],
     });
+    setStep(1);
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("¿Estás seguro de que quieres eliminar esta regla?")) {
-      deleteRuleMutation.mutate(id);
+  const handleDeleteRule = async (rule: any) => {
+    if (confirm(`¿Estás seguro de que deseas eliminar la regla "${rule.name}"?`)) {
+      deleteRuleMutation.mutate(rule.id);
     }
   };
 
-  const handleDuplicate = (rule: any) => {
-    duplicateRuleMutation.mutate(rule);
+  const onSubmit = async (data: RuleFormData) => {
+    if (editingRule) {
+      updateRuleMutation.mutate({ id: editingRule.id, data });
+    } else {
+      createRuleMutation.mutate(data);
+    }
   };
 
-  const handleNewRule = () => {
-    setEditingRule(null);
-    setStep(1);
-    form.reset();
-    setIsDialogOpen(true);
-  };
-
-  const nextStep = () => setStep(step + 1);
-  const prevStep = () => setStep(step - 1);
-
-  const filteredRules = (Array.isArray(rules) ? rules : []).filter((rule: any) => {
+  // Filter rules based on search and filters
+  const filteredRules = rules?.filter((rule: any) => {
     const matchesSearch = 
+      rule.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       rule.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      rule.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      rule.description?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesParticipation = !participationFilter || rule.participationType === participationFilter;
     const matchesSpecialty = !specialtyFilter || rule.specialtyId === specialtyFilter;
     
-    const today = new Date();
-    const validFrom = new Date(rule.validFrom);
-    const validTo = new Date(rule.validTo);
     let matchesStatus = true;
-    
-    if (statusFilter === "active") {
-      matchesStatus = rule.isActive && validFrom <= today && validTo >= today;
-    } else if (statusFilter === "expired") {
-      matchesStatus = validTo < today;
-    } else if (statusFilter === "inactive") {
-      matchesStatus = !rule.isActive;
+    if (statusFilter) {
+      const today = new Date();
+      const validFrom = new Date(rule.validFrom);
+      const validTo = new Date(rule.validTo);
+      
+      if (statusFilter === "active") {
+        matchesStatus = validFrom <= today && validTo >= today && rule.isActive;
+      } else if (statusFilter === "pending") {
+        matchesStatus = validFrom > today;
+      } else if (statusFilter === "expired") {
+        matchesStatus = validTo < today;
+      }
     }
     
     return matchesSearch && matchesParticipation && matchesSpecialty && matchesStatus;
   }) || [];
 
-  const getSpecialtyName = (specialtyId: string) => {
-    const specialty = Array.isArray(specialties) ? specialties.find((s: any) => s.id === specialtyId) : null;
-    return specialty?.name || "N/A";
-  };
-
-  const getServiceName = (serviceId: string) => {
-    if (!serviceId) return "Todas";
-    const service = Array.isArray(services) ? services.find((s: any) => s.id === serviceId) : null;
-    return service?.name || "N/A";
-  };
-
-  const getRuleStatus = (rule: any) => {
-    const today = new Date();
-    const validFrom = new Date(rule.validFrom);
-    const validTo = new Date(rule.validTo);
-    
-    if (!rule.isActive) return { status: "Inactiva", variant: "secondary" as const };
-    if (validTo < today) return { status: "Vencida", variant: "destructive" as const };
-    if (validFrom <= today && validTo >= today) return { status: "Activa", variant: "default" as const };
-    return { status: "Pendiente", variant: "secondary" as const };
-  };
-
-  const getParticipationBadge = (type: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      individual: "default",
-      society: "secondary",
-      mixed: "destructive",
-    };
-    return variants[type] || "secondary";
-  };
-
-  const getParticipationLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      individual: "Individual",
-      society: "Sociedad",
-      mixed: "Mixto",
-    };
-    return labels[type] || type;
-  };
-
-  // Calculate stats
   const calculateStats = () => {
-    if (!rules || !Array.isArray(rules)) return { active: 0, pending: 0, expired: 0, total: 0 };
+    if (!rules) return { active: 0, pending: 0, expired: 0, total: 0 };
     
     const today = new Date();
+    
     const active = rules.filter((rule: any) => {
       const validFrom = new Date(rule.validFrom);
       const validTo = new Date(rule.validTo);
-      return rule.isActive && validFrom <= today && validTo >= today;
+      return validFrom <= today && validTo >= today && rule.isActive;
     }).length;
     
     const expired = rules.filter((rule: any) => 
@@ -494,16 +331,6 @@ export default function Rules() {
 
   const stats = calculateStats();
 
-  const weekDays = [
-    { value: "monday", label: "Lunes" },
-    { value: "tuesday", label: "Martes" },
-    { value: "wednesday", label: "Miércoles" },
-    { value: "thursday", label: "Jueves" },
-    { value: "friday", label: "Viernes" },
-    { value: "saturday", label: "Sábado" },
-    { value: "sunday", label: "Domingo" },
-  ];
-
   return (
     <Layout>
       <div className="space-y-4 lg:space-y-6 w-full max-w-none">
@@ -515,295 +342,79 @@ export default function Rules() {
               Gestiona las reglas que determinan los cálculos de honorarios médicos
             </p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={handleNewRule} className="bg-medical-blue hover:bg-medical-dark shadow-md">
-                <Plus className="w-4 h-4 mr-2" />
-                Nueva Regla
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingRule ? "Editar Regla de Cálculo" : "Nueva Regla de Cálculo"}
-                </DialogTitle>
-                <DialogDescription>
-                  Define los parámetros para el cálculo de honorarios médicos
-                </DialogDescription>
-              </DialogHeader>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => setIsSimulatorOpen(true)} 
+              className="bg-green-600 hover:bg-green-700 text-white shadow-md"
+            >
+              <PlayCircle className="w-4 h-4 mr-2" />
+              Simulador
+            </Button>
+            
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={handleNewRule} className="bg-medical-blue hover:bg-medical-dark shadow-md">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nueva Regla
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingRule ? "Editar Regla de Cálculo" : "Nueva Regla de Cálculo"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Define los parámetros para el cálculo de honorarios médicos
+                  </DialogDescription>
+                </DialogHeader>
 
-              {/* Step Indicator */}
-              <div className="mb-6">
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${
-                      step >= 1 ? 'bg-medical-blue text-white' : 'bg-gray-300 text-gray-600'
-                    }`}>1</div>
-                    <span className={`ml-2 font-medium ${step >= 1 ? 'text-gray-900' : 'text-gray-500'}`}>
-                      Información Básica
-                    </span>
-                  </div>
-                  <div className="h-px bg-gray-300 flex-1"></div>
-                  <div className="flex items-center">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${
-                      step >= 2 ? 'bg-medical-blue text-white' : 'bg-gray-300 text-gray-600'
-                    }`}>2</div>
-                    <span className={`ml-2 font-medium ${step >= 2 ? 'text-gray-900' : 'text-gray-500'}`}>
-                      Criterios
-                    </span>
-                  </div>
-                  <div className="h-px bg-gray-300 flex-1"></div>
-                  <div className="flex items-center">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${
-                      step >= 3 ? 'bg-medical-blue text-white' : 'bg-gray-300 text-gray-600'
-                    }`}>3</div>
-                    <span className={`ml-2 font-medium ${step >= 3 ? 'text-gray-900' : 'text-gray-500'}`}>
-                      Validación
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <Form {...form}>
-                <form onSubmit={(e) => {
-                  e.preventDefault();
-                  if (step === 3) {
-                    form.handleSubmit(handleSubmit)(e);
-                  }
-                }} className="space-y-6">
-                  {step === 1 && (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="code"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Código de Regla *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="R005" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Nombre de la Regla *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Nombre descriptivo" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
-                        name="description"
+                        name="code"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Descripción</FormLabel>
+                            <FormLabel>Código</FormLabel>
                             <FormControl>
-                              <Textarea
-                                placeholder="Describe el propósito y aplicación de esta regla..."
-                                {...field}
-                              />
+                              <Input placeholder="Ej: CARD_IND_001" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="validFrom"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Vigencia Desde *</FormLabel>
-                              <FormControl>
-                                <Input type="date" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="validTo"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Vigencia Hasta *</FormLabel>
-                              <FormControl>
-                                <Input type="date" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {step === 2 && (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="participationType"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Tipo de Participación *</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar..." />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="individual">Profesional</SelectItem>
-                                  <SelectItem value="society">Sociedad</SelectItem>
-                                  <SelectItem value="mixed">Mixto</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="specialtyId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Especialidad *</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar..." />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {(Array.isArray(specialties) ? specialties : []).map((specialty: any) => (
-                                    <SelectItem key={specialty.id} value={specialty.id}>
-                                      {specialty.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      {/* Selector de Profesional o Sociedad según tipo de participación */}
-                      {form.watch("participationType") === "individual" && (
-                        <FormField
-                          control={form.control}
-                          name="doctorId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="flex items-center gap-2">
-                                Médico/Profesional *
-                                {lastSavedRule === field.value && field.value && (
-                                  <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
-                                    <CheckCircle className="w-3 h-3 mr-1" />
-                                    Regla guardada
-                                  </Badge>
-                                )}
-                              </FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger className={lastSavedRule === field.value && field.value ? "border-green-500 bg-green-50" : ""}>
-                                    <SelectValue placeholder="Seleccionar médico..." />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {(Array.isArray(doctors) ? doctors : []).map((doctor: any) => (
-                                    <SelectItem key={doctor.id} value={doctor.id}>
-                                      {doctor.name} ({doctor.rut})
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-
-                      {form.watch("participationType") === "society" && (
-                        <FormField
-                          control={form.control}
-                          name="societyId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Sociedad Médica *</FormLabel>
-                              <Select
-                                onValueChange={(value) => {
-                                  field.onChange(value);
-                                  // Auto-fill RUT and name based on selected society
-                                  const selectedSociety = (Array.isArray(medicalSocieties) ? medicalSocieties : []).find((s: any) => s.id === value);
-                                  if (selectedSociety) {
-                                    form.setValue("societyRut", selectedSociety.rut);
-                                    form.setValue("societyName", selectedSociety.name);
-                                  }
-                                }}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar sociedad médica..." />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {(Array.isArray(medicalSocieties) ? medicalSocieties : []).map((society: any) => (
-                                    <SelectItem key={society.id} value={society.id}>
-                                      {society.rut} - {society.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nombre</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ej: Cardiología Individual" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
                       <FormField
                         control={form.control}
-                        name="serviceId"
+                        name="specialtyId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Tipo de Prestación</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value || 'all'}
-                            >
+                            <FormLabel>Especialidad</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Todas las prestaciones" />
+                                  <SelectValue placeholder="Seleccionar especialidad" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="all">Todas las prestaciones</SelectItem>
-                                {(Array.isArray(services) ? services : []).map((service: any) => (
-                                  <SelectItem key={service.id} value={service.id}>
-                                    {service.name}
+                                {specialties?.map((specialty: any) => (
+                                  <SelectItem key={specialty.id} value={specialty.id}>
+                                    {specialty.name}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -813,198 +424,152 @@ export default function Rules() {
                         )}
                       />
 
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-3">Configuración del Cálculo</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="paymentType"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Tipo de Abono *</FormLabel>
-                                <Select
-                                  onValueChange={field.onChange}
-                                  value={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Seleccionar..." />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="percentage">Porcentaje</SelectItem>
-                                    <SelectItem value="fixed_amount">Monto Fijo</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="paymentValue"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Valor *</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    placeholder={form.watch("paymentType") === "percentage" ? "35" : "450000"}
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {step === 3 && (
-                    <div className="space-y-4">
-                      <div className="bg-blue-50 rounded-lg p-4">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-3">Criterios Avanzados</h4>
-                        
-                        <FormField
-                          control={form.control}
-                          name="scheduleType"
-                          render={({ field }) => (
-                            <FormItem className="mb-4">
-                              <FormLabel>Tipo de Horario</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar tipo de horario" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="all">Todos los horarios</SelectItem>
-                                  <SelectItem value="regular">Horario Hábil</SelectItem>
-                                  <SelectItem value="irregular">Horario Inhábil</SelectItem>
-                                  <SelectItem value="night">Horario Nocturno</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="applicableDays"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Días de la Semana</FormLabel>
-                              <div className="grid grid-cols-2 gap-2 mt-2">
-                                {weekDays.map((day) => (
-                                  <div key={day.value} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={day.value}
-                                      checked={field.value?.includes(day.value)}
-                                      onCheckedChange={(checked) => {
-                                        const current = field.value || [];
-                                        if (checked) {
-                                          field.onChange([...current, day.value]);
-                                        } else {
-                                          field.onChange(current.filter((d) => d !== day.value));
-                                        }
-                                      }}
-                                    />
-                                    <label htmlFor={day.value} className="text-sm text-gray-700">
-                                      {day.label}
-                                    </label>
-                                  </div>
-                                ))}
-                              </div>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                      <FormField
+                        control={form.control}
+                        name="participationType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Tipo de Participación</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="individual">Individual</SelectItem>
+                                <SelectItem value="society">Sociedad</SelectItem>
+                                <SelectItem value="mixed">Mixta</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
                       <FormField
                         control={form.control}
-                        name="baseRule"
+                        name="paymentType"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Regla Base</FormLabel>
+                            <FormLabel>Tipo de Pago</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="percentage">Porcentaje</SelectItem>
+                                <SelectItem value="fixed_amount">Monto Fijo</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="paymentValue"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              {form.watch("paymentType") === "percentage" ? "Porcentaje" : "Monto"}
+                            </FormLabel>
                             <FormControl>
-                              <Textarea
-                                placeholder="Describe la lógica base de cálculo..."
-                                {...field}
+                              <Input 
+                                type="number" 
+                                placeholder={form.watch("paymentType") === "percentage" ? "25" : "50000"} 
+                                {...field} 
                               />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                    </div>
-                  )}
 
-                  <DialogFooter className="gap-2">
-                    {step > 1 && (
-                      <Button type="button" variant="outline" onClick={prevStep}>
-                        Anterior
-                      </Button>
-                    )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsDialogOpen(false)}
-                    >
-                      Cancelar
-                    </Button>
-                    {step < 3 ? (
+                      <FormField
+                        control={form.control}
+                        name="validFrom"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Fecha de Inicio</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="validTo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Fecha de Fin</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Descripción</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Descripción detallada de la regla..."
+                              className="resize-none"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <DialogFooter>
                       <Button 
-                        type="button" 
-                        onClick={async () => {
-                          // Validar campos del paso actual antes de continuar
-                          if (step === 1) {
-                            const isValid = await form.trigger(['code', 'name', 'validFrom', 'validTo']);
-                            if (isValid) nextStep();
-                          } else if (step === 2) {
-                            const isValid = await form.trigger(['participationType', 'specialtyId', 'paymentType', 'paymentValue']);
-                            if (isValid) nextStep();
-                          }
-                        }}
-                      >
-                        Siguiente: {step === 1 ? "Criterios" : "Validación"}
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        onClick={() => form.handleSubmit(handleSubmit)()}
-                        disabled={
-                          createRuleMutation.isPending || updateRuleMutation.isPending
-                        }
+                        type="submit" 
+                        disabled={createRuleMutation.isPending || updateRuleMutation.isPending}
                         className="bg-medical-blue hover:bg-medical-dark"
                       >
-                        {editingRule ? "Actualizar Regla" : "Crear Regla"}
+                        {createRuleMutation.isPending || updateRuleMutation.isPending ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                            Guardando...
+                          </>
+                        ) : editingRule ? (
+                          "Actualizar Regla"
+                        ) : (
+                          "Crear Regla"
+                        )}
                       </Button>
-                    )}
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
-        {/* Search and Filters Section */}
+        {/* Filters */}
         <Card>
-          <CardHeader>
-            <CardTitle>Filtros de Búsqueda</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="flex items-center space-x-2">
-                <Search className="w-4 h-4 text-gray-400" />
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Código o nombre..."
+                  placeholder="Buscar reglas..."
+                  className="pl-10"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -1014,10 +579,10 @@ export default function Rules() {
                   <SelectValue placeholder="Tipo de participación" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="individual">Profesional</SelectItem>
+                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="individual">Individual</SelectItem>
                   <SelectItem value="society">Sociedad</SelectItem>
-                  <SelectItem value="mixed">Mixto</SelectItem>
+                  <SelectItem value="mixed">Mixta</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}>
@@ -1025,8 +590,8 @@ export default function Rules() {
                   <SelectValue placeholder="Especialidad" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {(Array.isArray(specialties) ? specialties : []).map((specialty: any) => (
+                  <SelectItem value="">Todas</SelectItem>
+                  {specialties?.map((specialty: any) => (
                     <SelectItem key={specialty.id} value={specialty.id}>
                       {specialty.name}
                     </SelectItem>
@@ -1038,274 +603,29 @@ export default function Rules() {
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="active">Activa</SelectItem>
-                  <SelectItem value="inactive">Inactiva</SelectItem>
-                  <SelectItem value="expired">Vencida</SelectItem>
+                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="active">Activas</SelectItem>
+                  <SelectItem value="pending">Pendientes</SelectItem>
+                  <SelectItem value="expired">Vencidas</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex flex-col sm:flex-row justify-end mt-4 space-y-2 sm:space-y-0 sm:space-x-3">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setSearchTerm("");
-                  setParticipationFilter("");
-                  setSpecialtyFilter("");
-                  setStatusFilter("");
-                }}
-              >
-                Limpiar
-              </Button>
-              <Button className="bg-medical-blue hover:bg-medical-dark">
-                Buscar
-              </Button>
-            </div>
           </CardContent>
         </Card>
 
-        {/* Rules Table */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Lista de Reglas</h3>
-              <div className="flex items-center space-x-2 text-sm text-gray-500">
-                <Calculator className="w-4 h-4" />
-                <span>Mostrando {filteredRules.length} de {(Array.isArray(rules) ? rules.length : 0)} reglas</span>
-              </div>
-            </div>
-
-            {/* Desktop Table */}
-            <div className="hidden lg:block">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Especialidad</TableHead>
-                    <TableHead>Regla Base</TableHead>
-                    <TableHead>Vigencia</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-center">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
-                      Cargando reglas...
-                    </TableCell>
-                  </TableRow>
-                ) : filteredRules.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
-                      No se encontraron reglas
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredRules.map((rule: any) => {
-                    const status = getRuleStatus(rule);
-                    return (
-                      <TableRow key={rule.id} className="hover:bg-gray-50 transition-colors">
-                        <TableCell className="font-mono text-sm font-medium text-medical-blue">
-                          {rule.code}
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium text-gray-900">{rule.name}</p>
-                            {rule.description && (
-                              <p className="text-sm text-gray-500 max-w-xs truncate">
-                                {rule.description}
-                              </p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getParticipationBadge(rule.participationType)}>
-                            {getParticipationLabel(rule.participationType)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm text-gray-900">
-                            {getSpecialtyName(rule.specialtyId)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm text-gray-900">
-                            {rule.paymentType === "percentage" 
-                              ? `${rule.paymentValue}% del valor base`
-                              : `$${parseFloat(rule.paymentValue).toLocaleString()} fijo`
-                            }
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <p className="text-gray-900">{rule.validFrom}</p>
-                            <p className="text-gray-500">{rule.validTo}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={status.variant}>
-                            {status.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex justify-center space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-gray-400 hover:text-medical-blue"
-                              title="Ver detalles"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(rule)}
-                              className="text-gray-400 hover:text-warning-orange"
-                              title="Editar"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDuplicate(rule)}
-                              className="text-gray-400 hover:text-blue-500"
-                              title="Duplicar"
-                            >
-                              <Copy className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(rule.id)}
-                              className="text-gray-400 hover:text-red-500"
-                              title="Eliminar"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-              </Table>
-            </div>
-
-            {/* Mobile Card Layout */}
-            <div className="lg:hidden space-y-4">
-              {isLoading ? (
-                <div className="text-center py-8">Cargando reglas...</div>
-              ) : filteredRules.length === 0 ? (
-                <div className="text-center py-8">No se encontraron reglas</div>
-              ) : (
-                filteredRules.map((rule: any) => {
-                  const status = getRuleStatus(rule);
-                  return (
-                    <Card key={rule.id} className="p-4">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-medium text-gray-900">{rule.name}</h4>
-                            <p className="text-sm text-medical-blue font-mono">{rule.code}</p>
-                          </div>
-                          <Badge variant={status.variant}>
-                            {status.status}
-                          </Badge>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div>
-                            <span className="text-gray-500">Tipo:</span>
-                            <Badge variant={getParticipationBadge(rule.participationType)} className="ml-1">
-                              {getParticipationLabel(rule.participationType)}
-                            </Badge>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Especialidad:</span>
-                            <span className="ml-1">{getSpecialtyName(rule.specialtyId)}</span>
-                          </div>
-                        </div>
-
-                        <div className="text-sm">
-                          <span className="text-gray-500">Regla Base:</span>
-                          <p className="mt-1">
-                            {rule.paymentType === "percentage" 
-                              ? `${rule.paymentValue}% del valor base`
-                              : `$${parseFloat(rule.paymentValue).toLocaleString()} fijo`
-                            }
-                          </p>
-                        </div>
-
-                        <div className="text-sm">
-                          <span className="text-gray-500">Vigencia:</span>
-                          <p className="mt-1">{rule.validFrom} - {rule.validTo}</p>
-                        </div>
-
-                        <div className="flex justify-end space-x-2 pt-2 border-t">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-gray-400 hover:text-medical-blue"
-                            title="Ver detalles"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(rule)}
-                            className="text-gray-400 hover:text-warning-orange"
-                            title="Editar"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDuplicate(rule)}
-                            className="text-gray-400 hover:text-blue-500"
-                            title="Duplicar"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(rule.id)}
-                            className="text-gray-400 hover:text-red-500"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Quick Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <CheckCircle className="text-success-green text-xl" />
+                    <CheckCircle className="text-green-600 text-xl" />
                   </div>
                 </div>
                 <div className="ml-4">
                   <p className="text-2xl font-bold text-gray-900">{stats.active}</p>
-                  <p className="text-sm text-gray-500">Reglas Activas</p>
+                  <p className="text-sm text-gray-500">Activas</p>
                 </div>
               </div>
             </CardContent>
@@ -1315,13 +635,13 @@ export default function Rules() {
             <CardContent className="p-6">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                    <Clock className="text-warning-orange text-xl" />
+                  <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                    <Clock className="text-yellow-600 text-xl" />
                   </div>
                 </div>
                 <div className="ml-4">
                   <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
-                  <p className="text-sm text-gray-500">En Revisión</p>
+                  <p className="text-sm text-gray-500">Pendientes</p>
                 </div>
               </div>
             </CardContent>
@@ -1359,7 +679,154 @@ export default function Rules() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Rules Table */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Especialidad</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Pago</TableHead>
+                    <TableHead>Vigencia</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8">
+                        <div className="flex justify-center items-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-medical-blue" />
+                          <span className="ml-2">Cargando reglas...</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredRules.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                        No se encontraron reglas que coincidan con los filtros
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredRules.map((rule: any) => {
+                      const today = new Date();
+                      const validFrom = new Date(rule.validFrom);
+                      const validTo = new Date(rule.validTo);
+                      const isActive = validFrom <= today && validTo >= today && rule.isActive;
+                      const isPending = validFrom > today;
+                      const isExpired = validTo < today;
+
+                      return (
+                        <TableRow key={rule.id}>
+                          <TableCell className="font-mono text-sm">{rule.code}</TableCell>
+                          <TableCell className="font-medium">{rule.name}</TableCell>
+                          <TableCell>
+                            {specialties?.find((s: any) => s.id === rule.specialtyId)?.name || "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {rule.participationType === "individual" ? "Individual" : 
+                               rule.participationType === "society" ? "Sociedad" : "Mixta"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {rule.paymentType === "percentage" 
+                              ? `${rule.paymentValue}%` 
+                              : `$${parseInt(rule.paymentValue).toLocaleString('es-CL')}`}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {new Date(rule.validFrom).toLocaleDateString('es-CL')} - <br />
+                            {new Date(rule.validTo).toLocaleDateString('es-CL')}
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              className={
+                                isActive 
+                                  ? "bg-green-100 text-green-800 hover:bg-green-100"
+                                  : isPending 
+                                  ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
+                                  : "bg-red-100 text-red-800 hover:bg-red-100"
+                              }
+                            >
+                              {isActive ? "Activa" : isPending ? "Pendiente" : "Vencida"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditRule(rule)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteRule(rule)}
+                                className="text-red-600 hover:text-red-700 hover:border-red-300"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Rule Simulator Modal */}
+      <Dialog open={isSimulatorOpen} onOpenChange={setIsSimulatorOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PlayCircle className="w-5 h-5 text-blue-600" />
+              Simulador de Reglas
+            </DialogTitle>
+            <DialogDescription>
+              Prueba las reglas de cálculo con datos específicos para ver qué regla se aplicaría y el monto resultante.
+            </DialogDescription>
+          </DialogHeader>
+          <RuleSimulator 
+            onSimulate={async (data) => {
+              try {
+                const result = await fetch('/api/rules/simulate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(data)
+                }).then(res => res.json());
+                setSimulationResult(result);
+                return result;
+              } catch (error) {
+                console.error('Simulation error:', error);
+                toast({
+                  title: "Error en la simulación",
+                  description: "No se pudo simular las reglas. Verifique los datos.",
+                  variant: "destructive"
+                });
+                throw error;
+              }
+            }}
+            specialties={specialties || []}
+            services={services || []}
+            doctors={doctors || []}
+            medicalSocieties={medicalSocieties || []}
+            result={simulationResult}
+          />
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

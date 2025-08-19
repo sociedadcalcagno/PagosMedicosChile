@@ -13,6 +13,9 @@ import {
   medicalAttentions,
   paymentCalculations,
   payments,
+  ruleVersions,
+  ruleAlerts,
+  ruleScopeGroups,
   type User,
   type UpsertUser,
   type Doctor,
@@ -36,6 +39,12 @@ import {
   type MedicalAttention,
   type PaymentCalculation,
   type Payment,
+  type RuleVersion,
+  type InsertRuleVersion,
+  type RuleAlert,
+  type InsertRuleAlert,
+  type RuleScopeGroup,
+  type InsertRuleScopeGroup,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, ilike, desc, asc, gte, lte, inArray, sql } from "drizzle-orm";
@@ -91,6 +100,22 @@ export interface IStorage {
   createMedicalCenter(center: InsertMedicalCenter): Promise<MedicalCenter>;
   updateMedicalCenter(id: string, center: Partial<InsertMedicalCenter>): Promise<MedicalCenter>;
   deleteMedicalCenter(id: string): Promise<void>;
+  
+  // Rule version operations (audit trail)
+  getRuleVersions(ruleId: string): Promise<RuleVersion[]>;
+  createRuleVersion(version: Partial<InsertRuleVersion>): Promise<RuleVersion>;
+  
+  // Rule alert operations
+  getRuleAlerts(ruleId?: string): Promise<RuleAlert[]>;
+  createRuleAlert(alert: Partial<InsertRuleAlert>): Promise<RuleAlert>;
+  deleteRuleAlert(id: string): Promise<void>;
+  
+  // Rule scope group operations
+  getRuleScopeGroups(type?: string): Promise<RuleScopeGroup[]>;
+  getRuleScopeGroupById(id: string): Promise<RuleScopeGroup | undefined>;
+  createRuleScopeGroup(group: Partial<InsertRuleScopeGroup>): Promise<RuleScopeGroup>;
+  updateRuleScopeGroup(id: string, group: Partial<InsertRuleScopeGroup>): Promise<RuleScopeGroup>;
+  deleteRuleScopeGroup(id: string): Promise<void>;
   
   // Insurance type operations
   getInsuranceTypes(): Promise<InsuranceType[]>;
