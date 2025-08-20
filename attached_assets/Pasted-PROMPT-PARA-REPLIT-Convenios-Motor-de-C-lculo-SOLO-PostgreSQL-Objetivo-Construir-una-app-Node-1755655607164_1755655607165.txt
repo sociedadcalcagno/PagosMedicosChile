@@ -1,0 +1,294 @@
+PROMPT PARA REPLIT — Convenios + Motor de Cálculo (SOLO PostgreSQL)
+
+Objetivo
+Construir una app Node.js + Express con Knex + PostgreSQL (único motor) que implemente:
+
+Módulo de Convenios (criterios paramétricos + regla + vigencia + prioridad/conflictos).
+
+Motor de Cálculo que evalúa atenciones vs convenios y retorna honorarios.
+
+Simulador Web (madre/cesárea y bebé/visita).
+Si existe código previo incompatible, reemplazarlo. Prohibido usar SQLite o dejar fallback: SOLO Postgres.
+
+1) Stack, dependencias y scripts
+
+Node.js + Express.
+
+Knex + pg (PostgreSQL). No incluir sqlite3 ni referencias a SQLite.
+
+.env obligatorio con DATABASE_URL (formato completo, idealmente con ?sslmode=require si es DB en la nube) y PORT.
+
+package.json:
+
+deps: express, dotenv, knex, pg
+
+scripts:
+
+"start": "node index.js"
+
+"migrate": "knex --knexfile knexfile.js migrate:latest"
+
+"seed": "knex --knexfile knexfile.js seed:run"
+
+"setup": "npm run migrate && npm run seed"
+
+knexfile.js: usar process.env.DATABASE_URL como única conexión. Incluir soporte SSL automático si el URL no trae sslmode=require (por ejemplo, ssl: { rejectUnauthorized: false } cuando NODE_ENV==='production').
+
+2) Modelo funcional (resumen operativo)
+
+Convenio = criterios (empresa/sucursal/centro, previsión, convenio paciente: GRD/GES/CAEC/nivel, plan, código y tipo de prestación, especialidad, horario, tipo de día, proceso, rol médico ejecutante/informante, residente, grupos de médicos/prestaciones, etc.)
+
+método de cálculo (tipo_regla/valor_base)
+
+vigencia (inicio/fin, estado, fecha_referencia: ejecución o venta/pago)
+
+prioridad y resolución (first_win vs stack, comparador de montos si hace falta).
+
+Valor base: recaudado_exento | recaudado_afecto | recaudado_total | devengado_hosp | fonasa_1 | fonasa_2 | fonasa_3 | arancel_especifico.
+
+Tipos de regla: %, fijo, factor, tabla_acumulada (por cantidad o monto), tabla_directa (por cantidad o monto), calc_mas_fijo (combinación).
+
+Criterio de diseño (firme): base = first_win (jerarquía por prioridad) + bonos = stack (acumulan %). Es más gobernable y auditable.
+
+3) Esquema de datos (migraciones — PostgreSQL puro)
+
+Usar tipos Postgres: serial/bigserial, numeric, jsonb, timestamptz.
+
+Tabla convenios
+
+id serial pk
+
+nombre text not null
+
+estado boolean not null default true
+
+prioridad int not null default 100 // menor = evalúa primero
+
+vigencia_inicio date not null
+
+vigencia_fin date null
+
+fecha_referencia text check (fecha_referencia in ('ejecucion','venta_pago')) not null default 'ejecucion'
+
+tipo_regla text check (tipo_regla in ('%','fijo','factor','tabla_acumulada','tabla_directa','calc_mas_fijo')) not null default '%'
+
+valor_regla numeric(12,4) null
+
+combinacion jsonb null // para tablas o calc_mas_fijo {tramos:[], porcentaje, fijo}
+
+valor_base text check (valor_base in ('recaudado_exento','recaudado_afecto','recaudado_total','devengado_hosp','fonasa_1','fonasa_2','fonasa_3','arancel_especifico')) not null default 'recaudado_total'
+
+modo_exclusividad text check (modo_exclusividad in ('first_win','stack')) not null default 'first_win'
+
+created_at timestamptz default now()
+
+updated_at timestamptz default now()
+
+Tabla convenio_criterios
+
+id serial pk
+
+convenio_id int references convenios(id) on delete cascade
+
+clave text not null // ej: 'tipo_prestacion','especialidad','rol_paciente','tipo_dia', etc.
+
+operador text check (operador in ('eq','in','like','gte','lte','between','regex')) not null default 'eq'
+
+valor text not null // texto o JSON stringificado
+
+Tabla convenio_bonos (accesorios stack)
+
+id serial pk
+
+convenio_id int references convenios(id) on delete cascade
+
+descripcion text not null
+
+porcentaje numeric(12,4) not null default 0 // 0.10 = +10%
+
+criterio_clave text not null
+
+criterio_operador text check (criterio_operador in ('eq','in','like')) not null default 'eq'
+
+criterio_valor text not null // texto o JSON
+
+prioridad int not null default 100
+
+Tabla auditoria_calculos
+
+id bigserial pk
+
+ts timestamptz default now()
+
+entrada jsonb
+
+reglas_aplicadas jsonb
+
+resultado jsonb
+
+4) Seeds (datos iniciales obligatorios)
+
+Cargar 5 convenios de ejemplo:
+
+Base: Cirugía 70%
+
+criterio: tipo_prestacion = 'cirugia'
+
+tipo_regla: '%', valor_regla: 0.70, valor_base: 'recaudado_total'
+
+prioridad: 10, modo_exclusividad: 'first_win'
+
+Bono +10% si especialidad in ('ginecologia','obstetricia') (tabla convenio_bonos, prioridad: 15).
+
+Visita bebé 20%
+
+criterios: tipo_prestacion='visita' y rol_paciente='bebe'
+
+% = 0.20, prioridad: 20.
+
+Visita madre 15%
+
+criterios: tipo_prestacion='visita' y rol_paciente='madre'
+
+% = 0.15, prioridad: 20.
+
+Insumos 0%
+
+criterio: tipo_prestacion='insumo'
+
+% = 0.0, prioridad: 5 (bloquea honorarios por materiales).
+
+(5) opcional: Comparador de montos (si quieres dos bases para el mismo caso, deja un segundo convenio con distinta prioridad y un flag en README para “quedarse con el mayor”). Si no, mantener first_win.
+
+5) API (obligatoria)
+
+POST /api/convenios — crear (con criterios y bonos)
+
+GET /api/convenios — listar (filtros por estado/vigencia)
+
+GET /api/convenios/:id — detalle
+
+PUT /api/convenios/:id — actualizar
+
+DELETE /api/convenios/:id — deshabilitar (soft: estado=false)
+
+POST /api/simular — entrada: una o varias líneas; salida: cálculo + trazas.
+
+Soportar campo fecha_evento para comparar vigencia.
+
+Soportar derivar tipo_dia (domingo..sábado) desde la fecha si el criterio lo pide.
+
+Salida por línea:
+
+valor_base_usado,
+
+reglas_base_aplicadas (lista, aunque se use first_win),
+
+bonos_aplicados (stack),
+
+porcentaje_total,
+
+monto_profesional,
+
+advertencias (ej. “Sin convenio aplicable”).
+
+Persistir en auditoria_calculos.
+
+POST /api/simular/csv (opcional) — subir CSV de atenciones y devolver resultados.
+
+6) Motor de cálculo (detalles)
+
+Vigencia: fecha_evento vs vigencia_inicio/fin usando fecha_referencia del convenio (ejecucion o venta_pago).
+
+Match: un convenio base aplica si TODOS sus criterios matchean (operadores soportados).
+
+Valor base: seleccionar monto según valor_base. Para demo, recaudado_total := monto_bruto.
+
+Aplicar regla base:
+
+%: monto = base * valor_regla
+
+fijo: monto = valor_regla
+
+factor: monto = base * factor
+
+calc_mas_fijo: usar combinacion {porcentaje, fijo}
+
+tabla_acumulada/directa: si combinacion.tramos existe, implementar.
+
+Bonos (stack): sumar % compatibles definidos en convenio_bonos.
+
+Conflictos: por defecto first_win; opcional comparador de montos para “mayor entre bases”.
+
+Trazabilidad: guardar entrada, reglas aplicadas y resultado.
+
+7) UI (Simulador mínimo)
+
+GET /: formulario simple + botón “Ejemplo madre + bebé” que envíe 4 líneas:
+
+Madre cesárea (cirugía) ginecología → 70% + 10% = 80% sobre monto_bruto=1.000.000.
+
+Bebé visita → 20% sobre 80.000.
+
+Bebé insumo → 0% sobre 150.000.
+
+Bebé visita con cardiología → 20% (o lo que defina convenio).
+
+Mostrar JSON de respuesta y trazas.
+
+8) Validaciones y manejo de errores
+
+Si faltan campos críticos, responder 422 con detalle.
+
+Si no matchea base: porcentaje_total=0, advertencias=["Sin convenio aplicable"].
+
+Nunca tumbar el proceso por datos sucios: normalizar y registrar advertencias (p. ej., INTEGER '' → warning).
+
+Logs claros.
+
+9) Estructura del repo
+/src
+  /db
+    migrations/
+    seeds/
+  /services
+    criteria-matcher.js
+    value-base.js
+    rules-engine.js
+    resolver.js
+  /routes
+    convenios.routes.js
+    simulador.routes.js
+  /ui
+    index.html
+index.js
+knexfile.js
+.env.example
+README.md
+
+
+El README debe incluir:
+
+Requisitos (DATABASE_URL, ejemplo de URL con sslmode=require).
+
+Comandos: npm install → npm run setup → npm start.
+
+Ejemplos de POST /api/simular.
+
+Explicación de first_win + stack.
+
+10) Criterios de aceptación (obligatorios)
+
+Caso madre cesárea: 80% (70% base + 10% bono).
+
+Caso bebé visita: 20%.
+
+Caso insumos: 0%.
+
+Respuesta con traza completa (base/bonos/valor_base/porcentaje/advertencias).
+
+DB exclusivamente PostgreSQL (no debe existir ni compilar nada de SQLite).
+
+Opinión
+
+Ir solo con Postgres es mejor para productivo: tipos serios (jsonb, numeric), transacciones sólidas y misma semántica que tu entorno real. Además, con knex y seeds de ejemplo, la curva de adopción es bajísima.

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Convenios Médicos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            padding: 40px;
+        }
+        
+        .form-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            background: #fff;
+            transition: border-color 0.3s;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #2196F3;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-example {
+            background: #28a745;
+            color: white;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .result-section {
+            background: #fff;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 30px;
+            margin-top: 30px;
+        }
+        
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .result-icon {
+            width: 24px;
+            height: 24px;
+        }
+        
+        .result-content {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #2196F3;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2196F3;
+        }
+        
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Simulador de Convenios Médicos</h1>
+            <p>Motor de Cálculo de Honorarios - PostgreSQL</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="form-section">
+                <h2>📝 Datos de Simulación</h2>
+                <div class="form-group">
+                    <label for="atenciones">Atenciones Médicas (JSON):</label>
+                    <textarea 
+                        id="atenciones" 
+                        rows="12" 
+                        placeholder='[
+  {
+    "id": "madre-cesarea",
+    "tipo_prestacion": "cirugia",
+    "especialidad": "ginecologia", 
+    "rol_paciente": "madre",
+    "monto_bruto": 1000000
+  }
+]'></textarea>
+                </div>
+                
+                <div class="buttons">
+                    <button class="btn-primary" onclick="simular()">
+                        🚀 Simular Convenios
+                    </button>
+                    <button class="btn-example" onclick="cargarEjemplo()">
+                        📋 Cargar Ejemplo Madre+Bebé
+                    </button>
+                    <button class="btn-secondary" onclick="limpiar()">
+                        🗑️ Limpiar
+                    </button>
+                </div>
+            </div>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Procesando simulación...</p>
+            </div>
+            
+            <div class="result-section" id="result-section" style="display: none;">
+                <div class="result-header">
+                    <svg class="result-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <h3>Resultado de la Simulación</h3>
+                </div>
+                
+                <div class="stats" id="stats"></div>
+                <div class="result-content" id="result-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function simular() {
+            const atenciones = document.getElementById('atenciones').value.trim();
+            
+            if (!atenciones) {
+                alert('Por favor ingrese datos de atenciones');
+                return;
+            }
+            
+            let data;
+            try {
+                data = JSON.parse(atenciones);
+            } catch (e) {
+                alert('JSON inválido. Por favor verifique el formato.');
+                return;
+            }
+            
+            showLoading(true);
+            
+            try {
+                const response = await fetch('/api/simular', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        atenciones: data,
+                        fecha_evento: new Date().toISOString().split('T')[0]
+                    })
+                });
+                
+                const result = await response.json();
+                
+                showLoading(false);
+                
+                if (result.success) {
+                    mostrarResultado(result.data);
+                } else {
+                    mostrarError(result.message || 'Error en la simulación');
+                }
+                
+            } catch (error) {
+                showLoading(false);
+                mostrarError('Error de conexión: ' + error.message);
+            }
+        }
+        
+        async function cargarEjemplo() {
+            try {
+                const response = await fetch('/api/simular/ejemplo');
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('atenciones').value = 
+                        JSON.stringify(result.data.atenciones, null, 2);
+                }
+            } catch (error) {
+                console.error('Error al cargar ejemplo:', error);
+            }
+        }
+        
+        function limpiar() {
+            document.getElementById('atenciones').value = '';
+            document.getElementById('result-section').style.display = 'none';
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+            document.getElementById('result-section').style.display = show ? 'none' : 'none';
+        }
+        
+        function mostrarResultado(data) {
+            const { resultados, resumen } = data;
+            
+            // Mostrar estadísticas
+            const statsHtml = `
+                <div class="stat-card">
+                    <div class="stat-value">${resumen.total_atenciones}</div>
+                    <div class="stat-label">Atenciones</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">$${resumen.total_honorarios.toLocaleString('es-CL')}</div>
+                    <div class="stat-label">Total Honorarios</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${resumen.convenios_utilizados}</div>
+                    <div class="stat-label">Convenios Usados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${resumen.atenciones_sin_convenio}</div>
+                    <div class="stat-label">Sin Convenio</div>
+                </div>
+            `;
+            
+            document.getElementById('stats').innerHTML = statsHtml;
+            
+            // Mostrar JSON completo
+            document.getElementById('result-content').textContent = 
+                JSON.stringify(data, null, 2);
+            
+            document.getElementById('result-section').style.display = 'block';
+        }
+        
+        function mostrarError(mensaje) {
+            document.getElementById('stats').innerHTML = `
+                <div class="stat-card error">
+                    <div class="stat-value">❌</div>
+                    <div class="stat-label">Error</div>
+                </div>
+            `;
+            
+            document.getElementById('result-content').textContent = mensaje;
+            document.getElementById('result-section').style.display = 'block';
+        }
+        
+        // Cargar ejemplo al iniciar
+        window.addEventListener('load', cargarEjemplo);
+    </script>
+</body>
+</html>
