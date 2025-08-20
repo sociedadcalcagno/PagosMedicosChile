@@ -100,7 +100,7 @@ export default function ConventionsSection({
   // Filter conventions on the frontend for now
   const conventions = Array.isArray(allRules) ? allRules.filter(rule => rule.ruleType === 'convention' || rule.rule_type === 'convention') : [];
   
-  console.log('All rules sample:', allRules?.slice(0, 2)); // Debug log
+  console.log('All rules sample:', Array.isArray(allRules) ? allRules.slice(0, 2) : allRules); // Debug log
   console.log('Filtered conventions:', conventions); // Debug log
 
   const form = useForm<ConventionFormData>({
