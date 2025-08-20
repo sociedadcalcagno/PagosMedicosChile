@@ -526,9 +526,60 @@ export class IntelligentRuleEngine {
           }
           
         } else if (selectedRule.paymentType === 'percentage') {
-          const percentage = parseFloat(selectedRule.paymentValue.toString());
-          const calculatedAmount = Math.round((baseAmount * percentage) / 100);
-          parts.push(`💰 Calcula ${percentage}% del monto base ($${baseAmount.toLocaleString('es-CL')}) = $${calculatedAmount.toLocaleString('es-CL')}`);
+          // Check if percentage rule has escalation logic in combinationRule
+          const ruleWithCombination = selectedRule as any;
+          if (ruleWithCombination.combinationRule && typeof ruleWithCombination.combinationRule === 'object') {
+            const combination = ruleWithCombination.combinationRule as any;
+            if (combination.type === 'table_accumulated' && combination.scales && Array.isArray(combination.scales)) {
+              // Show escalation even for percentage rules
+              parts.push(`\n\n📊 **SISTEMA ESCALABLE POR MONTO:**`);
+              combination.scales.forEach((scale: any) => {
+                if (scale.to && scale.to < 999999999) {
+                  parts.push(`   • $${scale.from.toLocaleString('es-CL')} - $${scale.to.toLocaleString('es-CL')}: ${scale.percentage}%`);
+                } else {
+                  parts.push(`   • Más de $${scale.from.toLocaleString('es-CL')}: ${scale.percentage}%`);
+                }
+              });
+              
+              // Current calculation with escalation logic
+              let appliedPercentage = 60; // default
+              for (const scale of combination.scales) {
+                if (baseAmount >= scale.from && (scale.to === undefined || baseAmount <= scale.to)) {
+                  appliedPercentage = scale.percentage;
+                  break;
+                }
+              }
+              
+              const calculatedAmount = Math.round((baseAmount * appliedPercentage) / 100);
+              parts.push(`\n🎯 **APLICACIÓN DEL ESCALONAMIENTO:**`);
+              parts.push(`   • Monto a evaluar: $${baseAmount.toLocaleString('es-CL')}`);
+              
+              // Find which range applies
+              for (const scale of combination.scales) {
+                if (baseAmount >= scale.from && (scale.to === undefined || baseAmount <= scale.to)) {
+                  if (scale.to && scale.to < 999999999) {
+                    parts.push(`   • Cae en rango: $${scale.from.toLocaleString('es-CL')} - $${scale.to.toLocaleString('es-CL')}`);
+                  } else {
+                    parts.push(`   • Cae en rango: Más de $${scale.from.toLocaleString('es-CL')}`);
+                  }
+                  parts.push(`   • Porcentaje aplicado: ${scale.percentage}%`);
+                  break;
+                }
+              }
+              
+              parts.push(`\n💰 **CÁLCULO FINAL:** ${appliedPercentage}% de $${baseAmount.toLocaleString('es-CL')} = $${calculatedAmount.toLocaleString('es-CL')}`);
+            } else {
+              // Standard percentage logic
+              const percentage = parseFloat(selectedRule.paymentValue.toString());
+              const calculatedAmount = Math.round((baseAmount * percentage) / 100);
+              parts.push(`💰 Calcula ${percentage}% del monto base ($${baseAmount.toLocaleString('es-CL')}) = $${calculatedAmount.toLocaleString('es-CL')}`);
+            }
+          } else {
+            // Standard percentage logic
+            const percentage = parseFloat(selectedRule.paymentValue.toString());
+            const calculatedAmount = Math.round((baseAmount * percentage) / 100);
+            parts.push(`💰 Calcula ${percentage}% del monto base ($${baseAmount.toLocaleString('es-CL')}) = $${calculatedAmount.toLocaleString('es-CL')}`);
+          }
         } else {
           const fixedAmount = parseFloat(selectedRule.paymentValue.toString());
           parts.push(`💰 Monto fijo de $${fixedAmount.toLocaleString('es-CL')}`);
