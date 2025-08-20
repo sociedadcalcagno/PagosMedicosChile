@@ -1468,7 +1468,15 @@ export class DatabaseStorage implements IStorage {
   // Custom query method for complex joins
   async query(sqlQuery: string, params: any[] = []): Promise<any[]> {
     try {
-      const result = await db.execute(sql.raw(sqlQuery, ...params));
+      // Replace $1, $2, etc. with actual parameter values
+      let processedQuery = sqlQuery;
+      params.forEach((param, index) => {
+        const placeholder = `$${index + 1}`;
+        const value = typeof param === 'string' ? `'${param}'` : param;
+        processedQuery = processedQuery.replace(placeholder, value);
+      });
+      
+      const result = await db.execute(sql.raw(processedQuery));
       return result.rows as any[];
     } catch (error) {
       console.error('Error executing custom query:', error);

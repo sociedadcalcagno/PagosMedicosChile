@@ -183,9 +183,14 @@ export default function RuleSimulator({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los servicios</SelectItem>
-                {Array.isArray(services) ? services.map((service: any) => (
+                {Array.isArray(services) ? services
+                  .filter((service: any) => 
+                    !simulationData.specialtyId || 
+                    service.specialtyId === simulationData.specialtyId
+                  )
+                  .map((service: any) => (
                   <SelectItem key={service.id} value={service.id}>
-                    {service.name}
+                    {service.name} ({service.code})
                   </SelectItem>
                 )) : []}
               </SelectContent>

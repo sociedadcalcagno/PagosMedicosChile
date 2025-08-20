@@ -1121,9 +1121,14 @@ export default function ConventionsSection({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos los servicios</SelectItem>
-                        {services.map((service: any) => (
+                        {services
+                          .filter((service: any) => 
+                            !simulationData.specialtyId || 
+                            service.specialtyId === simulationData.specialtyId
+                          )
+                          .map((service: any) => (
                           <SelectItem key={service.id} value={service.id}>
-                            {service.name}
+                            {service.name} ({service.code})
                           </SelectItem>
                         ))}
                       </SelectContent>
