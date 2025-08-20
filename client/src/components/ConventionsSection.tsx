@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Edit, Trash2, PlayCircle, FileText } from "lucide-react";
+import { Plus, Search, Edit, Trash2, PlayCircle, FileText, AlertTriangle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -92,12 +92,13 @@ export default function ConventionsSection({
   const queryClient = useQueryClient();
 
   // Get conventions (rules marked as convention type)
-  const { data: conventions, isLoading } = useQuery({
-    queryKey: ["/api/calculation-rules", "convention"],
-    queryFn: () => apiRequest("/api/calculation-rules?ruleType=convention"),
+  const { data: allRules, isLoading } = useQuery({
+    queryKey: ["/api/calculation-rules"],
+    queryFn: () => apiRequest("/api/calculation-rules"),
   });
 
-  console.log('Conventions data:', conventions); // Debug log
+  // Filter conventions on the frontend for now
+  const conventions = Array.isArray(allRules) ? allRules.filter(rule => rule.ruleType === 'convention') : [];
 
   const form = useForm<ConventionFormData>({
     resolver: zodResolver(conventionFormSchema),
@@ -288,8 +289,6 @@ export default function ConventionsSection({
 
   // Filter conventions
   const filteredConventions = Array.isArray(conventions) ? conventions.filter((convention: any) => {
-    console.log('Filtering convention:', convention); // Debug log
-    
     const matchesSearch = !searchTerm || 
       convention.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       convention.code?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -312,11 +311,8 @@ export default function ConventionsSection({
       matchesStatus = true; // Show all regardless of status
     }
     
-    console.log('Filter results:', { matchesSearch, matchesSpecialty, matchesStatus }); // Debug log
     return matchesSearch && matchesSpecialty && matchesStatus;
   }) : [];
-  
-  console.log('Filtered conventions:', filteredConventions); // Debug log
 
   // Calculate stats
   const calculateStats = () => {
