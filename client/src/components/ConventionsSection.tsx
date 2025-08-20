@@ -76,8 +76,8 @@ export default function ConventionsSection({
   medicalSocieties,
 }: ConventionsSectionProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [specialtyFilter, setSpecialtyFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [specialtyFilter, setSpecialtyFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingConvention, setEditingConvention] = useState<any>(null);
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
@@ -117,6 +117,8 @@ export default function ConventionsSection({
         participationType: "mixed", // Conventions can apply to both individual and society
         ruleType: "convention",
         scopeType: data.exclusivityMode === "first_win" ? "individual" : "group",
+        // Ensure serviceId is handled correctly
+        serviceId: data.serviceId === "all" ? null : data.serviceId,
       };
       return apiRequest("/api/calculation-rules", "POST", conventionData);
     },
@@ -391,7 +393,7 @@ export default function ConventionsSection({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">Todos los servicios</SelectItem>
+                              <SelectItem value="all">Todos los servicios</SelectItem>
                               {services.map((service: any) => (
                                 <SelectItem key={service.id} value={service.id}>
                                   {service.name}
