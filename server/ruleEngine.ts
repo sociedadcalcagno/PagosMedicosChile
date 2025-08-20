@@ -101,11 +101,29 @@ export class IntelligentRuleEngine {
       
       console.log(`[RuleEngine] Selected rule: ${selectedRule.code}, calculated: $${calculatedPayment.toLocaleString('es-CL')}`);
       
+      // For escalated payments, show the actually applied percentage instead of the base percentage
+      let displayValue = parseFloat(selectedRule.paymentValue.toString());
+      if (selectedRule.paymentType === 'table_accumulated') {
+        const ruleWithCombination = selectedRule as any;
+        if (ruleWithCombination.combinationRule && typeof ruleWithCombination.combinationRule === 'object') {
+          const combination = ruleWithCombination.combinationRule as any;
+          if (combination.type === 'table_accumulated' && combination.scales && Array.isArray(combination.scales)) {
+            // Find and show the actually applied percentage based on baseAmount
+            for (const scale of combination.scales) {
+              if (request.baseAmount >= scale.from && (scale.to === undefined || request.baseAmount <= scale.to)) {
+                displayValue = scale.percentage;
+                break;
+              }
+            }
+          }
+        }
+      }
+
       return {
         selectedRuleId: selectedRule.id,
         applied: {
           paymentType: selectedRule.paymentType,
-          paymentValue: parseFloat(selectedRule.paymentValue.toString())
+          paymentValue: displayValue
         },
         calculatedPayment,
         explanation,
@@ -326,6 +344,9 @@ export class IntelligentRuleEngine {
             }
           }
           amount = (baseAmount * appliedPercentage) / 100;
+          
+          // Store the applied percentage for display purposes
+          (rule as any).appliedPercentage = appliedPercentage;
         } else {
           // Fallback to basic percentage
           const percentage = parseFloat(rule.paymentValue.toString());
