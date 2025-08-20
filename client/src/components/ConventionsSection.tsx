@@ -144,7 +144,7 @@ export default function ConventionsSection({
     },
     onSuccess: () => {
       // Force refresh the specific query
-      queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"], exact: true });
+      queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"] });
       toast({
         title: "Convenio creado",
         description: "El convenio médico ha sido creado exitosamente.",
@@ -175,8 +175,8 @@ export default function ConventionsSection({
       });
     },
     onSuccess: () => {
-      // Force refresh the specific query 
-      queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"], exact: true });
+      // Simple and reliable refresh
+      queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"] });
       toast({
         title: "Convenio actualizado",
         description: "El convenio médico ha sido actualizado exitosamente.",
@@ -200,7 +200,7 @@ export default function ConventionsSection({
     },
     onSuccess: () => {
       // Force refresh the specific query
-      queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"], exact: true });
+      queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"] });
       toast({
         title: "Convenio eliminado",
         description: "El convenio médico ha sido eliminado exitosamente.",
