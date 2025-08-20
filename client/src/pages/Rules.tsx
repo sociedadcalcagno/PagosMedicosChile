@@ -439,7 +439,7 @@ export default function Rules() {
                   Nueva Regla
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-[1100px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>
                     {editingRule ? "Editar Regla de Cálculo" : "Nueva Regla de Cálculo"}
