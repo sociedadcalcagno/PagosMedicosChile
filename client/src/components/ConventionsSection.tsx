@@ -100,8 +100,7 @@ export default function ConventionsSection({
   // Filter conventions on the frontend for now
   const conventions = Array.isArray(allRules) ? allRules.filter(rule => rule.ruleType === 'convention' || rule.rule_type === 'convention') : [];
   
-  console.log('All rules sample:', Array.isArray(allRules) ? allRules.slice(0, 2) : allRules); // Debug log
-  console.log('Filtered conventions:', conventions); // Debug log
+  // Debug logs removed for stability
 
   const form = useForm<ConventionFormData>({
     resolver: zodResolver(conventionFormSchema),
@@ -144,7 +143,8 @@ export default function ConventionsSection({
       return apiRequest("/api/calculation-rules", "POST", conventionData);
     },
     onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["/api/calculation-rules"] });
+      // Just update the toast, data will update automatically
+      // queryClient.refetchQueries({ queryKey: ["/api/calculation-rules"] });
       toast({
         title: "Convenio creado",
         description: "El convenio médico ha sido creado exitosamente.",
@@ -175,7 +175,8 @@ export default function ConventionsSection({
       });
     },
     onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["/api/calculation-rules"] });
+      // Just update the toast, data will update automatically
+      // queryClient.refetchQueries({ queryKey: ["/api/calculation-rules"] });
       toast({
         title: "Convenio actualizado",
         description: "El convenio médico ha sido actualizado exitosamente.",
@@ -198,7 +199,8 @@ export default function ConventionsSection({
       return apiRequest(`/api/calculation-rules/${id}`, "DELETE");
     },
     onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["/api/calculation-rules"] });
+      // Just update the toast, data will update automatically
+      // queryClient.refetchQueries({ queryKey: ["/api/calculation-rules"] });
       toast({
         title: "Convenio eliminado",
         description: "El convenio médico ha sido eliminado exitosamente.",
@@ -317,7 +319,7 @@ export default function ConventionsSection({
     return matchesSearch && matchesSpecialty && matchesStatus;
   }) : [];
   
-  console.log('Final filtered conventions for display:', filteredConventions); // Debug log
+  // Debug log removed for stability
 
   // Calculate stats
   const calculateStats = () => {
