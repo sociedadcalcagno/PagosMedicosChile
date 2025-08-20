@@ -1098,7 +1098,7 @@ export default function ConventionsSection({
                   </div>
                   <div>
                     <label className="text-sm font-medium">Especialidad</label>
-                    <Select onValueChange={(value) => setSimulationData({...simulationData, specialtyId: value})}>
+                    <Select onValueChange={(value) => setSimulationData({...simulationData, specialtyId: value, serviceId: ''})}>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar especialidad" />
                       </SelectTrigger>
@@ -1115,15 +1115,22 @@ export default function ConventionsSection({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium">Servicio Médico</label>
-                    <Select onValueChange={(value) => setSimulationData({...simulationData, serviceId: value})}>
+                    <Select 
+                      value={simulationData.serviceId || ""} 
+                      onValueChange={(value) => setSimulationData({...simulationData, serviceId: value})}
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar servicio" />
+                        <SelectValue placeholder={
+                          simulationData.specialtyId 
+                            ? "Seleccionar servicio de la especialidad" 
+                            : "Primero selecciona especialidad"
+                        } />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos los servicios</SelectItem>
                         {services
                           .filter((service: any) => 
-                            !simulationData.specialtyId || 
+                            simulationData.specialtyId && 
                             service.specialtyId === simulationData.specialtyId
                           )
                           .map((service: any) => (
