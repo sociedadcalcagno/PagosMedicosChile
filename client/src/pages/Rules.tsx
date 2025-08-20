@@ -89,8 +89,16 @@ const ruleFormSchema = z.object({
   societyId: z.string().optional(),
   societyRut: z.string().optional(),
   societyName: z.string().optional(),
-  paymentType: z.enum(["percentage", "fixed_amount"]),
-  paymentValue: z.string().min(1, "Valor de pago es requerido"),
+  paymentType: z.enum(["percentage", "fixed_amount", "table_accumulated"]),
+  paymentValue: z.string().optional(),
+  combinationRule: z.object({
+    type: z.literal("table_accumulated"),
+    scales: z.array(z.object({
+      from: z.number(),
+      to: z.number().optional(),
+      percentage: z.number()
+    }))
+  }).optional(),
   scheduleType: z.string().optional(),
   applicableDays: z.array(z.string()).optional(),
 });
@@ -109,8 +117,27 @@ export default function Rules() {
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [simulationResult, setSimulationResult] = useState<any>(null);
   const [conflictDetectionResults, setConflictDetectionResults] = useState<any>(null);
+  const [escalationRanges, setEscalationRanges] = useState([
+    { from: 0, to: 1500000, percentage: 60 },
+    { from: 1500001, to: undefined, percentage: 70 }
+  ]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Escalation range management functions
+  const addEscalationRange = () => {
+    setEscalationRanges([...escalationRanges, { from: 0, to: undefined, percentage: 60 }]);
+  };
+
+  const removeEscalationRange = (index: number) => {
+    setEscalationRanges(escalationRanges.filter((_, i) => i !== index));
+  };
+
+  const updateEscalationRange = (index: number, field: 'from' | 'to' | 'percentage', value: number | undefined) => {
+    const newRanges = [...escalationRanges];
+    newRanges[index] = { ...newRanges[index], [field]: value };
+    setEscalationRanges(newRanges);
+  };
 
   // Queries
   const { data: rules, isLoading } = useQuery({
@@ -158,6 +185,18 @@ export default function Rules() {
   // Mutations
   const createRuleMutation = useMutation({
     mutationFn: async (data: RuleFormData) => {
+      // Prepare data for table_accumulated type
+      if (data.paymentType === "table_accumulated") {
+        const ruleData = {
+          ...data,
+          paymentValue: "0", // Not used for escalated rules
+          combinationRule: {
+            type: "table_accumulated",
+            scales: escalationRanges
+          }
+        };
+        return apiRequest("/api/calculation-rules", "POST", ruleData);
+      }
       return apiRequest("/api/calculation-rules", "POST", data);
     },
     onSuccess: () => {
@@ -190,6 +229,18 @@ export default function Rules() {
 
   const updateRuleMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<RuleFormData> }) => {
+      // Prepare data for table_accumulated type
+      if (data.paymentType === "table_accumulated") {
+        const ruleData = {
+          ...data,
+          paymentValue: "0", // Not used for escalated rules
+          combinationRule: {
+            type: "table_accumulated",
+            scales: escalationRanges
+          }
+        };
+        return apiRequest(`/api/calculation-rules/${id}`, "PUT", ruleData);
+      }
       return apiRequest(`/api/calculation-rules/${id}`, "PUT", data);
     },
     onSuccess: () => {
@@ -260,6 +311,18 @@ export default function Rules() {
 
   const handleEditRule = (rule: any) => {
     setEditingRule(rule);
+    
+    // Load escalation ranges if it's a table_accumulated rule
+    if (rule.paymentType === "table_accumulated" && rule.combinationRule?.scales) {
+      setEscalationRanges(rule.combinationRule.scales);
+    } else {
+      // Reset to default ranges
+      setEscalationRanges([
+        { from: 0, to: 1500000, percentage: 60 },
+        { from: 1500001, to: undefined, percentage: 70 }
+      ]);
+    }
+    
     form.reset({
       code: rule.code || "",
       name: rule.name || "",
@@ -480,6 +543,7 @@ export default function Rules() {
                               <SelectContent>
                                 <SelectItem value="percentage">Porcentaje</SelectItem>
                                 <SelectItem value="fixed_amount">Monto Fijo</SelectItem>
+                                <SelectItem value="table_accumulated">Escalable por Monto</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -487,25 +551,96 @@ export default function Rules() {
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="paymentValue"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              {form.watch("paymentType") === "percentage" ? "Porcentaje" : "Monto"}
-                            </FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                placeholder={form.watch("paymentType") === "percentage" ? "25" : "50000"} 
-                                {...field} 
+                      {form.watch("paymentType") !== "table_accumulated" && (
+                        <FormField
+                          control={form.control}
+                          name="paymentValue"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                {form.watch("paymentType") === "percentage" ? "Porcentaje" : "Monto"}
+                              </FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  placeholder={form.watch("paymentType") === "percentage" ? "25" : "50000"} 
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      {/* Escalation configuration interface */}
+                      {form.watch("paymentType") === "table_accumulated" && (
+                        <div className="space-y-4 border rounded-lg p-4 bg-blue-50">
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="w-5 h-5 text-blue-600" />
+                            <h4 className="text-lg font-semibold text-blue-900">📊 Configuración de Escalamiento por Monto</h4>
+                          </div>
+                          
+                          <div className="grid grid-cols-4 gap-4 text-sm font-medium text-gray-700">
+                            <div>Desde ($)</div>
+                            <div>Hasta ($)</div>
+                            <div>Porcentaje (%)</div>
+                            <div>Acciones</div>
+                          </div>
+                          
+                          {escalationRanges.map((range, index) => (
+                            <div key={index} className="grid grid-cols-4 gap-4 items-center">
+                              <Input
+                                type="number"
+                                placeholder="0"
+                                value={range.from}
+                                onChange={(e) => updateEscalationRange(index, 'from', parseInt(e.target.value))}
+                                className="bg-white"
                               />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                              <Input
+                                type="number"
+                                placeholder="1500000"
+                                value={range.to || ''}
+                                onChange={(e) => updateEscalationRange(index, 'to', e.target.value ? parseInt(e.target.value) : undefined)}
+                                className="bg-white"
+                                disabled={index === escalationRanges.length - 1}
+                              />
+                              <Input
+                                type="number"
+                                placeholder="60"
+                                value={range.percentage}
+                                onChange={(e) => updateEscalationRange(index, 'percentage', parseInt(e.target.value))}
+                                className="bg-white"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeEscalationRange(index)}
+                                disabled={escalationRanges.length <= 1}
+                                className="text-red-600 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                          
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={addEscalationRange}
+                            className="w-full border-dashed border-blue-300 text-blue-600 hover:bg-blue-50"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Agregar Rango
+                          </Button>
+                          
+                          <div className="text-xs text-gray-600 bg-white p-3 rounded border-l-4 border-blue-400">
+                            <strong>💡 Ejemplo:</strong> Primer rango $0-$1.500.000 = 60%, segundo rango $1.500.001+ = 70%
+                          </div>
+                        </div>
+                      )}
 
                       {/* PRIMER CRITERIO: Doctor específico */}
                       <FormField
