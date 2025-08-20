@@ -311,7 +311,32 @@ export class IntelligentRuleEngine {
   calculatePayment(baseAmount: number, rule: CalculationRule): number {
     let amount = 0;
     
-    if (rule.paymentType === 'percentage') {
+    if (rule.paymentType === 'table_accumulated') {
+      // Handle escalated payments based on combinationRule
+      const ruleWithCombination = rule as any;
+      if (ruleWithCombination.combinationRule && typeof ruleWithCombination.combinationRule === 'object') {
+        const combination = ruleWithCombination.combinationRule as any;
+        if (combination.type === 'table_accumulated' && combination.scales && Array.isArray(combination.scales)) {
+          // Find applicable percentage based on amount
+          let appliedPercentage = 60; // default
+          for (const scale of combination.scales) {
+            if (baseAmount >= scale.from && (scale.to === undefined || baseAmount <= scale.to)) {
+              appliedPercentage = scale.percentage;
+              break;
+            }
+          }
+          amount = (baseAmount * appliedPercentage) / 100;
+        } else {
+          // Fallback to basic percentage
+          const percentage = parseFloat(rule.paymentValue.toString());
+          amount = (baseAmount * percentage) / 100;
+        }
+      } else {
+        // Fallback to basic percentage
+        const percentage = parseFloat(rule.paymentValue.toString());
+        amount = (baseAmount * percentage) / 100;
+      }
+    } else if (rule.paymentType === 'percentage') {
       const percentage = parseFloat(rule.paymentValue.toString());
       amount = (baseAmount * percentage) / 100;
     } else {
@@ -430,19 +455,64 @@ export class IntelligentRuleEngine {
         }
         
         // Detailed payment calculation explanation
-        if (selectedRule.paymentType === 'table_accumulated' && conventionDetails.scaleRules && conventionDetails.scaleRules.length > 0) {
-          parts.push(`\n\n📊 **SISTEMA DE TABLA ESCALABLE:**`);
-          conventionDetails.scaleRules.forEach((scale: any) => {
-            const rangeText = scale.max_quantity 
-              ? `${scale.min_quantity}-${scale.max_quantity} procedimientos`
-              : `${scale.min_quantity}+ procedimientos`;
-            parts.push(`   • ${rangeText}: ${scale.percentage}%`);
-          });
-          
-          // Current calculation 
-          const percentage = parseFloat(selectedRule.paymentValue.toString());
-          const calculatedAmount = Math.round((baseAmount * percentage) / 100);
-          parts.push(`\n💰 Para 1 procedimiento: ${percentage}% de $${baseAmount.toLocaleString('es-CL')} = $${calculatedAmount.toLocaleString('es-CL')}`);
+        if (selectedRule.paymentType === 'table_accumulated') {
+          // Check if it has monto-based scaling (combinationRule) or quantity-based scaling (scaleRules)
+          const ruleWithCombination = selectedRule as any;
+          if (ruleWithCombination.combinationRule && typeof ruleWithCombination.combinationRule === 'object') {
+            const combination = ruleWithCombination.combinationRule as any;
+            if (combination.type === 'table_accumulated' && combination.scales && Array.isArray(combination.scales)) {
+              parts.push(`\n\n📊 **SISTEMA ESCALABLE POR MONTO:**`);
+              combination.scales.forEach((scale: any) => {
+                if (scale.to && scale.to < 999999999) {
+                  parts.push(`   • $${scale.from.toLocaleString('es-CL')} - $${scale.to.toLocaleString('es-CL')}: ${scale.percentage}%`);
+                } else {
+                  parts.push(`   • Más de $${scale.from.toLocaleString('es-CL')}: ${scale.percentage}%`);
+                }
+              });
+              
+              // Current calculation with escalation logic
+              let appliedPercentage = 60; // default
+              for (const scale of combination.scales) {
+                if (baseAmount >= scale.from && (scale.to === undefined || baseAmount <= scale.to)) {
+                  appliedPercentage = scale.percentage;
+                  break;
+                }
+              }
+              
+              const calculatedAmount = Math.round((baseAmount * appliedPercentage) / 100);
+              parts.push(`\n🎯 **APLICACIÓN DEL ESCALONAMIENTO:**`);
+              parts.push(`   • Monto a evaluar: $${baseAmount.toLocaleString('es-CL')}`);
+              
+              // Find which range applies
+              for (const scale of combination.scales) {
+                if (baseAmount >= scale.from && (scale.to === undefined || baseAmount <= scale.to)) {
+                  if (scale.to && scale.to < 999999999) {
+                    parts.push(`   • Cae en rango: $${scale.from.toLocaleString('es-CL')} - $${scale.to.toLocaleString('es-CL')}`);
+                  } else {
+                    parts.push(`   • Cae en rango: Más de $${scale.from.toLocaleString('es-CL')}`);
+                  }
+                  parts.push(`   • Porcentaje aplicado: ${scale.percentage}%`);
+                  break;
+                }
+              }
+              
+              parts.push(`\n💰 **CÁLCULO FINAL:** ${appliedPercentage}% de $${baseAmount.toLocaleString('es-CL')} = $${calculatedAmount.toLocaleString('es-CL')}`);
+            }
+          } else if (conventionDetails.scaleRules && conventionDetails.scaleRules.length > 0) {
+            // Quantity-based scaling (original logic)
+            parts.push(`\n\n📊 **SISTEMA DE TABLA ESCALABLE POR CANTIDAD:**`);
+            conventionDetails.scaleRules.forEach((scale: any) => {
+              const rangeText = scale.max_quantity 
+                ? `${scale.min_quantity}-${scale.max_quantity} procedimientos`
+                : `${scale.min_quantity}+ procedimientos`;
+              parts.push(`   • ${rangeText}: ${scale.percentage}%`);
+            });
+            
+            // Current calculation 
+            const percentage = parseFloat(selectedRule.paymentValue.toString());
+            const calculatedAmount = Math.round((baseAmount * percentage) / 100);
+            parts.push(`\n💰 Para 1 procedimiento: ${percentage}% de $${baseAmount.toLocaleString('es-CL')} = $${calculatedAmount.toLocaleString('es-CL')}`);
+          }
           
           // Values breakdown if available
           if (conventionDetails.extension) {
