@@ -102,7 +102,6 @@ export default function ConventionsSection({
   
   console.log('All rules sample:', allRules?.slice(0, 2)); // Debug log
   console.log('Filtered conventions:', conventions); // Debug log
-  console.log('Final filtered conventions for display:', filteredConventions); // Debug log
 
   const form = useForm<ConventionFormData>({
     resolver: zodResolver(conventionFormSchema),
@@ -317,6 +316,8 @@ export default function ConventionsSection({
     
     return matchesSearch && matchesSpecialty && matchesStatus;
   }) : [];
+  
+  console.log('Final filtered conventions for display:', filteredConventions); // Debug log
 
   // Calculate stats
   const calculateStats = () => {
