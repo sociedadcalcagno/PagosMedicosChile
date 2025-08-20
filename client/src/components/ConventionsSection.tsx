@@ -142,14 +142,9 @@ export default function ConventionsSection({
       };
       return apiRequest("/api/calculation-rules", "POST", conventionData);
     },
-    onSuccess: (newConvention) => {
-      // Add the new item to the cache
-      queryClient.setQueryData(["/api/calculation-rules"], (oldData: any) => {
-        if (Array.isArray(oldData)) {
-          return [...oldData, newConvention];
-        }
-        return [newConvention];
-      });
+    onSuccess: () => {
+      // Force refresh the specific query
+      queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"], exact: true });
       toast({
         title: "Convenio creado",
         description: "El convenio médico ha sido creado exitosamente.",
@@ -179,16 +174,9 @@ export default function ConventionsSection({
         serviceId: data.serviceId === "all" ? null : data.serviceId,
       });
     },
-    onSuccess: (updatedConvention) => {
-      // Update only this specific item in the cache
-      queryClient.setQueryData(["/api/calculation-rules"], (oldData: any) => {
-        if (Array.isArray(oldData)) {
-          return oldData.map(item => 
-            item.id === updatedConvention.id ? updatedConvention : item
-          );
-        }
-        return oldData;
-      });
+    onSuccess: () => {
+      // Force refresh the specific query 
+      queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"], exact: true });
       toast({
         title: "Convenio actualizado",
         description: "El convenio médico ha sido actualizado exitosamente.",
@@ -211,8 +199,8 @@ export default function ConventionsSection({
       return apiRequest(`/api/calculation-rules/${id}`, "DELETE");
     },
     onSuccess: () => {
-      // Just update the toast, data will update automatically
-      // queryClient.refetchQueries({ queryKey: ["/api/calculation-rules"] });
+      // Force refresh the specific query
+      queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"], exact: true });
       toast({
         title: "Convenio eliminado",
         description: "El convenio médico ha sido eliminado exitosamente.",
