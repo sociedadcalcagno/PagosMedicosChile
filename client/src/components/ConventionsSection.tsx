@@ -82,6 +82,12 @@ export default function ConventionsSection({
   const [editingConvention, setEditingConvention] = useState<any>(null);
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [simulationResult, setSimulationResult] = useState<any>(null);
+  const [simulationData, setSimulationData] = useState({
+    doctorId: '',
+    specialtyId: '',
+    serviceId: '',
+    baseAmount: '',
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -90,6 +96,8 @@ export default function ConventionsSection({
     queryKey: ["/api/calculation-rules", "convention"],
     queryFn: () => apiRequest("/api/calculation-rules?ruleType=convention"),
   });
+
+  console.log('Conventions data:', conventions); // Debug log
 
   const form = useForm<ConventionFormData>({
     resolver: zodResolver(conventionFormSchema),
@@ -240,17 +248,58 @@ export default function ConventionsSection({
     }
   };
 
+  const handleSimulation = async () => {
+    // Find applicable conventions
+    const applicableConventions = filteredConventions.filter((conv: any) => {
+      // Check if convention applies to selected criteria
+      const matchesSpecialty = !conv.specialtyId || conv.specialtyId === simulationData.specialtyId;
+      const matchesService = !conv.serviceId || conv.serviceId === simulationData.serviceId || simulationData.serviceId === 'all';
+      const today = new Date();
+      const validFrom = new Date(conv.validFrom || '');
+      const validTo = new Date(conv.validTo || '');
+      const isValid = conv.isActive && today >= validFrom && today <= validTo;
+      
+      return matchesSpecialty && matchesService && isValid;
+    });
+
+    // Calculate results
+    const baseAmount = parseFloat(simulationData.baseAmount) || 0;
+    const results = applicableConventions.map((conv: any) => {
+      const calculatedAmount = conv.paymentType === 'percentage' 
+        ? baseAmount * (parseFloat(conv.paymentValue) / 100)
+        : parseFloat(conv.paymentValue);
+      
+      return {
+        convention: conv,
+        calculatedAmount,
+        percentage: conv.paymentType === 'percentage' ? parseFloat(conv.paymentValue) : null
+      };
+    });
+
+    const totalAmount = results.reduce((sum, result) => sum + result.calculatedAmount, 0);
+    
+    setSimulationResult({
+      baseAmount,
+      applicableConventions: results,
+      totalAmount,
+      conventionCount: results.length
+    });
+  };
+
   // Filter conventions
   const filteredConventions = Array.isArray(conventions) ? conventions.filter((convention: any) => {
+    console.log('Filtering convention:', convention); // Debug log
+    
     const matchesSearch = !searchTerm || 
       convention.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       convention.code?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesSpecialty = !specialtyFilter || specialtyFilter === "all" || convention.specialtyId === specialtyFilter;
+    const matchesSpecialty = !specialtyFilter || specialtyFilter === "all" || 
+      convention.specialtyId === specialtyFilter || !convention.specialtyId;
     
     const today = new Date();
-    const validFrom = new Date(convention.validFrom || '');
-    const validTo = new Date(convention.validTo || '');
+    const validFrom = convention.validFrom ? new Date(convention.validFrom) : new Date();
+    const validTo = convention.validTo ? new Date(convention.validTo) : new Date(2030, 0, 1);
     
     let matchesStatus = true;
     if (statusFilter === "active") {
@@ -259,10 +308,15 @@ export default function ConventionsSection({
       matchesStatus = !convention.isActive || today > validTo;
     } else if (statusFilter === "pending") {
       matchesStatus = convention.isActive && today < validFrom;
+    } else if (statusFilter === "all") {
+      matchesStatus = true; // Show all regardless of status
     }
     
+    console.log('Filter results:', { matchesSearch, matchesSpecialty, matchesStatus }); // Debug log
     return matchesSearch && matchesSpecialty && matchesStatus;
   }) : [];
+  
+  console.log('Filtered conventions:', filteredConventions); // Debug log
 
   // Calculate stats
   const calculateStats = () => {
@@ -1026,7 +1080,7 @@ export default function ConventionsSection({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium">Doctor</label>
-                    <Select>
+                    <Select onValueChange={(value) => setSimulationData({...simulationData, doctorId: value})}>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar doctor" />
                       </SelectTrigger>
@@ -1041,7 +1095,7 @@ export default function ConventionsSection({
                   </div>
                   <div>
                     <label className="text-sm font-medium">Especialidad</label>
-                    <Select>
+                    <Select onValueChange={(value) => setSimulationData({...simulationData, specialtyId: value})}>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar especialidad" />
                       </SelectTrigger>
@@ -1058,11 +1112,12 @@ export default function ConventionsSection({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium">Servicio Médico</label>
-                    <Select>
+                    <Select onValueChange={(value) => setSimulationData({...simulationData, serviceId: value})}>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar servicio" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="all">Todos los servicios</SelectItem>
                         {services.map((service: any) => (
                           <SelectItem key={service.id} value={service.id}>
                             {service.name}
@@ -1073,10 +1128,18 @@ export default function ConventionsSection({
                   </div>
                   <div>
                     <label className="text-sm font-medium">Monto Base</label>
-                    <Input placeholder="100000" />
+                    <Input 
+                      placeholder="100000" 
+                      value={simulationData.baseAmount}
+                      onChange={(e) => setSimulationData({...simulationData, baseAmount: e.target.value})}
+                    />
                   </div>
                 </div>
-                <Button className="w-full">
+                <Button 
+                  className="w-full" 
+                  onClick={handleSimulation}
+                  disabled={!simulationData.doctorId || !simulationData.specialtyId || !simulationData.baseAmount}
+                >
                   <PlayCircle className="w-4 h-4 mr-2" />
                   Ejecutar Simulación
                 </Button>
@@ -1089,10 +1152,73 @@ export default function ConventionsSection({
                 <CardTitle className="text-lg">Resultados de Simulación</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-gray-500">
-                  <PlayCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Ejecuta una simulación para ver los convenios aplicables</p>
-                </div>
+                {simulationResult ? (
+                  <div className="space-y-6">
+                    {/* Summary */}
+                    <div className="grid grid-cols-3 gap-4 p-4 bg-blue-50 rounded-lg">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-blue-600">
+                          ${simulationResult.baseAmount.toLocaleString('es-CL')}
+                        </p>
+                        <p className="text-sm text-gray-600">Monto Base</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-green-600">
+                          {simulationResult.conventionCount}
+                        </p>
+                        <p className="text-sm text-gray-600">Convenios Aplicables</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-purple-600">
+                          ${simulationResult.totalAmount.toLocaleString('es-CL')}
+                        </p>
+                        <p className="text-sm text-gray-600">Total Calculado</p>
+                      </div>
+                    </div>
+
+                    {/* Convention Details */}
+                    {simulationResult.applicableConventions.length > 0 ? (
+                      <div>
+                        <h4 className="font-semibold mb-4">Convenios Aplicados:</h4>
+                        <div className="space-y-3">
+                          {simulationResult.applicableConventions.map((result: any, index: number) => (
+                            <div key={index} className="border rounded-lg p-4">
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <h5 className="font-medium">{result.convention.name}</h5>
+                                  <p className="text-sm text-gray-600">Código: {result.convention.code}</p>
+                                  <p className="text-sm text-gray-600">
+                                    Tipo: {result.convention.paymentType === 'percentage' ? 'Porcentaje' : 'Monto Fijo'}
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-semibold text-green-600">
+                                    ${result.calculatedAmount.toLocaleString('es-CL')}
+                                  </p>
+                                  {result.percentage && (
+                                    <p className="text-sm text-gray-600">
+                                      {result.percentage}%
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <AlertTriangle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>No se encontraron convenios aplicables para los criterios seleccionados</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <PlayCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Ejecuta una simulación para ver los convenios aplicables</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
