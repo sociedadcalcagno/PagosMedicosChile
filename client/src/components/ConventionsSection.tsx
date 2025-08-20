@@ -98,7 +98,11 @@ export default function ConventionsSection({
   });
 
   // Filter conventions on the frontend for now
-  const conventions = Array.isArray(allRules) ? allRules.filter(rule => rule.ruleType === 'convention') : [];
+  const conventions = Array.isArray(allRules) ? allRules.filter(rule => rule.ruleType === 'convention' || rule.rule_type === 'convention') : [];
+  
+  console.log('All rules sample:', allRules?.slice(0, 2)); // Debug log
+  console.log('Filtered conventions:', conventions); // Debug log
+  console.log('Final filtered conventions for display:', filteredConventions); // Debug log
 
   const form = useForm<ConventionFormData>({
     resolver: zodResolver(conventionFormSchema),
