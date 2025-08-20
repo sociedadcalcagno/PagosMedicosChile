@@ -92,7 +92,7 @@ export default function ConventionsSection({
   const queryClient = useQueryClient();
 
   // Get conventions (rules marked as convention type)
-  const { data: allRules, isLoading } = useQuery({
+  const { data: allRules, isLoading, refetch } = useQuery({
     queryKey: ["/api/calculation-rules"],
     queryFn: () => apiRequest("/api/calculation-rules"),
   });
@@ -144,7 +144,7 @@ export default function ConventionsSection({
     },
     onSuccess: () => {
       // Force refresh the specific query
-      queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"] });
+      refetch();
       toast({
         title: "Convenio creado",
         description: "El convenio médico ha sido creado exitosamente.",
@@ -176,7 +176,7 @@ export default function ConventionsSection({
     },
     onSuccess: () => {
       // Simple and reliable refresh
-      queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"] });
+      refetch();
       toast({
         title: "Convenio actualizado",
         description: "El convenio médico ha sido actualizado exitosamente.",
@@ -200,7 +200,7 @@ export default function ConventionsSection({
     },
     onSuccess: () => {
       // Force refresh the specific query
-      queryClient.invalidateQueries({ queryKey: ["/api/calculation-rules"] });
+      refetch();
       toast({
         title: "Convenio eliminado",
         description: "El convenio médico ha sido eliminado exitosamente.",
