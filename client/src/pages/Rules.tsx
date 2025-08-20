@@ -481,6 +481,112 @@ export default function Rules() {
                         )}
                       />
 
+                      {/* PRIMER CRITERIO: Doctor específico */}
+                      <FormField
+                        control={form.control}
+                        name="doctorId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Doctor Específico (Opcional)</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Todos los doctores" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="all">Todos los doctores</SelectItem>
+                                {Array.isArray(doctors) ? doctors.map((doctor: any) => (
+                                  <SelectItem key={doctor.id} value={doctor.id}>
+                                    {doctor.name} ({doctor.rut})
+                                  </SelectItem>
+                                )) : []}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* SEGUNDO CRITERIO: Servicio médico */}
+                      <FormField
+                        control={form.control}
+                        name="serviceId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Servicio Médico (Opcional)</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Todos los servicios" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="all">Todos los servicios</SelectItem>
+                                {Array.isArray(services) ? services.map((service: any) => (
+                                  <SelectItem key={service.id} value={service.id}>
+                                    {service.name}
+                                  </SelectItem>
+                                )) : []}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Sociedad médica */}
+                      <FormField
+                        control={form.control}
+                        name="societyId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Sociedad Médica (Opcional)</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Todas las sociedades" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="all">Todas las sociedades</SelectItem>
+                                {Array.isArray(medicalSocieties) ? medicalSocieties.map((society: any) => (
+                                  <SelectItem key={society.id} value={society.id}>
+                                    {society.name}
+                                  </SelectItem>
+                                )) : []}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Tipo de horario */}
+                      <FormField
+                        control={form.control}
+                        name="scheduleType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Tipo de Horario</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || "all"}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="all">Todos los horarios</SelectItem>
+                                <SelectItem value="regular">Horario regular</SelectItem>
+                                <SelectItem value="night">Horario nocturno</SelectItem>
+                                <SelectItem value="irregular">Horario irregular</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
                       <FormField
                         control={form.control}
                         name="validFrom"
@@ -507,6 +613,54 @@ export default function Rules() {
                             <FormMessage />
                           </FormItem>
                         )}
+                      />
+
+                      {/* TERCER CRITERIO: Días aplicables */}
+                      <FormField
+                        control={form.control}
+                        name="applicableDays"
+                        render={({ field }) => {
+                          const selectedDays = Array.isArray(field.value) ? field.value : [];
+                          
+                          const toggleDay = (day: string) => {
+                            const newDays = selectedDays.includes(day)
+                              ? selectedDays.filter(d => d !== day)
+                              : [...selectedDays, day];
+                            field.onChange(newDays);
+                          };
+                          
+                          return (
+                            <FormItem>
+                              <FormLabel>Días Aplicables (Opcional)</FormLabel>
+                              <div className="grid grid-cols-4 gap-2">
+                                {[
+                                  { value: 'monday', label: 'Lun' },
+                                  { value: 'tuesday', label: 'Mar' },
+                                  { value: 'wednesday', label: 'Mié' },
+                                  { value: 'thursday', label: 'Jue' },
+                                  { value: 'friday', label: 'Vie' },
+                                  { value: 'saturday', label: 'Sáb' },
+                                  { value: 'sunday', label: 'Dom' }
+                                ].map((day) => (
+                                  <Button
+                                    key={day.value}
+                                    type="button"
+                                    variant={selectedDays.includes(day.value) ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => toggleDay(day.value)}
+                                    className="h-8"
+                                  >
+                                    {day.label}
+                                  </Button>
+                                ))}
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Si no seleccionas días, la regla se aplicará todos los días
+                              </p>
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
                       />
                     </div>
 

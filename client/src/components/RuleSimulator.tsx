@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Calculator, CheckCircle, AlertTriangle, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { SimulationResultModal } from './SimulationResultModal';
 
 interface RuleSimulatorProps {
   onSimulate: (data: any) => Promise<any>;
@@ -32,31 +33,67 @@ export default function RuleSimulator({
   const [simulationData, setSimulationData] = useState({
     date: new Date().toISOString().split('T')[0],
     specialtyId: '',
-    doctorId: '',
+    doctorId: 'all',
     societyId: '',
-    serviceId: '',
+    serviceId: 'all',
     baseAmount: 100000,
     scheduleType: 'regular',
     weekday: 'monday'
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [simulationResult, setSimulationResult] = useState<any>(null);
   const { toast } = useToast();
 
   const handleSimulate = async () => {
-    if (!simulationData.specialtyId || !simulationData.baseAmount) {
-      toast({
-        title: "Datos incompletos",
-        description: "Por favor complete al menos la especialidad y el monto base.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsLoading(true);
     try {
-      await onSimulate(simulationData);
+      setIsLoading(true);
+      
+      const response = await onSimulate({
+        ...simulationData,
+        doctorId: simulationData.doctorId === 'all' ? '' : simulationData.doctorId,
+        serviceId: simulationData.serviceId === 'all' ? '' : simulationData.serviceId,
+      });
+
+      // Agregar datos adicionales para el modal
+      const resultWithData = {
+        ...response,
+        simulationData: {
+          specialtyName: specialties?.find((s: any) => s.id === simulationData.specialtyId)?.name,
+          doctorName: simulationData.doctorId && simulationData.doctorId !== 'all' 
+            ? doctors?.find((d: any) => d.id === simulationData.doctorId)?.name 
+            : undefined,
+          serviceName: simulationData.serviceId && simulationData.serviceId !== 'all' 
+            ? services?.find((s: any) => s.id === simulationData.serviceId)?.name 
+            : undefined,
+          baseAmount: simulationData.baseAmount,
+          date: simulationData.date,
+          scheduleType: simulationData.scheduleType
+        }
+      };
+
+      setSimulationResult(resultWithData);
+      setIsModalOpen(true);
+
+      if (response.selectedRuleId) {
+        toast({
+          title: "✅ Simulación exitosa",
+          description: "Se encontró una regla aplicable para los criterios especificados.",
+        });
+      } else {
+        toast({
+          title: "⚠️ Sin reglas aplicables",
+          description: "No se encontraron reglas que coincidan con los criterios.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
-      // Error handling is done in parent component
+      console.error('Error en simulación:', error);
+      toast({
+        title: "❌ Error en simulación",
+        description: "No se pudo completar la simulación. Intenta nuevamente.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -64,182 +101,162 @@ export default function RuleSimulator({
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">Fecha de Atención</label>
-          <Input 
-            type="date" 
-            value={simulationData.date}
-            onChange={(e) => setSimulationData({...simulationData, date: e.target.value})}
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium mb-2">Especialidad *</label>
-          <Select 
-            value={simulationData.specialtyId}
-            onValueChange={(value) => setSimulationData({...simulationData, specialtyId: value})}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Seleccionar especialidad" />
-            </SelectTrigger>
-            <SelectContent>
-              {specialties?.map((specialty: any) => (
-                <SelectItem key={specialty.id} value={specialty.id}>
-                  {specialty.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200">
+        <h3 className="text-xl font-bold text-blue-900 mb-2 flex items-center gap-2">
+          <Calculator className="w-6 h-6" />
+          Simulador de Reglas Inteligente
+        </h3>
+        <p className="text-blue-700 mb-4">
+          Prueba las reglas de cálculo con datos específicos para ver qué regla se aplicaría y el monto resultante.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Fecha de Atención */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Fecha de Atención *
+            </label>
+            <Input
+              type="date"
+              value={simulationData.date}
+              onChange={(e) => setSimulationData(prev => ({ ...prev, date: e.target.value }))}
+              required
+            />
+          </div>
+
+          {/* Especialidad */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Especialidad *
+            </label>
+            <Select 
+              value={simulationData.specialtyId} 
+              onValueChange={(value) => setSimulationData(prev => ({ ...prev, specialtyId: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar especialidad" />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.isArray(specialties) ? specialties.map((specialty: any) => (
+                  <SelectItem key={specialty.id} value={specialty.id}>
+                    {specialty.name}
+                  </SelectItem>
+                )) : []}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Doctor */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Doctor
+            </label>
+            <Select 
+              value={simulationData.doctorId} 
+              onValueChange={(value) => setSimulationData(prev => ({ ...prev, doctorId: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los doctores</SelectItem>
+                {Array.isArray(doctors) ? doctors.map((doctor: any) => (
+                  <SelectItem key={doctor.id} value={doctor.id}>
+                    {doctor.name} ({doctor.rut})
+                  </SelectItem>
+                )) : []}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Servicio */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Servicio
+            </label>
+            <Select 
+              value={simulationData.serviceId} 
+              onValueChange={(value) => setSimulationData(prev => ({ ...prev, serviceId: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los servicios</SelectItem>
+                {Array.isArray(services) ? services.map((service: any) => (
+                  <SelectItem key={service.id} value={service.id}>
+                    {service.name}
+                  </SelectItem>
+                )) : []}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Monto Base */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Monto Base *
+            </label>
+            <Input
+              type="number"
+              value={simulationData.baseAmount}
+              onChange={(e) => setSimulationData(prev => ({ ...prev, baseAmount: parseInt(e.target.value) || 0 }))}
+              placeholder="500000"
+              required
+            />
+          </div>
+
+          {/* Tipo de Horario */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tipo de Horario
+            </label>
+            <Select 
+              value={simulationData.scheduleType} 
+              onValueChange={(value) => setSimulationData(prev => ({ ...prev, scheduleType: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="regular">Regular</SelectItem>
+                <SelectItem value="night">Nocturno</SelectItem>
+                <SelectItem value="irregular">Irregular</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">Doctor</label>
-          <Select 
-            value={simulationData.doctorId}
-            onValueChange={(value) => setSimulationData({...simulationData, doctorId: value})}
+        {/* Botón de Simulación */}
+        <div className="mt-6">
+          <Button 
+            onClick={handleSimulate} 
+            disabled={isLoading || !simulationData.specialtyId || simulationData.baseAmount <= 0}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-medium px-8 py-2 text-lg"
           >
-            <SelectTrigger>
-              <SelectValue placeholder="Seleccionar doctor" />
-            </SelectTrigger>
-            <SelectContent>
-              {doctors?.map((doctor: any) => (
-                <SelectItem key={doctor.id} value={doctor.id}>
-                  {doctor.name} ({doctor.rut})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-2">Servicio</label>
-          <Select 
-            value={simulationData.serviceId}
-            onValueChange={(value) => setSimulationData({...simulationData, serviceId: value})}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Seleccionar servicio" />
-            </SelectTrigger>
-            <SelectContent>
-              {services?.filter((service: any) => 
-                !simulationData.specialtyId || service.specialtyId === simulationData.specialtyId
-              ).map((service: any) => (
-                <SelectItem key={service.id} value={service.id}>
-                  {service.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-2">Monto Base *</label>
-          <Input 
-            type="number" 
-            value={simulationData.baseAmount}
-            onChange={(e) => setSimulationData({...simulationData, baseAmount: parseInt(e.target.value) || 0})}
-            placeholder="100000"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-2">Tipo de Horario</label>
-          <Select 
-            value={simulationData.scheduleType}
-            onValueChange={(value) => setSimulationData({...simulationData, scheduleType: value})}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="regular">Regular</SelectItem>
-              <SelectItem value="irregular">Irregular</SelectItem>
-              <SelectItem value="night">Nocturno</SelectItem>
-            </SelectContent>
-          </Select>
+            {isLoading ? (
+              <>
+                <Calculator className="w-4 h-4 mr-2 animate-spin" />
+                Simulando...
+              </>
+            ) : (
+              <>
+                <Zap className="w-4 h-4 mr-2" />
+                Simular Reglas
+              </>
+            )}
+          </Button>
         </div>
       </div>
 
-      <div className="flex justify-center">
-        <Button 
-          onClick={handleSimulate}
-          disabled={isLoading || !simulationData.specialtyId || !simulationData.baseAmount}
-          className="bg-green-600 hover:bg-green-700 text-white px-8"
-        >
-          {isLoading ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-              Simulando...
-            </>
-          ) : (
-            <>
-              <Zap className="w-4 h-4 mr-2" />
-              Simular Reglas
-            </>
-          )}
-        </Button>
-      </div>
-
-      {result && (
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h4 className="font-medium mb-3 flex items-center gap-2">
-            <Calculator className="w-4 h-4" />
-            Resultado de la Simulación
-          </h4>
-          
-          {result.selectedRuleId ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                <span className="font-medium text-green-800">Regla aplicada exitosamente</span>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium">Tipo de pago:</span> 
-                  <Badge variant="outline" className="ml-2">
-                    {result.applied?.paymentType === 'percentage' ? 'Porcentaje' : 'Monto fijo'}
-                  </Badge>
-                </div>
-                <div>
-                  <span className="font-medium">Valor:</span> 
-                  <span className="ml-2">{result.applied?.paymentValue}
-                    {result.applied?.paymentType === 'percentage' ? '%' : ''}
-                  </span>
-                </div>
-                <div className="md:col-span-2">
-                  <span className="font-medium">Monto calculado:</span> 
-                  <span className="ml-2 text-lg font-bold text-green-600">
-                    ${result.calculatedPayment?.toLocaleString('es-CL')}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="mt-4 p-3 bg-blue-50 rounded border-l-4 border-blue-400">
-                <p className="text-sm text-blue-800">{result.explanation}</p>
-              </div>
-              
-              {result.conflictingRules && result.conflictingRules.length > 0 && (
-                <div className="mt-4 p-3 bg-yellow-50 rounded border-l-4 border-yellow-400">
-                  <h5 className="font-medium text-yellow-800 mb-2">Reglas conflictivas encontradas:</h5>
-                  <ul className="text-sm text-yellow-700 space-y-1">
-                    {result.conflictingRules.map((rule: any, idx: number) => (
-                      <li key={idx}>• {rule.name} ({rule.code})</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-gray-600">
-              <AlertTriangle className="w-5 h-5 text-amber-500" />
-              <span>No se encontró ninguna regla aplicable para estos criterios.</span>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Modal de Resultados */}
+      <SimulationResultModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        result={simulationResult}
+        simulationData={simulationResult?.simulationData}
+      />
     </div>
   );
 }
