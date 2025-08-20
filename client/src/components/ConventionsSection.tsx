@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -111,9 +111,14 @@ export default function ConventionsSection({
   // Mutations
   const createConventionMutation = useMutation({
     mutationFn: async (data: ConventionFormData) => {
+      // Generate unique code for conventions
+      const timestamp = Date.now().toString().slice(-6);
+      const uniqueCode = `CONV_${timestamp}`;
+      
       // Create as a calculation rule with convention type
       const conventionData = {
         ...data,
+        code: uniqueCode, // Override with unique code
         baseRule: `Convenio: ${data.name}`,
         participationType: "mixed", // Conventions can apply to both individual and society
         ruleType: "convention",
@@ -308,8 +313,12 @@ export default function ConventionsSection({
         </div>
         <div className="flex gap-2">
           <Button 
-            onClick={() => setIsSimulatorOpen(true)} 
+            onClick={() => {
+              console.log('Opening simulator...');
+              setIsSimulatorOpen(true);
+            }} 
             className="bg-green-600 hover:bg-green-700 text-white shadow-md"
+            data-testid="button-simulator"
           >
             <PlayCircle className="w-4 h-4 mr-2" />
             Simulador
@@ -751,6 +760,347 @@ export default function ConventionsSection({
           </div>
         </CardContent>
       </Card>
+
+      {/* Convention Creation/Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingConvention ? "Editar Convenio Médico" : "Nuevo Convenio Médico"}
+            </DialogTitle>
+            <DialogDescription>
+              Define los parámetros para el convenio con instituciones de salud
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Código</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Se generará automáticamente" disabled />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre del Convenio</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Ej: Guillermo Arcángel" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="specialtyId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Especialidad</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar especialidad" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {specialties.map((specialty: any) => (
+                            <SelectItem key={specialty.id} value={specialty.id}>
+                              {specialty.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="serviceId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Servicio Médico (Opcional)</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Todos los servicios" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="all">Todos los servicios</SelectItem>
+                          {services.map((service: any) => (
+                            <SelectItem key={service.id} value={service.id}>
+                              {service.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="validFrom"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Vigencia Desde</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="validTo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Vigencia Hasta</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="paymentType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo de Pago</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar tipo" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="percentage">Porcentaje</SelectItem>
+                          <SelectItem value="fixed_amount">Monto Fijo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="paymentValue"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="85" />
+                      </FormControl>
+                      <FormDescription>
+                        {form.watch("paymentType") === "percentage" 
+                          ? "Porcentaje (ej: 70 = 70%)"
+                          : "Monto en pesos chilenos"}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="priority"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prioridad</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="100" />
+                      </FormControl>
+                      <FormDescription>
+                        Menor número = mayor prioridad
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="exclusivityMode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Modo de Exclusividad</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Primer Convenio (first_win)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="first_win">Primer Convenio (first_win)</SelectItem>
+                          <SelectItem value="stack">Aplica todos los convenios coincidentes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        first_win: Solo aplica el primer convenio que coincida; stack: Aplica todos los convenios coincidentes.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descripción</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        {...field} 
+                        placeholder="Descripción detallada del convenio..."
+                        rows={3}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createConventionMutation.isPending || updateConventionMutation.isPending}
+                >
+                  {editingConvention ? "Actualizar" : "Crear Convenio"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Convention Simulator Dialog */}
+      <Dialog open={isSimulatorOpen} onOpenChange={setIsSimulatorOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Simulador de Convenios Médicos</DialogTitle>
+            <DialogDescription>
+              Simula la aplicación de convenios para un caso específico
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Simulation Form */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Datos para Simulación</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Doctor</label>
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar doctor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {doctors.map((doctor: any) => (
+                          <SelectItem key={doctor.id} value={doctor.id}>
+                            {doctor.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Especialidad</label>
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar especialidad" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {specialties.map((specialty: any) => (
+                          <SelectItem key={specialty.id} value={specialty.id}>
+                            {specialty.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Servicio Médico</label>
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar servicio" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {services.map((service: any) => (
+                          <SelectItem key={service.id} value={service.id}>
+                            {service.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Monto Base</label>
+                    <Input placeholder="100000" />
+                  </div>
+                </div>
+                <Button className="w-full">
+                  <PlayCircle className="w-4 h-4 mr-2" />
+                  Ejecutar Simulación
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Simulation Results */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Resultados de Simulación</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-gray-500">
+                  <PlayCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>Ejecuta una simulación para ver los convenios aplicables</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setIsSimulatorOpen(false)}>
+              Cerrar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
