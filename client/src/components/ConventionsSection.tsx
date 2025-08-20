@@ -142,9 +142,14 @@ export default function ConventionsSection({
       };
       return apiRequest("/api/calculation-rules", "POST", conventionData);
     },
-    onSuccess: () => {
-      // Just update the toast, data will update automatically
-      // queryClient.refetchQueries({ queryKey: ["/api/calculation-rules"] });
+    onSuccess: (newConvention) => {
+      // Add the new item to the cache
+      queryClient.setQueryData(["/api/calculation-rules"], (oldData: any) => {
+        if (Array.isArray(oldData)) {
+          return [...oldData, newConvention];
+        }
+        return [newConvention];
+      });
       toast({
         title: "Convenio creado",
         description: "El convenio médico ha sido creado exitosamente.",
@@ -174,9 +179,16 @@ export default function ConventionsSection({
         serviceId: data.serviceId === "all" ? null : data.serviceId,
       });
     },
-    onSuccess: () => {
-      // Just update the toast, data will update automatically
-      // queryClient.refetchQueries({ queryKey: ["/api/calculation-rules"] });
+    onSuccess: (updatedConvention) => {
+      // Update only this specific item in the cache
+      queryClient.setQueryData(["/api/calculation-rules"], (oldData: any) => {
+        if (Array.isArray(oldData)) {
+          return oldData.map(item => 
+            item.id === updatedConvention.id ? updatedConvention : item
+          );
+        }
+        return oldData;
+      });
       toast({
         title: "Convenio actualizado",
         description: "El convenio médico ha sido actualizado exitosamente.",
