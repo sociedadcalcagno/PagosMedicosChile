@@ -171,7 +171,7 @@ export const calculationRules = pgTable("calculation_rules", {
   valueBase: varchar("value_base").default('total_collected'), // What amount to base calculation on
   exclusivityMode: varchar("exclusivity_mode").default('first_win'), // 'first_win', 'stack'
   ruleType: varchar("rule_type").default('standard'), // 'standard', 'convention', 'bonus'
-  parentRuleId: varchar("parent_rule_id").references(() => calculationRules.id), // For bonus rules
+  parentRuleId: varchar("parent_rule_id"), // For bonus rules - self-reference handled later
   
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -716,3 +716,252 @@ export const enhancedCalculationRuleSchema = insertCalculationRuleSchema.extend(
 });
 
 export type EnhancedInsertCalculationRule = z.infer<typeof enhancedCalculationRuleSchema>;
+
+// ========== NUEVAS TABLAS PARA CASUÍSTICA COMPLETA ==========
+
+// Sucursales de empresas/clínicas
+export const branches = pgTable("branches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code").notNull().unique(),
+  name: varchar("name").notNull(),
+  medicalCenterId: varchar("medical_center_id").notNull().references(() => medicalCenters.id),
+  address: text("address"),
+  phone: varchar("phone"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Grupos de códigos de prestación
+export const serviceGroups = pgTable("service_groups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  groupType: varchar("group_type"), // 'procedure', 'consultation', 'diagnostic'
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relación servicios con grupos
+export const serviceGroupItems = pgTable("service_group_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serviceGroupId: varchar("service_group_id").notNull().references(() => serviceGroups.id),
+  serviceId: varchar("service_id").notNull().references(() => services.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Horarios y turnos detallados
+export const scheduleDetails = pgTable("schedule_details", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ruleId: varchar("rule_id").notNull().references(() => calculationRules.id, { onDelete: 'cascade' }),
+  dayType: varchar("day_type").notNull(), // 'weekday', 'weekend', 'holiday'
+  specificDay: varchar("specific_day"), // 'monday', 'tuesday', etc.
+  startTime: varchar("start_time"), // '08:00'
+  endTime: varchar("end_time"), // '17:00'
+  hoursPerShift: integer("hours_per_shift"), // 3 horas por turno
+  hoursPerSchedule: integer("hours_per_schedule"), // Total horas por agenda
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Reglas escalables (tabla acumulada)
+export const scaleRules = pgTable("scale_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ruleId: varchar("rule_id").notNull().references(() => calculationRules.id, { onDelete: 'cascade' }),
+  minQuantity: integer("min_quantity").notNull(), // 1, 3, 5
+  maxQuantity: integer("max_quantity"), // null para "o más"
+  percentage: decimal("percentage", { precision: 5, scale: 2 }).notNull(), // 70.00, 80.00, 90.00
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Planes de previsión específicos
+export const insurancePlans = pgTable("insurance_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  insuranceTypeId: varchar("insurance_type_id").notNull().references(() => insuranceTypes.id),
+  code: varchar("code").notNull(),
+  name: varchar("name").notNull(), // 'Preferente', 'Básico', 'Premium'
+  description: text("description"),
+  copaymentPercentage: decimal("copayment_percentage", { precision: 5, scale: 2 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Convenios específicos de pacientes
+export const patientAgreements = pgTable("patient_agreements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code").notNull().unique(),
+  name: varchar("name").notNull(), // 'GES', 'CAEC', 'PARTICULAR'
+  description: text("description"),
+  discountPercentage: decimal("discount_percentage", { precision: 5, scale: 2 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Extendemos services para incluir información detallada
+export const serviceExtensions = pgTable("service_extensions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serviceId: varchar("service_id").notNull().references(() => services.id),
+  procedureType: varchar("procedure_type"), // 'consultation', 'procedure_with_pavilion', 'diagnostic'
+  requiresAnesthesia: boolean("requires_anesthesia").default(false),
+  pavilionTime: integer("pavilion_time"), // minutos
+  complexityLevel: varchar("complexity_level"), // 'low', 'medium', 'high'
+  exemptAmount: decimal("exempt_amount", { precision: 15, scale: 2 }), // 350.000
+  taxableAmount: decimal("taxable_amount", { precision: 15, scale: 2 }), // 320.000
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Extendemos calculation_rules para soportar toda la casuística
+export const calculationRuleExtensions = pgTable("calculation_rule_extensions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ruleId: varchar("rule_id").notNull().references(() => calculationRules.id, { onDelete: 'cascade' }),
+  
+  // Identificadores específicos
+  branchId: varchar("branch_id").references(() => branches.id),
+  serviceGroupId: varchar("service_group_id").references(() => serviceGroups.id),
+  insurancePlanId: varchar("insurance_plan_id").references(() => insurancePlans.id),
+  patientAgreementId: varchar("patient_agreement_id").references(() => patientAgreements.id),
+  
+  // RUTs diferenciados
+  executingDoctorRut: varchar("executing_doctor_rut"),
+  reportingDoctorRut: varchar("reporting_doctor_rut"),
+  executingDoctorName: varchar("executing_doctor_name"),
+  reportingDoctorName: varchar("reporting_doctor_name"),
+  
+  // Marcas y condiciones
+  doctorConditionMark: varchar("doctor_condition_mark"), // 'executing', 'reporting'
+  isResidentDoctor: boolean("is_resident_doctor").default(false),
+  
+  // Proceso y tipo
+  processType: varchar("process_type"), // 'direct', 'production_participation'
+  
+  // Fechas específicas
+  executionDate: date("execution_date"),
+  salePaymentDate: date("sale_payment_date"),
+  
+  // Valores detallados
+  exemptValue: decimal("exempt_value", { precision: 15, scale: 2 }),
+  taxableValue: decimal("taxable_value", { precision: 15, scale: 2 }),
+  totalCollected: decimal("total_collected", { precision: 15, scale: 2 }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Relaciones
+export const branchesRelations = relations(branches, ({ one, many }) => ({
+  medicalCenter: one(medicalCenters, {
+    fields: [branches.medicalCenterId],
+    references: [medicalCenters.id],
+  }),
+  rules: many(calculationRuleExtensions),
+}));
+
+export const serviceGroupsRelations = relations(serviceGroups, ({ many }) => ({
+  items: many(serviceGroupItems),
+  rules: many(calculationRuleExtensions),
+}));
+
+export const serviceGroupItemsRelations = relations(serviceGroupItems, ({ one }) => ({
+  serviceGroup: one(serviceGroups, {
+    fields: [serviceGroupItems.serviceGroupId],
+    references: [serviceGroups.id],
+  }),
+  service: one(services, {
+    fields: [serviceGroupItems.serviceId],
+    references: [services.id],
+  }),
+}));
+
+export const scheduleDetailsRelations = relations(scheduleDetails, ({ one }) => ({
+  rule: one(calculationRules, {
+    fields: [scheduleDetails.ruleId],
+    references: [calculationRules.id],
+  }),
+}));
+
+export const scaleRulesRelations = relations(scaleRules, ({ one }) => ({
+  rule: one(calculationRules, {
+    fields: [scaleRules.ruleId],
+    references: [calculationRules.id],
+  }),
+}));
+
+export const insurancePlansRelations = relations(insurancePlans, ({ one, many }) => ({
+  insuranceType: one(insuranceTypes, {
+    fields: [insurancePlans.insuranceTypeId],
+    references: [insuranceTypes.id],
+  }),
+  rules: many(calculationRuleExtensions),
+}));
+
+export const patientAgreementsRelations = relations(patientAgreements, ({ many }) => ({
+  rules: many(calculationRuleExtensions),
+}));
+
+export const serviceExtensionsRelations = relations(serviceExtensions, ({ one }) => ({
+  service: one(services, {
+    fields: [serviceExtensions.serviceId],
+    references: [services.id],
+  }),
+}));
+
+export const calculationRuleExtensionsRelations = relations(calculationRuleExtensions, ({ one }) => ({
+  rule: one(calculationRules, {
+    fields: [calculationRuleExtensions.ruleId],
+    references: [calculationRules.id],
+  }),
+  branch: one(branches, {
+    fields: [calculationRuleExtensions.branchId],
+    references: [branches.id],
+  }),
+  serviceGroup: one(serviceGroups, {
+    fields: [calculationRuleExtensions.serviceGroupId],
+    references: [serviceGroups.id],
+  }),
+  insurancePlan: one(insurancePlans, {
+    fields: [calculationRuleExtensions.insurancePlanId],
+    references: [insurancePlans.id],
+  }),
+  patientAgreement: one(patientAgreements, {
+    fields: [calculationRuleExtensions.patientAgreementId],
+    references: [patientAgreements.id],
+  }),
+}));
+
+// Esquemas Zod para las nuevas tablas
+export const insertBranchSchema = createInsertSchema(branches);
+export const insertServiceGroupSchema = createInsertSchema(serviceGroups);
+export const insertServiceGroupItemSchema = createInsertSchema(serviceGroupItems);
+export const insertScheduleDetailSchema = createInsertSchema(scheduleDetails);
+export const insertScaleRuleSchema = createInsertSchema(scaleRules);
+export const insertInsurancePlanSchema = createInsertSchema(insurancePlans);
+export const insertPatientAgreementSchema = createInsertSchema(patientAgreements);
+export const insertServiceExtensionSchema = createInsertSchema(serviceExtensions);
+export const insertCalculationRuleExtensionSchema = createInsertSchema(calculationRuleExtensions);
+
+// Tipos TypeScript
+export type Branch = typeof branches.$inferSelect;
+export type InsertBranch = z.infer<typeof insertBranchSchema>;
+
+export type ServiceGroup = typeof serviceGroups.$inferSelect;
+export type InsertServiceGroup = z.infer<typeof insertServiceGroupSchema>;
+
+export type ServiceGroupItem = typeof serviceGroupItems.$inferSelect;
+export type InsertServiceGroupItem = z.infer<typeof insertServiceGroupItemSchema>;
+
+export type ScheduleDetail = typeof scheduleDetails.$inferSelect;
+export type InsertScheduleDetail = z.infer<typeof insertScheduleDetailSchema>;
+
+export type ScaleRule = typeof scaleRules.$inferSelect;
+export type InsertScaleRule = z.infer<typeof insertScaleRuleSchema>;
+
+export type InsurancePlan = typeof insurancePlans.$inferSelect;
+export type InsertInsurancePlan = z.infer<typeof insertInsurancePlanSchema>;
+
+export type PatientAgreement = typeof patientAgreements.$inferSelect;
+export type InsertPatientAgreement = z.infer<typeof insertPatientAgreementSchema>;
+
+export type ServiceExtension = typeof serviceExtensions.$inferSelect;
+export type InsertServiceExtension = z.infer<typeof insertServiceExtensionSchema>;
+
+export type CalculationRuleExtension = typeof calculationRuleExtensions.$inferSelect;
+export type InsertCalculationRuleExtension = z.infer<typeof insertCalculationRuleExtensionSchema>;
