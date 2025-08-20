@@ -431,13 +431,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Calculation rule routes
   app.get('/api/calculation-rules', unifiedAuthCheck, async (req, res) => {
     try {
-      const { code, participationType, specialtyId, isActive } = req.query;
+      const { code, participationType, specialtyId, isActive, ruleType } = req.query;
       const filters: any = {};
       
       if (code) filters.code = code as string;
       if (participationType) filters.participationType = participationType as string;
       if (specialtyId) filters.specialtyId = specialtyId as string;
       if (isActive !== undefined) filters.isActive = isActive === 'true';
+      if (ruleType) filters.ruleType = ruleType as string;
 
       const rules = await storage.getCalculationRules(filters);
       res.json(rules);

@@ -368,6 +368,7 @@ export class DatabaseStorage implements IStorage {
     participationType?: string;
     specialtyId?: string;
     isActive?: boolean;
+    ruleType?: string;
   }): Promise<CalculationRule[]> {
     let conditions = [];
     
@@ -382,6 +383,9 @@ export class DatabaseStorage implements IStorage {
     }
     if (filters?.isActive !== undefined) {
       conditions.push(eq(calculationRules.isActive, filters.isActive));
+    }
+    if (filters?.ruleType) {
+      conditions.push(eq(calculationRules.ruleType, filters.ruleType));
     }
     
     if (conditions.length > 0) {

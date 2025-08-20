@@ -13,6 +13,7 @@ import Users from "@/pages/Users";
 import Doctors from "@/pages/Doctors.tsx";
 import Services from "@/pages/Services.tsx";
 import Rules from "@/pages/Rules.tsx";
+import Conventions from "@/pages/Conventions.tsx";
 import Reports from "@/pages/Reports.tsx";
 import Profile from "@/pages/Profile";
 import DoctorDashboard from "@/pages/DoctorDashboard";
@@ -63,6 +64,7 @@ function Router() {
         <Route path="/medicos" component={Doctors} />
         <Route path="/prestaciones" component={Services} />
         <Route path="/reglas" component={Rules} />
+        <Route path="/convenios" component={Conventions} />
         <Route path="/atenciones-medicas" component={MedicalAttentions} />
         <Route path="/calcular-pagos" component={CalculatePayments} />
         <Route path="/procesar-pagos" component={ProcessPayments} />

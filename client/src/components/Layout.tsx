@@ -20,6 +20,7 @@ import {
   Building2,
   Banknote,
   FileText,
+  HandHeart,
 } from "lucide-react";
 import AIChat from "@/components/AIChat";
 
@@ -69,6 +70,12 @@ export default function Layout({ children }: LayoutProps) {
           href: "/reglas",
           label: "Reglas de Cálculo",
           icon: Calculator,
+          section: "Gestión de Maestros",
+        },
+        {
+          href: "/convenios",
+          label: "Convenios Médicos",
+          icon: HandHeart,
           section: "Gestión de Maestros",
         },
         {
