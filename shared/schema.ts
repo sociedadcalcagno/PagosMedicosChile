@@ -161,12 +161,54 @@ export const calculationRules = pgTable("calculation_rules", {
   applicableDays: jsonb("applicable_days"), // JSON array of weekdays
   
   // Payment calculation
-  paymentType: varchar("payment_type").notNull(), // 'percentage', 'fixed_amount'
+  paymentType: varchar("payment_type").notNull(), // 'percentage', 'fixed_amount', 'factor', 'table_accumulated', 'table_direct', 'calc_plus_fixed'
   paymentValue: decimal("payment_value", { precision: 15, scale: 2 }).notNull(), // Increased precision
+  
+  // Convention-specific fields
+  priority: integer("priority").default(100), // Lower = evaluated first
+  referenceDate: varchar("reference_date").default('execution'), // 'execution', 'payment_sale'
+  combinationRule: jsonb("combination_rule"), // For complex calculation rules (tables, calc_plus_fixed)
+  valueBase: varchar("value_base").default('total_collected'), // What amount to base calculation on
+  exclusivityMode: varchar("exclusivity_mode").default('first_win'), // 'first_win', 'stack'
+  ruleType: varchar("rule_type").default('standard'), // 'standard', 'convention', 'bonus'
+  parentRuleId: varchar("parent_rule_id").references(() => calculationRules.id), // For bonus rules
   
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Convention criteria - complex matching rules for conventions
+export const conventionCriteria = pgTable("convention_criteria", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ruleId: varchar("rule_id").notNull().references(() => calculationRules.id, { onDelete: 'cascade' }),
+  criteriaKey: varchar("criteria_key").notNull(), // 'service_type', 'specialty', 'patient_role', 'day_type'
+  operator: varchar("operator").notNull().default('eq'), // 'eq', 'in', 'like', 'gte', 'lte', 'between', 'regex'
+  criteriaValue: text("criteria_value").notNull(), // JSON string or text value
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Convention bonuses - additional percentage bonuses based on criteria
+export const conventionBonuses = pgTable("convention_bonuses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ruleId: varchar("rule_id").notNull().references(() => calculationRules.id, { onDelete: 'cascade' }),
+  description: text("description").notNull(),
+  percentage: decimal("percentage", { precision: 12, scale: 4 }).notNull().default('0'), // 0.10 = +10%
+  criteriaKey: varchar("criteria_key").notNull(),
+  criteriaOperator: varchar("criteria_operator").notNull().default('eq'),
+  criteriaValue: text("criteria_value").notNull(),
+  priority: integer("priority").default(100),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Calculation audit trail - tracks all calculations performed
+export const calculationAudit = pgTable("calculation_audit", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timestamp: timestamp("timestamp").defaultNow(),
+  inputData: jsonb("input_data"),
+  appliedRules: jsonb("applied_rules"),
+  result: jsonb("result"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Relations

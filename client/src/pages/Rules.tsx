@@ -49,6 +49,32 @@ import { useToast } from "@/hooks/use-toast";
 
 const isUnauthorizedError = (error: any) => error?.status === 401 || error?.message?.includes("Unauthorized");
 
+// Convention-specific types
+type ConventionFormData = {
+  code: string;
+  name: string;
+  description?: string;
+  validFrom: string;
+  validTo: string;
+  participationType: "individual" | "society" | "mixed";
+  specialtyId: string;
+  serviceId?: string;
+  paymentValue: string;
+  priority: string;
+  exclusivityMode: "first_win" | "stack";
+  criteria: Array<{
+    key: string;
+    operator: "eq" | "in" | "like";
+    value: string;
+  }>;
+  bonuses: Array<{
+    description: string;
+    percentage: string;
+    criteriaKey: string;
+    criteriaValue: string;
+  }>;
+};
+
 const ruleFormSchema = z.object({
   code: z.string().min(1, "Código es requerido"),
   name: z.string().min(1, "Nombre es requerido"),
