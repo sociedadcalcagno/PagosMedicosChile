@@ -119,6 +119,9 @@ export default function ConventionsSection({
         scopeType: data.exclusivityMode === "first_win" ? "individual" : "group",
         // Ensure serviceId is handled correctly
         serviceId: data.serviceId === "all" ? null : data.serviceId,
+        // Convert string values to correct types
+        priority: parseInt(data.priority) || 100,
+        paymentValue: parseFloat(data.paymentValue) || 0,
       };
       return apiRequest("/api/calculation-rules", "POST", conventionData);
     },
@@ -147,6 +150,10 @@ export default function ConventionsSection({
         ...data,
         baseRule: `Convenio: ${data.name}`,
         ruleType: "convention",
+        // Convert string values to correct types
+        priority: parseInt(data.priority) || 100,
+        paymentValue: parseFloat(data.paymentValue) || 0,
+        serviceId: data.serviceId === "all" ? null : data.serviceId,
       });
     },
     onSuccess: () => {
