@@ -91,10 +91,12 @@ export default function ConventionsSection({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Get conventions (rules marked as convention type)
+  // Get conventions (rules marked as convention type) - ISOLATED query
   const { data: allRules, isLoading, refetch } = useQuery({
-    queryKey: ["/api/calculation-rules"],
+    queryKey: ["/api/calculation-rules", "conventions"],
     queryFn: () => apiRequest("/api/calculation-rules"),
+    staleTime: 0, // Always fresh
+    refetchOnWindowFocus: false,
   });
 
   // Filter conventions on the frontend for now
@@ -143,8 +145,8 @@ export default function ConventionsSection({
       return apiRequest("/api/calculation-rules", "POST", conventionData);
     },
     onSuccess: () => {
-      // Force refresh the specific query
-      refetch();
+      // Force immediate refresh
+      setTimeout(() => refetch(), 100);
       toast({
         title: "Convenio creado",
         description: "El convenio médico ha sido creado exitosamente.",
@@ -199,8 +201,8 @@ export default function ConventionsSection({
       return apiRequest(`/api/calculation-rules/${id}`, "DELETE");
     },
     onSuccess: () => {
-      // Force refresh the specific query
-      refetch();
+      // Force immediate refresh
+      setTimeout(() => refetch(), 100);
       toast({
         title: "Convenio eliminado",
         description: "El convenio médico ha sido eliminado exitosamente.",
