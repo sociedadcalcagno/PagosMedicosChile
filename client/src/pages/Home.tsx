@@ -2,8 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Clock, AlertTriangle, TrendingUp } from "lucide-react";
+import { CheckCircle, Clock, AlertTriangle, TrendingUp, HandHeart } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Home() {
   const { data: doctors, isLoading: doctorsLoading } = useQuery({
@@ -20,6 +21,11 @@ export default function Home() {
 
   const { data: services, isLoading: servicesLoading } = useQuery({
     queryKey: ["/api/services"],
+  });
+
+  const { data: conventions, isLoading: conventionsLoading } = useQuery({
+    queryKey: ["/api/calculation-rules", "convention"],
+    queryFn: () => apiRequest("/api/calculation-rules?ruleType=convention"),
   });
 
   const calculateStats = () => {
@@ -42,7 +48,27 @@ export default function Home() {
     };
   };
 
+  const calculateConventionStats = () => {
+    if (!conventions || !Array.isArray(conventions)) return { active: 0, expired: 0, total: 0 };
+    
+    const today = new Date();
+    const active = conventions.filter((convention: any) => 
+      convention.isActive && new Date(convention.validFrom) <= today && new Date(convention.validTo) >= today
+    ).length;
+    
+    const expired = conventions.filter((convention: any) => 
+      new Date(convention.validTo) < today
+    ).length;
+    
+    return {
+      active,
+      expired,
+      total: conventions.length,
+    };
+  };
+
   const stats = calculateStats();
+  const conventionStats = calculateConventionStats();
 
   return (
     <Layout>
@@ -56,7 +82,7 @@ export default function Home() {
         </div>
 
         {/* Quick Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
@@ -117,6 +143,26 @@ export default function Home() {
             <CardContent className="p-6">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <HandHeart className="text-purple-600 text-xl" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  {conventionsLoading ? (
+                    <Skeleton className="h-8 w-16" />
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900">{conventionStats.active}</p>
+                  )}
+                  <p className="text-sm text-gray-500">Convenios Activos</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                     <TrendingUp className="text-blue-600 text-xl" />
                   </div>
@@ -168,6 +214,14 @@ export default function Home() {
                   <Skeleton className="h-5 w-8" />
                 ) : (
                   <Badge variant="secondary">{stats.total}</Badge>
+                )}
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Convenios Médicos</span>
+                {conventionsLoading ? (
+                  <Skeleton className="h-5 w-8" />
+                ) : (
+                  <Badge variant="secondary">{conventionStats.total}</Badge>
                 )}
               </div>
             </CardContent>
