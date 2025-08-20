@@ -47,7 +47,7 @@ import { useToast } from "@/hooks/use-toast";
 
 // Convention form schema
 const conventionFormSchema = z.object({
-  code: z.string().min(1, "Código es requerido"),
+  code: z.string().optional(), // Auto-generated
   name: z.string().min(1, "Nombre es requerido"),
   description: z.string().optional(),
   validFrom: z.string().min(1, "Fecha de inicio es requerida"),
@@ -784,6 +784,9 @@ export default function ConventionsSection({
                       <FormControl>
                         <Input {...field} placeholder="Se generará automáticamente" disabled />
                       </FormControl>
+                      <FormDescription>
+                        Se generará automáticamente al crear el convenio
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
