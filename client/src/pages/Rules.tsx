@@ -439,7 +439,7 @@ export default function Rules() {
                   Nueva Regla
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>
                     {editingRule ? "Editar Regla de Cálculo" : "Nueva Regla de Cálculo"}
@@ -585,7 +585,7 @@ export default function Rules() {
                             <div>Desde ($)</div>
                             <div>Hasta ($)</div>
                             <div>Porcentaje (%)</div>
-                            <div>Acciones</div>
+                            <div className="w-20">Acciones</div>
                           </div>
                           
                           {escalationRanges.map((range, index) => (
@@ -1043,9 +1043,29 @@ export default function Rules() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {rule.paymentType === "percentage" 
-                              ? `${rule.paymentValue}%` 
-                              : `$${parseInt(rule.paymentValue).toLocaleString('es-CL')}`}
+                            {rule.paymentType === "percentage" && (
+                              <div className="flex items-center gap-1">
+                                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">%</span>
+                                <span>{`${rule.paymentValue}%`}</span>
+                              </div>
+                            )}
+                            {rule.paymentType === "fixed_amount" && (
+                              <div className="flex items-center gap-1">
+                                <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">$</span>
+                                <span>{`$${parseInt(rule.paymentValue).toLocaleString('es-CL')}`}</span>
+                              </div>
+                            )}
+                            {rule.paymentType === "table_accumulated" && (
+                              <div className="flex items-center gap-1">
+                                <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs flex items-center gap-1">
+                                  <TrendingUp className="w-3 h-3" />
+                                  Escalable
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {rule.combinationRule?.scales?.length || 0} rangos
+                                </span>
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell className="text-sm">
                             {new Date(rule.validFrom).toLocaleDateString('es-CL')} - <br />
