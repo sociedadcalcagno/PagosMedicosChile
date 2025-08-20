@@ -97,7 +97,7 @@ export class IntelligentRuleEngine {
       const calculatedPayment = this.calculatePayment(request.baseAmount, selectedRule);
       
       // Generate intelligent explanation
-      const explanation = this.generateExplanation(selectedRule, applicableRules, request.baseAmount);
+      const explanation = await this.generateExplanation(selectedRule, applicableRules, request.baseAmount);
       
       console.log(`[RuleEngine] Selected rule: ${selectedRule.code}, calculated: $${calculatedPayment.toLocaleString('es-CL')}`);
       
@@ -129,10 +129,11 @@ export class IntelligentRuleEngine {
   async getApplicableRules(request: RuleSimulationRequest & { date: string; weekday: string }): Promise<CalculationRule[]> {
     const rawRules = await storage.getCalculationRules({ isActive: true });
     
-    // Type conversion for applicableDays
+    // Type conversion for applicableDays and isActive
     const allRules: CalculationRule[] = rawRules.map(rule => ({
       ...rule,
-      applicableDays: Array.isArray(rule.applicableDays) ? rule.applicableDays as string[] : null
+      applicableDays: Array.isArray(rule.applicableDays) ? rule.applicableDays as string[] : null,
+      isActive: rule.isActive ?? true
     }));
     
     console.log(`[RuleEngine] Evaluating ${allRules.length} total rules`);
@@ -334,71 +335,310 @@ export class IntelligentRuleEngine {
   }
 
   /**
-   * Generates intelligent, human-readable explanation of rule selection
+   * Generates intelligent, comprehensive explanation of rule selection with all convention parameters
    */
-  generateExplanation(selectedRule: CalculationRule, allApplicableRules: CalculationRule[], baseAmount: number): string {
+  async generateExplanation(selectedRule: CalculationRule, allApplicableRules: CalculationRule[], baseAmount: number): Promise<string> {
     const parts = [];
     const criteria = [];
     
     parts.push(`✅ Se aplicó la regla "${selectedRule.name}" (${selectedRule.code})`);
     
-    // Explain why this rule was selected
-    if (selectedRule.doctorId) {
-      criteria.push("específica para este doctor");
-    }
-    if (selectedRule.serviceId) {
-      criteria.push("específica para este servicio médico");
-    }
-    if (selectedRule.participationType === 'individual') {
-      criteria.push("para atención individual");
-    } else if (selectedRule.participationType === 'society') {
-      criteria.push("para atención en sociedad médica");
-    }
-    if (selectedRule.scheduleType && selectedRule.scheduleType !== 'all') {
-      const scheduleNames: Record<string, string> = {
-        'regular': 'horario regular',
-        'night': 'horario nocturno',
-        'irregular': 'horario irregular'
-      };
-      criteria.push(`para ${scheduleNames[selectedRule.scheduleType] || selectedRule.scheduleType}`);
-    }
-    if (selectedRule.applicableDays && selectedRule.applicableDays.length > 0 && selectedRule.applicableDays.length < 7) {
-      const dayNames: Record<string, string> = {
-        'monday': 'lunes', 'tuesday': 'martes', 'wednesday': 'miércoles',
-        'thursday': 'jueves', 'friday': 'viernes', 'saturday': 'sábado', 'sunday': 'domingo'
-      };
-      const translatedDays = selectedRule.applicableDays.map(day => dayNames[day] || day);
-      criteria.push(`para días específicos: ${translatedDays.join(', ')}`);
-    }
-    
-    if (criteria.length > 0) {
+    try {
+      // Get comprehensive rule details for convention rules
+      if ((selectedRule as any).ruleType === 'convention') {
+        const conventionDetails = await this.getConventionDetails(selectedRule.id);
+        
+        // Basic criteria
+        if (selectedRule.doctorId && conventionDetails.doctor) {
+          criteria.push(`específica para Dr. ${conventionDetails.doctor.name} (RUT: ${conventionDetails.doctor.rut})`);
+        }
+        if (selectedRule.serviceId && conventionDetails.service) {
+          criteria.push(`específica para ${conventionDetails.service.name} (${conventionDetails.service.code})`);
+        }
+        if (selectedRule.specialtyId && conventionDetails.specialty) {
+          criteria.push(`en especialidad ${conventionDetails.specialty.name}`);
+        }
+        
+        // Extended criteria for conventions
+        if (conventionDetails.extension) {
+          const ext = conventionDetails.extension;
+          
+          if (conventionDetails.medicalCenter) {
+            criteria.push(`en ${conventionDetails.medicalCenter.name}`);
+          }
+          if (conventionDetails.branch) {
+            criteria.push(`sucursal ${conventionDetails.branch.name}`);
+          }
+          if (conventionDetails.insurancePlan) {
+            criteria.push(`previsión ${conventionDetails.insurancePlan.name}`);
+          }
+          if (conventionDetails.patientAgreement) {
+            criteria.push(`convenio ${conventionDetails.patientAgreement.name}`);
+          }
+          if (conventionDetails.serviceGroup) {
+            criteria.push(`grupo "${conventionDetails.serviceGroup.name}"`);
+          }
+          
+          // Doctor condition details
+          if (ext.doctor_condition_mark === 'executing') {
+            criteria.push("médico ejecutante");
+          } else if (ext.doctor_condition_mark === 'reporting') {
+            criteria.push("médico informante");
+          }
+          
+          if (ext.is_resident_doctor === false) {
+            criteria.push("médico NO residente");
+          }
+          
+          // Process type
+          if (ext.process_type) {
+            const processNames: Record<string, string> = {
+              'production_participation': 'participación por producción',
+              'fixed_payment': 'pago fijo',
+              'bonus_payment': 'bono adicional'
+            };
+            criteria.push(`proceso: ${processNames[ext.process_type] || ext.process_type}`);
+          }
+        }
+        
+        // Service extension details
+        if (conventionDetails.serviceExtension) {
+          const svcExt = conventionDetails.serviceExtension;
+          if (svcExt.procedure_type === 'procedure_with_pavilion') {
+            criteria.push(`procedimiento con pabellón (${svcExt.pavilion_time} min)`);
+          }
+          if (svcExt.requires_anesthesia) {
+            criteria.push("requiere anestesia");
+          }
+          if (svcExt.complexity_level) {
+            criteria.push(`complejidad ${svcExt.complexity_level}`);
+          }
+        }
+        
+        // Schedule details
+        if (conventionDetails.scheduleDetails && conventionDetails.scheduleDetails.length > 0) {
+          const schedule = conventionDetails.scheduleDetails[0];
+          const dayNames: Record<string, string> = {
+            'monday': 'lunes', 'tuesday': 'martes', 'wednesday': 'miércoles',
+            'thursday': 'jueves', 'friday': 'viernes', 'saturday': 'sábado', 'sunday': 'domingo'
+          };
+          criteria.push(`día ${dayNames[schedule.specific_day]} ${schedule.start_time}-${schedule.end_time} (${schedule.hours_per_shift}h/turno)`);
+        }
+        
+        if (criteria.length > 0) {
+          parts.push(`porque es ${criteria.join(', ')}`);
+        }
+        
+        // Detailed payment calculation explanation
+        if (selectedRule.paymentType === 'table_accumulated' && conventionDetails.scaleRules && conventionDetails.scaleRules.length > 0) {
+          parts.push(`\n\n📊 **SISTEMA DE TABLA ESCALABLE:**`);
+          conventionDetails.scaleRules.forEach((scale: any) => {
+            const rangeText = scale.max_quantity 
+              ? `${scale.min_quantity}-${scale.max_quantity} procedimientos`
+              : `${scale.min_quantity}+ procedimientos`;
+            parts.push(`   • ${rangeText}: ${scale.percentage}%`);
+          });
+          
+          // Current calculation 
+          const percentage = parseFloat(selectedRule.paymentValue.toString());
+          const calculatedAmount = Math.round((baseAmount * percentage) / 100);
+          parts.push(`\n💰 Para 1 procedimiento: ${percentage}% de $${baseAmount.toLocaleString('es-CL')} = $${calculatedAmount.toLocaleString('es-CL')}`);
+          
+          // Values breakdown if available
+          if (conventionDetails.extension) {
+            const ext = conventionDetails.extension;
+            if (ext.exempt_value && ext.taxable_value) {
+              parts.push(`\n📋 **DESGLOSE DE VALORES:**`);
+              parts.push(`   • Valor exento: $${parseFloat(ext.exempt_value.toString()).toLocaleString('es-CL')}`);
+              parts.push(`   • Valor afecto: $${parseFloat(ext.taxable_value.toString()).toLocaleString('es-CL')}`);
+              parts.push(`   • Total recaudado: $${parseFloat(ext.total_collected.toString()).toLocaleString('es-CL')}`);
+            }
+          }
+          
+        } else if (selectedRule.paymentType === 'percentage') {
+          const percentage = parseFloat(selectedRule.paymentValue.toString());
+          const calculatedAmount = Math.round((baseAmount * percentage) / 100);
+          parts.push(`💰 Calcula ${percentage}% del monto base ($${baseAmount.toLocaleString('es-CL')}) = $${calculatedAmount.toLocaleString('es-CL')}`);
+        } else {
+          const fixedAmount = parseFloat(selectedRule.paymentValue.toString());
+          parts.push(`💰 Monto fijo de $${fixedAmount.toLocaleString('es-CL')}`);
+        }
+        
+        // Validity and dates
+        parts.push(`\n📅 **VIGENCIA:** ${selectedRule.validFrom} hasta ${selectedRule.validTo}`);
+        if (conventionDetails.extension && conventionDetails.extension.execution_date) {
+          parts.push(`   • Fecha ejecución: ${conventionDetails.extension.execution_date}`);
+        }
+        
+      } else {
+        // Standard rule explanation (existing logic for non-convention rules)
+        if (selectedRule.doctorId) {
+          criteria.push("específica para este doctor");
+        }
+        if (selectedRule.serviceId) {
+          criteria.push("específica para este servicio médico");
+        }
+        if (selectedRule.participationType === 'individual') {
+          criteria.push("para atención individual");
+        } else if (selectedRule.participationType === 'society') {
+          criteria.push("para atención en sociedad médica");
+        }
+        
+        if (criteria.length > 0) {
+          parts.push(`porque es ${criteria.join(', ')}`);
+        }
+        
+        if (selectedRule.paymentType === 'percentage') {
+          const percentage = parseFloat(selectedRule.paymentValue.toString());
+          const calculatedAmount = Math.round((baseAmount * percentage) / 100);
+          parts.push(`💰 Calcula ${percentage}% del monto base ($${baseAmount.toLocaleString('es-CL')}) = $${calculatedAmount.toLocaleString('es-CL')}`);
+        } else {
+          const fixedAmount = parseFloat(selectedRule.paymentValue.toString());
+          parts.push(`💰 Monto fijo de $${fixedAmount.toLocaleString('es-CL')}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error generating detailed explanation:', error);
+      // Fallback to basic explanation
+      criteria.push("aplicable según criterios básicos");
       parts.push(`porque es ${criteria.join(', ')}`);
-    }
-    
-    // Explain the payment calculation with visual indicators
-    if (selectedRule.paymentType === 'percentage') {
-      const percentage = parseFloat(selectedRule.paymentValue.toString());
-      const calculatedAmount = Math.round((baseAmount * percentage) / 100);
-      parts.push(`💰 Calcula ${percentage}% del monto base ($${baseAmount.toLocaleString('es-CL')}) = $${calculatedAmount.toLocaleString('es-CL')}`);
-    } else {
-      const fixedAmount = parseFloat(selectedRule.paymentValue.toString());
-      parts.push(`💰 Monto fijo de $${fixedAmount.toLocaleString('es-CL')}`);
     }
     
     // Mention conflicts if any
     if (allApplicableRules.length > 1) {
       const conflictCount = allApplicableRules.length - 1;
-      parts.push(`⚠️ Se encontraron ${allApplicableRules.length} reglas aplicables. Se seleccionó la más específica y beneficiosa.`);
+      parts.push(`\n⚠️ Se encontraron ${allApplicableRules.length} reglas aplicables. Se seleccionó la más específica y beneficiosa.`);
       
       if (conflictCount <= 3) {
         const otherRules = allApplicableRules.filter(r => r.id !== selectedRule.id).map(r => r.name).join(', ');
         parts.push(`Otras reglas consideradas: ${otherRules}`);
       }
     } else {
-      parts.push(`🎯 Regla única aplicable para estos criterios.`);
+      parts.push(`\n🎯 Regla única aplicable para estos criterios.`);
     }
     
     return parts.join('. ') + '.';
+  }
+
+  /**
+   * Gets comprehensive convention details from all related tables
+   */
+  async getConventionDetails(ruleId: string): Promise<any> {
+    try {
+      // Get rule extensions
+      const extensionQuery = `
+        SELECT 
+          ext.*,
+          mc.name as medical_center_name,
+          br.name as branch_name,
+          sg.name as service_group_name,
+          ip.name as insurance_plan_name,
+          pa.name as patient_agreement_name
+        FROM calculation_rule_extensions ext
+        LEFT JOIN medical_centers mc ON ext.branch_id = mc.id
+        LEFT JOIN branches br ON ext.branch_id = br.id
+        LEFT JOIN service_groups sg ON ext.service_group_id = sg.id
+        LEFT JOIN insurance_plans ip ON ext.insurance_plan_id = ip.id
+        LEFT JOIN patient_agreements pa ON ext.patient_agreement_id = pa.id
+        WHERE ext.rule_id = $1
+        LIMIT 1
+      `;
+      
+      const extensionResult = await storage.query(extensionQuery, [ruleId]);
+      const extension = extensionResult[0] || null;
+      
+      // Get related entities
+      const rule = await storage.getCalculationRuleById(ruleId);
+      if (!rule) return { extension };
+      
+      const [
+        doctor,
+        specialty, 
+        service,
+        medicalCenter,
+        scaleRules,
+        scheduleDetails,
+        serviceExtension
+      ] = await Promise.all([
+        rule.doctorId ? storage.getDoctorById(rule.doctorId) : null,
+        rule.specialtyId ? storage.getSpecialtyById(rule.specialtyId) : null,
+        rule.serviceId ? storage.getServiceById(rule.serviceId) : null,
+        rule.medicalCenterId ? storage.getMedicalCenterById(rule.medicalCenterId) : null,
+        this.getScaleRules(ruleId),
+        this.getScheduleDetails(ruleId),
+        rule.serviceId ? this.getServiceExtension(rule.serviceId) : null
+      ]);
+      
+      return {
+        extension,
+        doctor,
+        specialty,
+        service,
+        medicalCenter,
+        branch: extension ? { name: extension.branch_name } : null,
+        serviceGroup: extension ? { name: extension.service_group_name } : null,
+        insurancePlan: extension ? { name: extension.insurance_plan_name } : null,
+        patientAgreement: extension ? { name: extension.patient_agreement_name } : null,
+        scaleRules,
+        scheduleDetails,
+        serviceExtension
+      };
+    } catch (error) {
+      console.error('Error getting convention details:', error);
+      return { extension: null };
+    }
+  }
+
+  /**
+   * Gets scale rules for a convention
+   */
+  async getScaleRules(ruleId: string): Promise<any[]> {
+    try {
+      const query = `
+        SELECT * FROM scale_rules 
+        WHERE rule_id = $1 
+        ORDER BY min_quantity ASC
+      `;
+      return await storage.query(query, [ruleId]);
+    } catch (error) {
+      console.error('Error getting scale rules:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Gets schedule details for a convention
+   */
+  async getScheduleDetails(ruleId: string): Promise<any[]> {
+    try {
+      const query = `
+        SELECT * FROM schedule_details 
+        WHERE rule_id = $1 AND is_active = true
+        ORDER BY specific_day
+      `;
+      return await storage.query(query, [ruleId]);
+    } catch (error) {
+      console.error('Error getting schedule details:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Gets service extension details
+   */
+  async getServiceExtension(serviceId: string): Promise<any> {
+    try {
+      const query = `
+        SELECT * FROM service_extensions 
+        WHERE service_id = $1 
+        LIMIT 1
+      `;
+      const result = await storage.query(query, [serviceId]);
+      return result[0] || null;
+    } catch (error) {
+      console.error('Error getting service extension:', error);
+      return null;
+    }
   }
 
   /**

@@ -117,6 +117,9 @@ export interface IStorage {
   updateRuleScopeGroup(id: string, group: Partial<InsertRuleScopeGroup>): Promise<RuleScopeGroup>;
   deleteRuleScopeGroup(id: string): Promise<void>;
   
+  // Custom query operations
+  query(sql: string, params?: any[]): Promise<any[]>;
+  
   // Insurance type operations
   getInsuranceTypes(): Promise<InsuranceType[]>;
   getInsuranceTypeById(id: string): Promise<InsuranceType | undefined>;
@@ -1459,6 +1462,17 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error fetching doctor payments:', error);
       throw new Error(`Error al obtener pagos del doctor: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    }
+  }
+  
+  // Custom query method for complex joins
+  async query(sqlQuery: string, params: any[] = []): Promise<any[]> {
+    try {
+      const result = await db.execute(sql.raw(sqlQuery, ...params));
+      return result.rows as any[];
+    } catch (error) {
+      console.error('Error executing custom query:', error);
+      throw error;
     }
   }
 }
