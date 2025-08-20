@@ -23,10 +23,13 @@ export default function Home() {
     queryKey: ["/api/services"],
   });
 
-  const { data: conventions, isLoading: conventionsLoading } = useQuery({
-    queryKey: ["/api/calculation-rules", "convention"],
-    queryFn: () => apiRequest("/api/calculation-rules?ruleType=convention"),
+  const { data: allRulesForConventions, isLoading: conventionsLoading } = useQuery({
+    queryKey: ["/api/calculation-rules"],
   });
+  
+  // Filter conventions on the frontend (same as ConventionsSection)
+  const conventions = Array.isArray(allRulesForConventions) ? 
+    allRulesForConventions.filter(rule => rule.ruleType === 'convention' || rule.rule_type === 'convention') : [];
 
   const calculateStats = () => {
     if (!rules || !Array.isArray(rules)) return { active: 0, pending: 0, expired: 0, total: 0 };
